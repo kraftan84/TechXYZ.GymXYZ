@@ -1,9 +1,23 @@
 ﻿@inherits LayoutComponentBase
 @inject IDialogService DialogService
 
-<div class="app-shell">
+<div class="app-shell @(isNavOpen ? "nav-open" : "nav-closed")">
     <header class="top-bar">
-        <div class="app-brand">TechXyz GymXyz</div>
+        <div class="top-bar-left">
+            <FluentButton Appearance="Appearance.Stealth"
+                          class="icon-button nav-toggle"
+                          title="Menu"
+                          aria-label="Menu"
+                          aria-expanded="@isNavOpen"
+                          aria-controls="primary-nav"
+                          @onclick="ToggleNav">
+                <span class="icon-menu" aria-hidden="true"></span>
+            </FluentButton>
+            <div class="app-brand">
+                <span class="app-logo" aria-hidden="true">GX</span>
+                <span class="app-name">GymXYZ</span>
+            </div>
+        </div>
         <div class="top-bar-actions">
             <FluentButton Appearance="Appearance.Stealth"
                           class="icon-button"
@@ -18,13 +32,17 @@
         </div>
     </header>
     <div class="app-body">
-        <aside class="app-nav">
+        <aside class="app-nav" id="primary-nav">
             <NavMenu/>
         </aside>
         <main class="app-content">
             @Body
         </main>
     </div>
+    @if (isNavOpen)
+    {
+        <button class="nav-scrim" aria-hidden="true" tabindex="-1" @onclick="ToggleNav"></button>
+    }
 </div>
 
 <FluentToastProvider/>
@@ -40,6 +58,8 @@
 </div>
 
 @code {
+    private bool isNavOpen;
+
     private async Task OpenNotificationsAsync()
     {
         var parameters = new DialogParameters
@@ -53,5 +73,10 @@
         };
 
         await DialogService.ShowPanelAsync<NotificationsPanel>(parameters);
+    }
+
+    private void ToggleNav()
+    {
+        isNavOpen = !isNavOpen;
     }
 }
