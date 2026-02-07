@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.2" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.2">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.DataGrid.EntityFrameworkAdapter" Version="4.13.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TechXyz.GymXyz.Application\TechXyz.GymXyz.Application.csproj" />
+      <ProjectReference Include="..\TechXyz.GymXyz.Domain\TechXyz.GymXyz.Domain.csproj" />
+      <ProjectReference Include="..\TechXyz.GymXyz.Persistence\TechXyz.GymXyz.Persistence.csproj" />
+    </ItemGroup>
+
+</Project>

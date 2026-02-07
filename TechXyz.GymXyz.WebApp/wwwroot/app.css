@@ -1,0 +1,41 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: var(--body-font, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif);
+    background-color: var(--neutral-layer-1, #f5f5f5);
+    color: var(--neutral-foreground-rest, #1f1f1f);
+}
+
+a {
+    color: var(--accent-foreground-rest, #115ea3);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.page-card {
+    display: block;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.validation-message {
+    color: #c50f1f;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #13a10e;
+}
+
+.invalid {
+    outline: 1px solid #c50f1f;
+}
+
+.blazor-error-boundary {
+    background: #fef7f7;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: #6a0b0b;
+}

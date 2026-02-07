@@ -1,0 +1,75 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<div class="dashboard">
+    <FluentCard class="dashboard-hero">
+        <div class="hero-content">
+            <div class="hero-avatar">
+                <FluentPersona Name="Alex Johnson"
+                               Image="images/avatar-placeholder.svg"
+                               TextPosition="TextPosition.End"/>
+            </div>
+            <div class="hero-text">
+                <h1>Welcome back, Alex</h1>
+                <p>Ready for today's sessions?</p>
+            </div>
+        </div>
+        <FluentButton Appearance="Appearance.Accent" Href="counter">Start a quick warmup</FluentButton>
+    </FluentCard>
+
+    <div class="dashboard-grid">
+        <FluentCard class="today-card">
+            <div class="card-header">
+                <h2>Lessons today</h2>
+                <FluentBadge Appearance="Appearance.Accent">@LessonsToday.Count()</FluentBadge>
+            </div>
+            <FluentDataGrid Items="@LessonsToday">
+                <PropertyColumn Property="@(lesson => lesson.Time)" Title="Time"/>
+                <PropertyColumn Property="@(lesson => lesson.Title)" Title="Class"/>
+                <PropertyColumn Property="@(lesson => lesson.Location)" Title="Location"/>
+                <PropertyColumn Property="@(lesson => lesson.Trainer)" Title="Trainer"/>
+            </FluentDataGrid>
+        </FluentCard>
+
+        <FluentCard class="week-card">
+            <div class="card-header">
+                <h3>Lessons this week</h3>
+                <FluentBadge Appearance="Appearance.Neutral">@LessonsWeek.Count</FluentBadge>
+            </div>
+            <ul class="lesson-list">
+                @foreach (var lesson in LessonsWeek)
+                {
+                    <li class="lesson-row">
+                        <div class="lesson-day">@lesson.Day</div>
+                        <div class="lesson-info">
+                            <div class="lesson-title">@lesson.Title</div>
+                            <div class="lesson-time">@lesson.Time</div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </FluentCard>
+    </div>
+</div>
+
+@code {
+    private readonly IQueryable<LessonItem> LessonsToday = new[]
+    {
+        new LessonItem("06:30", "HIIT Blast", "Studio A", "Coach Maya"),
+        new LessonItem("12:00", "Mobility Flow", "Studio B", "Coach Lee"),
+        new LessonItem("18:30", "Power Cycle", "Studio C", "Coach Nora")
+    }.AsQueryable();
+
+    private readonly List<WeeklyLesson> LessonsWeek = new()
+    {
+        new WeeklyLesson("Mon", "Strength Foundations", "07:15"),
+        new WeeklyLesson("Tue", "Pilates Core", "18:00"),
+        new WeeklyLesson("Wed", "Boxing Fundamentals", "19:30"),
+        new WeeklyLesson("Thu", "Yoga Restore", "17:15"),
+        new WeeklyLesson("Fri", "Sprint Intervals", "06:45")
+    };
+
+    private sealed record LessonItem(string Time, string Title, string Location, string Trainer);
+    private sealed record WeeklyLesson(string Day, string Title, string Time);
+}

@@ -1,0 +1,57 @@
+﻿@inherits LayoutComponentBase
+@inject IDialogService DialogService
+
+<div class="app-shell">
+    <header class="top-bar">
+        <div class="app-brand">TechXyz GymXyz</div>
+        <div class="top-bar-actions">
+            <FluentButton Appearance="Appearance.Stealth"
+                          class="icon-button"
+                          title="Notifications"
+                          @onclick="OpenNotificationsAsync">
+                <span class="icon-bell" aria-hidden="true"></span>
+            </FluentButton>
+            <span class="user-name">Alex Johnson</span>
+            <FluentProfileMenu FullName="Alex Johnson"
+                               EMail="alex.johnson@example.com"
+                               Image="images/avatar-placeholder.svg"/>
+        </div>
+    </header>
+    <div class="app-body">
+        <aside class="app-nav">
+            <NavMenu/>
+        </aside>
+        <main class="app-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+<FluentToastProvider/>
+<FluentDialogProvider/>
+<FluentTooltipProvider/>
+<FluentMessageBarProvider/>
+<FluentMenuProvider/>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">X</span>
+</div>
+
+@code {
+    private async Task OpenNotificationsAsync()
+    {
+        var parameters = new DialogParameters
+        {
+            Title = "Notifications",
+            DialogType = DialogType.Panel,
+            Alignment = HorizontalAlignment.Right,
+            Width = "360px",
+            PreventScroll = true,
+            ShowDismiss = true
+        };
+
+        await DialogService.ShowPanelAsync<NotificationsPanel>(parameters);
+    }
+}
