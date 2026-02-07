@@ -1,40 +1,37 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Accueil</PageTitle>
 
 <div class="dashboard">
     <FluentCard class="dashboard-hero">
         <div class="hero-content">
             <div class="hero-avatar">
-                <FluentPersona Name="Alex Johnson"
-                               Image="images/avatar-placeholder.svg"
-                               TextPosition="TextPosition.End"/>
+                <FluentPersona Image="images/avatar-placeholder.svg"/>
             </div>
             <div class="hero-text">
-                <h1>Welcome back, Alex</h1>
-                <p>Ready for today's sessions?</p>
+                <h1>Bon retour, Alex</h1>
+                <p>Prêt pour les séances d'aujourd'hui ?</p>
             </div>
         </div>
-        <FluentButton Appearance="Appearance.Accent" Href="counter">Start a quick warmup</FluentButton>
     </FluentCard>
 
     <div class="dashboard-grid">
         <FluentCard class="today-card">
             <div class="card-header">
-                <h2>Lessons today</h2>
+                <h2>Cours aujourd'hui</h2>
                 <FluentBadge Appearance="Appearance.Accent">@LessonsToday.Count()</FluentBadge>
             </div>
             <FluentDataGrid Items="@LessonsToday">
-                <PropertyColumn Property="@(lesson => lesson.Time)" Title="Time"/>
-                <PropertyColumn Property="@(lesson => lesson.Title)" Title="Class"/>
-                <PropertyColumn Property="@(lesson => lesson.Location)" Title="Location"/>
-                <PropertyColumn Property="@(lesson => lesson.Trainer)" Title="Trainer"/>
+                <PropertyColumn Property="@(lesson => lesson.Time)" Title="Heure"/>
+                <PropertyColumn Property="@(lesson => lesson.Title)" Title="Cours"/>
+                <PropertyColumn Property="@(lesson => lesson.Location)" Title="Lieu"/>
+                <PropertyColumn Property="@(lesson => lesson.Trainer)" Title="Coach"/>
             </FluentDataGrid>
         </FluentCard>
 
         <FluentCard class="week-card">
             <div class="card-header">
-                <h3>Lessons this week</h3>
+                <h3>Cours cette semaine</h3>
                 <FluentBadge Appearance="Appearance.Neutral">@LessonsWeek.Count</FluentBadge>
             </div>
             <ul class="lesson-list">

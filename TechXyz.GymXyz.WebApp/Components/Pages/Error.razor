@@ -1,28 +1,28 @@
 ﻿@page "/Error"
 @using System.Diagnostics
 
-<PageTitle>Error</PageTitle>
+<PageTitle>Erreur</PageTitle>
 
 <FluentCard class="page-card">
-    <h1>Error.</h1>
-    <h2>An error occurred while processing your request.</h2>
+    <h1>Erreur.</h1>
+    <h2>Une erreur s'est produite lors du traitement de votre demande.</h2>
 
     @if (ShowRequestId)
     {
         <p>
-            <strong>Request ID:</strong> <code>@RequestId</code>
+            <strong>ID de requête :</strong> <code>@RequestId</code>
         </p>
     }
 
-    <h3>Development Mode</h3>
+    <h3>Mode développement</h3>
     <p>
-        Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
+        Passer à l'environnement Development affichera des informations plus détaillées sur l'erreur survenue.
     </p>
     <p>
-        <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-        It can result in displaying sensitive information from exceptions to end users.
-        For local debugging, enable the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-        and restarting the app.
+        <strong>L'environnement Development ne doit pas être activé pour les applications déployées.</strong>
+        Cela peut entraîner l'affichage d'informations sensibles provenant des exceptions aux utilisateurs finaux.
+        Pour le débogage local, activez la variable d'environnement <strong>ASPNETCORE_ENVIRONMENT</strong>
+        en <strong>Development</strong> et redémarrez l'application.
     </p>
 </FluentCard>
 
