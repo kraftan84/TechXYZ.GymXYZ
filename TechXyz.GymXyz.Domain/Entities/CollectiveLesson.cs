@@ -6,5 +6,6 @@ public sealed class CollectiveLesson : Lesson
     public ICollection<Room> Rooms { get; set; }
     public ICollection<Member>? Participants { get; set; }
     
+    // Convenience count for UI and reporting when Participants is not loaded.
     public int NumberOfParticipants => Participants?.Count ?? 0;
 }

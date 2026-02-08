@@ -76,6 +76,7 @@ public class GymDbContext : DbContext
     
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new())
     {
+        // Stamp audit fields for tracked entities on save.
         var entries = ChangeTracker
             .Entries()
             .Where(e => e is { Entity: AuditableEntityBase, State: EntityState.Added or EntityState.Modified });

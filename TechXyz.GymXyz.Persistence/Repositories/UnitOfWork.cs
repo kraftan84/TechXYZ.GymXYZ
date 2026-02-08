@@ -19,6 +19,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IGenericRepository<T, TU> Repository<T, TU>() where T : EntityBase<TU>
     {
+        // Cache repositories by entity type to avoid recreating instances per call.
         var type = typeof(T).Name;
 
         if (!_repositories.ContainsKey(type))
@@ -59,7 +60,7 @@ public class UnitOfWork : IUnitOfWork
     {
         if (disposed)
             if (disposing)
-                //dispose managed resources
+                // Dispose managed resources once.
                 _dbContext.Dispose();
 
         //dispose unmanaged resources

@@ -24,6 +24,7 @@ public class GenericRepository<T, TU> : IGenericRepository<T, TU> where T : Enti
 
     public Task UpdateAsync(T entity)
     {
+        // Load the tracked entity first so EF can apply changes to the existing row.
         var exist = _dbContext.Set<T>().Find(entity.Id);
         _dbContext.Entry(exist).CurrentValues.SetValues(entity);
         return Task.CompletedTask;

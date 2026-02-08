@@ -423,6 +423,7 @@
             return false;
         }
 
+        // Consider a subscription active when today's date is within its range.
         var today = DateOnly.FromDateTime(DateTime.Today);
         return member.Subscriptions.Any(subscription =>
             subscription.StartDate <= today && subscription.EndDate >= today);
