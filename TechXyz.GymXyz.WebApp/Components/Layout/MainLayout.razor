@@ -24,6 +24,12 @@
                           title="Notifications"
                           @onclick="OpenNotificationsAsync">
                 <span class="icon-bell" aria-hidden="true"></span>
+                @if (notificationCount > 0)
+                {
+                    <span class="notification-badge" aria-label="@($"{notificationCount} notifications")">
+                        @notificationCount
+                    </span>
+                }
             </FluentButton>
             <span class="user-name">Alex Johnson</span>
             <FluentProfileMenu FullName="Alex Johnson"
@@ -59,6 +65,7 @@
 
 @code {
     private bool isNavOpen;
+    private int notificationCount = 3;
 
     private async Task OpenNotificationsAsync()
     {

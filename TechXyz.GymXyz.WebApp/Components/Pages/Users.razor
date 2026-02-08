@@ -1,3 +1,325 @@
 @page "/users"
+@using Microsoft.AspNetCore.Identity
 
 <PageTitle>Utilisateurs</PageTitle>
+
+<div class="users-page">
+    <div class="users-header">
+        <div class="users-title">
+            <h1>Utilisateurs</h1>
+            <p>Gerez les comptes qui peuvent acceder a l'application.</p>
+        </div>
+        <div class="users-actions">
+            <FluentTextField class="users-search"
+                             Label="Rechercher"
+                             Placeholder="Nom, email, telephone..."
+                             @bind-Value="SearchText"
+                             @bind-Value:event="oninput" />
+            <FluentButton Appearance="Appearance.Accent" @onclick="OpenCreateDrawer">
+                Nouvel utilisateur
+            </FluentButton>
+        </div>
+    </div>
+
+    <FluentCard class="users-card">
+        <div class="users-table">
+            <div class="users-row users-row-header">
+                <span class="users-col users-col-photo">Photo</span>
+                <span class="users-col">Utilisateur</span>
+                <span class="users-col">Email</span>
+                <span class="users-col">Telephone</span>
+            </div>
+            @foreach (var user in pagedUsers)
+            {
+                <button class="users-row users-row-item"
+                        type="button"
+                        @onclick="() => OpenDetailsDrawer(user)"
+                        aria-label="@($"Voir {user.UserName}")">
+                    <span class="users-col users-col-photo">
+                        <img class="user-avatar"
+                             src="images/avatar-placeholder.svg"
+                             alt="@($"Photo de {user.UserName}")" />
+                    </span>
+                    <span class="users-col">@user.UserName</span>
+                    <span class="users-col">@user.Email</span>
+                    <span class="users-col">@user.PhoneNumber</span>
+                </button>
+            }
+        </div>
+        <div class="users-pagination">
+            <span>Page @currentPage sur @totalPages</span>
+            <div class="pagination-actions">
+                <FluentButton Appearance="Appearance.Outline"
+                              Disabled="@(!CanGoPrevious)"
+                              @onclick="GoPrevious">
+                    Precedent
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline"
+                              Disabled="@(!CanGoNext)"
+                              @onclick="GoNext">
+                    Suivant
+                </FluentButton>
+            </div>
+        </div>
+    </FluentCard>
+</div>
+
+@if (isDrawerOpen)
+{
+    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
+    <aside class="user-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-header">
+            <h2 id="drawer-title">@drawerTitle</h2>
+            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
+        </div>
+        <div class="drawer-content">
+            @if (drawerMode == DrawerMode.Details && selectedUser is not null)
+            {
+                <div class="drawer-profile">
+                    <img class="drawer-avatar"
+                         src="images/avatar-placeholder.svg"
+                         alt="@($"Photo de {selectedUser.UserName}")" />
+                    <div>
+                        <div class="drawer-name">@selectedUser.UserName</div>
+                        <div class="drawer-subtitle">ID @selectedUser.Id</div>
+                    </div>
+                </div>
+                <div class="drawer-section">
+                    <div class="drawer-field">
+                        <span class="drawer-label">Email</span>
+                        <span class="drawer-value">@selectedUser.Email</span>
+                    </div>
+                    <div class="drawer-field">
+                        <span class="drawer-label">Telephone</span>
+                        <span class="drawer-value">@selectedUser.PhoneNumber</span>
+                    </div>
+                </div>
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteUser">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
+                <div class="drawer-form">
+                    <FluentTextField Label="Nom d'utilisateur" @bind-Value="editModel.UserName" />
+                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
+                    <FluentTextField Label="Telephone" @bind-Value="editModel.PhoneNumber" />
+                </div>
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveUser">
+                        @(drawerMode == DrawerMode.Create ? "Creer l'utilisateur" : "Enregistrer")
+                    </FluentButton>
+                </div>
+            }
+        </div>
+    </aside>
+}
+
+@code {
+    private readonly List<IdentityUser> allUsers =
+    [
+        new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserName = "alex.johnson",
+            Email = "alex.johnson@gymxyz.fr",
+            PhoneNumber = "06 10 20 30 40"
+        },
+        new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserName = "leila.haddad",
+            Email = "leila.haddad@gymxyz.fr",
+            PhoneNumber = "06 22 33 44 55"
+        },
+        new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserName = "sylvain.dupont",
+            Email = "sylvain.dupont@gymxyz.fr",
+            PhoneNumber = "07 11 22 33 44"
+        },
+        new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserName = "marie.petit",
+            Email = "marie.petit@gymxyz.fr",
+            PhoneNumber = "06 55 66 77 88"
+        }
+    ];
+
+    private IdentityUser? selectedUser;
+    private UserEditModel editModel = new();
+    private DrawerMode drawerMode = DrawerMode.None;
+    private string drawerTitle = string.Empty;
+    private int currentPage = 1;
+    private readonly int pageSize = 10;
+    private string searchText = string.Empty;
+
+    private bool isDrawerOpen => drawerMode != DrawerMode.None;
+
+    private IEnumerable<IdentityUser> filteredUsers => string.IsNullOrWhiteSpace(searchText)
+        ? allUsers
+        : allUsers.Where(user =>
+            (user.UserName?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (user.Email?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (user.PhoneNumber?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredUsers.Count() / (double)pageSize));
+    private IEnumerable<IdentityUser> pagedUsers => filteredUsers
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private bool CanGoPrevious => currentPage > 1;
+    private bool CanGoNext => currentPage < totalPages;
+
+    private string SearchText
+    {
+        get => searchText;
+        set
+        {
+            if (searchText == value)
+            {
+                return;
+            }
+
+            searchText = value;
+            currentPage = 1;
+        }
+    }
+
+    private void OpenDetailsDrawer(IdentityUser user)
+    {
+        selectedUser = user;
+        drawerMode = DrawerMode.Details;
+        drawerTitle = "Details de l'utilisateur";
+    }
+
+    private void OpenCreateDrawer()
+    {
+        editModel = new UserEditModel();
+        drawerMode = DrawerMode.Create;
+        drawerTitle = "Nouvel utilisateur";
+    }
+
+    private void CloseDrawer()
+    {
+        drawerMode = DrawerMode.None;
+        selectedUser = null;
+        drawerTitle = string.Empty;
+    }
+
+    private void OpenEditDrawer()
+    {
+        if (selectedUser is null)
+        {
+            return;
+        }
+
+        editModel = new UserEditModel
+        {
+            UserName = selectedUser.UserName ?? string.Empty,
+            Email = selectedUser.Email ?? string.Empty,
+            PhoneNumber = selectedUser.PhoneNumber ?? string.Empty
+        };
+
+        drawerMode = DrawerMode.Edit;
+        drawerTitle = "Modifier l'utilisateur";
+    }
+
+    private void CancelEdit()
+    {
+        if (drawerMode == DrawerMode.Edit && selectedUser is not null)
+        {
+            drawerMode = DrawerMode.Details;
+            drawerTitle = "Details de l'utilisateur";
+            return;
+        }
+
+        CloseDrawer();
+    }
+
+    private void SaveUser()
+    {
+        if (drawerMode == DrawerMode.Create)
+        {
+            var newUser = new IdentityUser
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserName = editModel.UserName,
+                Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email,
+                PhoneNumber = string.IsNullOrWhiteSpace(editModel.PhoneNumber) ? null : editModel.PhoneNumber
+            };
+
+            allUsers.Add(newUser);
+            CloseDrawer();
+            return;
+        }
+
+        if (drawerMode == DrawerMode.Edit && selectedUser is not null)
+        {
+            selectedUser.UserName = editModel.UserName;
+            selectedUser.Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email;
+            selectedUser.PhoneNumber = string.IsNullOrWhiteSpace(editModel.PhoneNumber) ? null : editModel.PhoneNumber;
+            drawerMode = DrawerMode.Details;
+            drawerTitle = "Details de l'utilisateur";
+        }
+    }
+
+    private void DeleteUser()
+    {
+        if (selectedUser is null)
+        {
+            return;
+        }
+
+        allUsers.Remove(selectedUser);
+        CloseDrawer();
+        ClampCurrentPage();
+    }
+
+    private void GoPrevious()
+    {
+        if (CanGoPrevious)
+        {
+            currentPage--;
+        }
+    }
+
+    private void GoNext()
+    {
+        if (CanGoNext)
+        {
+            currentPage++;
+        }
+    }
+
+    private void ClampCurrentPage()
+    {
+        if (currentPage > totalPages)
+        {
+            currentPage = totalPages;
+        }
+    }
+
+    private enum DrawerMode
+    {
+        None,
+        Details,
+        Create,
+        Edit
+    }
+
+    private sealed class UserEditModel
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+    }
+}

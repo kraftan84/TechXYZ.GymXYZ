@@ -1,3 +1,486 @@
 @page "/members"
+@inject NavigationManager NavManager
 
 <PageTitle>Membres</PageTitle>
+
+<div class="members-page">
+    <div class="members-header">
+        <div class="members-title">
+            <h1>Membres</h1>
+            <p>Gerez les inscriptions, les coordonnees et les informations de contact.</p>
+        </div>
+        <div class="members-actions">
+            <FluentTextField class="members-search"
+                             Label="Rechercher"
+                             Placeholder="Nom, email, telephone..."
+                             @bind-Value="SearchText"
+                             @bind-Value:event="oninput" />
+            <FluentButton Appearance="Appearance.Accent" @onclick="OpenCreateDrawer">
+                Nouveau membre
+            </FluentButton>
+        </div>
+    </div>
+
+    <FluentCard class="members-card">
+        <div class="members-table">
+            <div class="members-row members-row-header">
+                <span class="members-col members-col-photo">Photo</span>
+                <span class="members-col">Prenom</span>
+                <span class="members-col">Nom</span>
+                <span class="members-col">Email</span>
+                <span class="members-col">Abonnement</span>
+                <span class="members-col">Telephone</span>
+            </div>
+            @foreach (var member in pagedMembers)
+            {
+                <button class="members-row members-row-item"
+                        type="button"
+                        @onclick="() => OpenDetailsDrawer(member)"
+                        aria-label="@($"Voir {member.FirstName} {member.LastName}")">
+                    <span class="members-col members-col-photo">
+                        <img class="member-avatar"
+                             src="images/avatar-placeholder.svg"
+                             alt="@($"Photo de {member.FirstName} {member.LastName}")" />
+                    </span>
+                    <span class="members-col">@member.FirstName</span>
+                    <span class="members-col">@member.LastName</span>
+                    <span class="members-col">@member.Email</span>
+                    <span class="members-col">
+                        @if (HasActiveSubscription(member))
+                        {
+                            <span class="members-badge members-badge-active">Actif</span>
+                        }
+                        else
+                        {
+                            <span class="members-badge members-badge-inactive">Inactif</span>
+                        }
+                    </span>
+                        <span class="members-col members-actions">
+                            <span class="members-phone">@member.Phone</span>
+                            <div class="members-inline-actions">
+                            <FluentButton Appearance="Appearance.Stealth"
+                                          Size="ButtonSize.Small"
+                                          IconEnd="@(new Icons.Regular.Size20.ChevronRight())"
+                                          aria-label="@($"Voir {member.FirstName} {member.LastName}")"
+                                          @onclick="() => GoToMember(member)" />
+                            <FluentButton Appearance="Appearance.Stealth"
+                                          Size="ButtonSize.Small"
+                                          IconEnd="@(new Icons.Regular.Size20.Edit())"
+                                          aria-label="@($"Editer {member.FirstName} {member.LastName}")"
+                                          @onclick="() => OpenEditDrawer(member)" />
+                            </div>
+                        </span>
+                </button>
+            }
+        </div>
+        <div class="members-pagination">
+            <span>Page @currentPage sur @totalPages</span>
+            <div class="pagination-actions">
+                <FluentButton Appearance="Appearance.Outline"
+                              Disabled="@(!CanGoPrevious)"
+                              @onclick="GoPrevious">
+                    Precedent
+                </FluentButton>
+                <FluentButton Appearance="Appearance.Outline"
+                              Disabled="@(!CanGoNext)"
+                              @onclick="GoNext">
+                    Suivant
+                </FluentButton>
+            </div>
+        </div>
+    </FluentCard>
+</div>
+
+@if (isDrawerOpen)
+{
+    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
+    <aside class="member-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-header">
+            <h2 id="drawer-title">@drawerTitle</h2>
+            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
+        </div>
+        <div class="drawer-content">
+            @if (drawerMode == DrawerMode.Details && selectedMember is not null)
+            {
+                <div class="drawer-profile">
+                    <img class="drawer-avatar"
+                         src="images/avatar-placeholder.svg"
+                         alt="@($"Photo de {selectedMember.FirstName} {selectedMember.LastName}")" />
+                    <div>
+                        <div class="drawer-name">@selectedMember.FirstName @selectedMember.LastName</div>
+                        <div class="drawer-subtitle">Membre #@selectedMember.Id</div>
+                    </div>
+                </div>
+                <div class="drawer-section">
+                    <div class="drawer-field">
+                        <span class="drawer-label">Email</span>
+                        <span class="drawer-value">@selectedMember.Email</span>
+                    </div>
+                    <div class="drawer-field">
+                        <span class="drawer-label">Telephone</span>
+                        <span class="drawer-value">@selectedMember.Phone</span>
+                    </div>
+                    <div class="drawer-field">
+                        <span class="drawer-label">Adresse</span>
+                        <span class="drawer-value">@FormatAddress(selectedMember.Address)</span>
+                    </div>
+                </div>
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenMemberPage">
+                        Voir la fiche
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteMember">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
+                <div class="drawer-form">
+                    <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
+                    <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
+                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
+                    <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
+                    <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
+                    <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
+                    <FluentTextField Label="Ville" @bind-Value="editModel.City" />
+                    <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
+                </div>
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMember">
+                        @(drawerMode == DrawerMode.Create ? "Creer le membre" : "Enregistrer")
+                    </FluentButton>
+                </div>
+            }
+        </div>
+    </aside>
+}
+
+@code {
+    private readonly List<Member> allMembers =
+    [
+        new Member("Camille", "Durand")
+        {
+            Id = 1,
+            Email = "camille.durand@gymxyz.fr",
+            Phone = "06 12 34 56 78",
+            Subscriptions =
+            [
+                new Subscription
+                {
+                    StartDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-1)),
+                    EndDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(1))
+                }
+            ],
+            Address = new Address
+            {
+                Street = "12 rue des Lilas",
+                ZipCode = "69003",
+                City = "Lyon",
+                Country = "France"
+            }
+        },
+        new Member("Lucas", "Martin")
+        {
+            Id = 2,
+            Email = "lucas.martin@gymxyz.fr",
+            Phone = "06 87 65 43 21",
+            Subscriptions =
+            [
+                new Subscription
+                {
+                    StartDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-3)),
+                    EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-1))
+                }
+            ],
+            Address = new Address
+            {
+                Street = "8 avenue du Prado",
+                ZipCode = "13008",
+                City = "Marseille",
+                Country = "France"
+            }
+        },
+        new Member("Amina", "Benali")
+        {
+            Id = 3,
+            Email = "amina.benali@gymxyz.fr",
+            Phone = "07 45 89 12 34",
+            Address = new Address
+            {
+                Street = "45 boulevard Voltaire",
+                ZipCode = "75011",
+                City = "Paris",
+                Country = "France"
+            }
+        },
+        new Member("Julien", "Petit")
+        {
+            Id = 4,
+            Email = "julien.petit@gymxyz.fr",
+            Phone = "06 55 44 33 22",
+            Address = new Address
+            {
+                Street = "3 place Bellecour",
+                ZipCode = "69002",
+                City = "Lyon",
+                Country = "France"
+            }
+        }
+    ];
+
+    private Member? selectedMember;
+    private MemberEditModel editModel = new();
+    private DrawerMode drawerMode = DrawerMode.None;
+    private string drawerTitle = string.Empty;
+    private int currentPage = 1;
+    private readonly int pageSize = 10;
+    private string searchText = string.Empty;
+
+    private bool isDrawerOpen => drawerMode != DrawerMode.None;
+
+    private IEnumerable<Member> filteredMembers => string.IsNullOrWhiteSpace(searchText)
+        ? allMembers
+        : allMembers.Where(member =>
+            member.FirstName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            member.LastName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            (member.Email?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (member.Phone?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count() / (double)pageSize));
+    private IEnumerable<Member> pagedMembers => filteredMembers
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private bool CanGoPrevious => currentPage > 1;
+    private bool CanGoNext => currentPage < totalPages;
+
+    private string SearchText
+    {
+        get => searchText;
+        set
+        {
+            if (searchText == value)
+            {
+                return;
+            }
+
+            searchText = value;
+            currentPage = 1;
+        }
+    }
+
+    private void OpenDetailsDrawer(Member member)
+    {
+        selectedMember = member;
+        drawerMode = DrawerMode.Details;
+        drawerTitle = "Details du membre";
+    }
+
+    private void OpenEditDrawer(Member member)
+    {
+        selectedMember = member;
+        OpenEditDrawer();
+    }
+
+    private void OpenCreateDrawer()
+    {
+        editModel = new MemberEditModel();
+        drawerMode = DrawerMode.Create;
+        drawerTitle = "Nouveau membre";
+    }
+
+    private void CloseDrawer()
+    {
+        drawerMode = DrawerMode.None;
+        selectedMember = null;
+        drawerTitle = string.Empty;
+    }
+
+    private void OpenEditDrawer()
+    {
+        if (selectedMember is null)
+        {
+            return;
+        }
+
+        editModel = new MemberEditModel
+        {
+            FirstName = selectedMember.FirstName,
+            LastName = selectedMember.LastName,
+            Email = selectedMember.Email ?? string.Empty,
+            Phone = selectedMember.Phone ?? string.Empty,
+            Street = selectedMember.Address?.Street ?? string.Empty,
+            ZipCode = selectedMember.Address?.ZipCode ?? string.Empty,
+            City = selectedMember.Address?.City ?? string.Empty,
+            Country = selectedMember.Address?.Country ?? string.Empty
+        };
+
+        drawerMode = DrawerMode.Edit;
+        drawerTitle = "Modifier le membre";
+    }
+
+    private void CancelEdit()
+    {
+        if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+        {
+            drawerMode = DrawerMode.Details;
+            drawerTitle = "Details du membre";
+            return;
+        }
+
+        CloseDrawer();
+    }
+
+    private void SaveMember()
+    {
+        if (drawerMode == DrawerMode.Create)
+        {
+            var newMember = new Member(editModel.FirstName, editModel.LastName)
+            {
+                Id = NextMemberId(),
+                Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email,
+                Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone,
+                Address = BuildAddress(editModel)
+            };
+
+            allMembers.Add(newMember);
+            CloseDrawer();
+            return;
+        }
+
+        if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+        {
+            selectedMember.FirstName = editModel.FirstName;
+            selectedMember.LastName = editModel.LastName;
+            selectedMember.Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email;
+            selectedMember.Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone;
+            selectedMember.Address = BuildAddress(editModel);
+            drawerMode = DrawerMode.Details;
+            drawerTitle = "Details du membre";
+        }
+    }
+
+    private void DeleteMember()
+    {
+        if (selectedMember is null)
+        {
+            return;
+        }
+
+        allMembers.Remove(selectedMember);
+        CloseDrawer();
+        ClampCurrentPage();
+    }
+
+    private void OpenMemberPage()
+    {
+        if (selectedMember is null)
+        {
+            return;
+        }
+
+        NavManager.NavigateTo($"/members/{selectedMember.Id}");
+    }
+
+    private void GoToMember(Member member)
+    {
+        NavManager.NavigateTo($"/members/{member.Id}");
+    }
+
+    private void GoPrevious()
+    {
+        if (CanGoPrevious)
+        {
+            currentPage--;
+        }
+    }
+
+    private void GoNext()
+    {
+        if (CanGoNext)
+        {
+            currentPage++;
+        }
+    }
+
+    private void ClampCurrentPage()
+    {
+        if (currentPage > totalPages)
+        {
+            currentPage = totalPages;
+        }
+    }
+
+    private static bool HasActiveSubscription(Member member)
+    {
+        if (member.Subscriptions is null || member.Subscriptions.Count == 0)
+        {
+            return false;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        return member.Subscriptions.Any(subscription =>
+            subscription.StartDate <= today && subscription.EndDate >= today);
+    }
+
+    private static Address? BuildAddress(MemberEditModel model)
+    {
+        if (string.IsNullOrWhiteSpace(model.Street) &&
+            string.IsNullOrWhiteSpace(model.ZipCode) &&
+            string.IsNullOrWhiteSpace(model.City) &&
+            string.IsNullOrWhiteSpace(model.Country))
+        {
+            return null;
+        }
+
+        return new Address
+        {
+            Street = model.Street,
+            ZipCode = model.ZipCode,
+            City = model.City,
+            Country = model.Country
+        };
+    }
+
+    private static string FormatAddress(Address? address)
+    {
+        if (address is null)
+        {
+            return "-";
+        }
+
+        var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+        return string.Join(", ", parts);
+    }
+
+    private int NextMemberId()
+    {
+        return allMembers.Count == 0 ? 1 : allMembers.Max(member => member.Id) + 1;
+    }
+
+    private enum DrawerMode
+    {
+        None,
+        Details,
+        Create,
+        Edit
+    }
+
+    private sealed class MemberEditModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string ZipCode { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+    }
+}

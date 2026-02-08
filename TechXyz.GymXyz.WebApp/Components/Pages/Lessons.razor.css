@@ -1,0 +1,238 @@
+.lessons-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.lessons-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.lessons-title h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+.lessons-title p {
+    margin: 0.35rem 0 0;
+    color: var(--neutral-foreground-rest, #1f1f1f);
+    opacity: 0.75;
+}
+
+.lessons-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 1.5rem;
+}
+
+.lessons-card,
+.themes-card {
+    padding: 1rem;
+}
+
+.lessons-card-header {
+    margin-bottom: 0.75rem;
+}
+
+.lessons-card-header h2,
+.themes-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.lessons-table {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.lessons-row {
+    display: grid;
+    grid-template-columns: minmax(160px, 2fr) minmax(110px, 1fr) minmax(140px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 0.5rem;
+    text-align: left;
+}
+
+.lessons-row-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--neutral-foreground-rest, #1f1f1f);
+    opacity: 0.6;
+    border-bottom: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+}
+
+.lessons-row-item {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    border-bottom: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+}
+
+.lessons-row-item:hover {
+    background: var(--neutral-layer-2, #ffffff);
+}
+
+.lessons-col {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.themes-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.themes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.theme-add-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.themes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.theme-item {
+    border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+    background: var(--neutral-layer-1, #f5f5f5);
+    border-radius: 10px;
+    padding: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.theme-item:hover {
+    background: var(--neutral-layer-2, #ffffff);
+}
+
+.theme-name {
+    font-weight: 600;
+}
+
+.theme-description {
+    font-size: 0.9rem;
+    opacity: 0.75;
+}
+
+.drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+    z-index: 1200;
+}
+
+.lesson-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 92vw;
+    background: var(--neutral-layer-1, #f5f5f5);
+    border-left: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+    z-index: 1300;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1.5rem;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.drawer-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.drawer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.drawer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.drawer-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+}
+
+.drawer-value {
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.drawer-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.drawer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.drawer-select,
+.drawer-input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+    background: var(--neutral-layer-2, #ffffff);
+    font: inherit;
+}
+
+@media (max-width: 1100px) {
+    .lessons-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .lessons-row {
+        min-width: 760px;
+    }
+}

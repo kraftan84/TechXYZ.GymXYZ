@@ -1,0 +1,358 @@
+@page "/coachs/{CoachId:int}"
+
+<PageTitle>Coach</PageTitle>
+
+<div class="coach-details-page">
+    <div class="coach-header">
+        <div class="coach-identity">
+            <img class="coach-avatar"
+                 src="images/avatar-placeholder.svg"
+                 alt="@($"Photo de {selectedCoach.FirstName} {selectedCoach.LastName}")" />
+            <div>
+                <h1>@selectedCoach.FirstName @selectedCoach.LastName</h1>
+                <p>@selectedCoach.Email · @selectedCoach.Phone</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="coach-layout">
+        <FluentCard class="coach-card">
+            <div class="card-header">
+                <h2>Informations</h2>
+                <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
+                    Editer
+                </FluentButton>
+            </div>
+            <div class="detail-list">
+                <div class="detail-row">
+                    <span class="detail-label">Email</span>
+                    <span class="detail-value">@selectedCoach.Email</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Telephone</span>
+                    <span class="detail-value">@selectedCoach.Phone</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Adresse</span>
+                    <span class="detail-value">@FormatAddress(selectedCoach.Address)</span>
+                </div>
+            </div>
+        </FluentCard>
+
+        <FluentCard class="coach-card">
+            <h2>Statistiques</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Cours a venir</div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">@coachStats.UpcomingLessons</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Cours ce mois</div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">@coachStats.MonthLessons</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Satisfaction</div>
+                    <div class="kpi-content">
+                        <div class="progress-ring" style="--progress:@coachStats.Satisfaction;">
+                            <span>@($"{coachStats.Satisfaction}%")</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Presences moyennes</div>
+                    <div class="kpi-content">
+                        <div class="kpi-value">@coachStats.AverageAttendance</div>
+                    </div>
+                </div>
+            </div>
+        </FluentCard>
+
+        <FluentCard class="coach-card">
+            <h2>Prochains cours</h2>
+            <div class="lesson-list">
+                @foreach (var lesson in upcomingLessons)
+                {
+                    <a class="lesson-item lesson-item-link" href="@($"/lessons/{lesson.Lesson.Id}")">
+                        <div>
+                            <div class="lesson-title">@lesson.Lesson.Name</div>
+                            <div class="lesson-meta">@FormatLessonDate(lesson.Lesson.StartDate, lesson.Lesson.EndDate) · @FormatLessonType(lesson.Lesson.Type)</div>
+                            @if (ShouldShowAvailability(lesson))
+                            {
+                                <div class="lesson-progress-line">
+                                    <span class="lesson-places">@lesson.RemainingSpots / @lesson.Capacity places</span>
+                                    <div class="progress-bar" role="progressbar"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"
+                                         aria-valuenow="@GetLessonAvailabilityPercent(lesson)"
+                                         style="--progress:@GetLessonAvailabilityPercent(lesson);">
+                                        <span></span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <span class="lesson-status status-upcoming">A venir</span>
+                    </a>
+                }
+            </div>
+        </FluentCard>
+
+        <FluentCard class="coach-card">
+            <h2>Cours passes</h2>
+            <div class="lesson-list">
+                @foreach (var lesson in pastLessons)
+                {
+                    <a class="lesson-item lesson-item-link" href="@($"/lessons/{lesson.Lesson.Id}")">
+                        <div>
+                            <div class="lesson-title">@lesson.Lesson.Name</div>
+                            <div class="lesson-meta">@FormatLessonDate(lesson.Lesson.StartDate, lesson.Lesson.EndDate) · @FormatLessonType(lesson.Lesson.Type)</div>
+                            @if (ShouldShowAvailability(lesson))
+                            {
+                                <div class="lesson-progress-line">
+                                    <span class="lesson-places">@lesson.RemainingSpots / @lesson.Capacity places</span>
+                                    <div class="progress-bar" role="progressbar"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"
+                                         aria-valuenow="@GetLessonAvailabilityPercent(lesson)"
+                                         style="--progress:@GetLessonAvailabilityPercent(lesson);">
+                                        <span></span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <span class="lesson-status status-completed">Termine</span>
+                    </a>
+                }
+            </div>
+        </FluentCard>
+    </div>
+</div>
+
+@if (isDrawerOpen)
+{
+    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
+    <aside class="coach-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-header">
+            <h2 id="drawer-title">@drawerTitle</h2>
+            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
+        </div>
+        <div class="drawer-content">
+            <div class="drawer-form">
+                <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
+                <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
+                <FluentTextField Label="Email" @bind-Value="editModel.Email" />
+                <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
+                <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
+                <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
+                <FluentTextField Label="Ville" @bind-Value="editModel.City" />
+                <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
+            </div>
+            <div class="drawer-actions">
+                <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoach">
+                    Enregistrer
+                </FluentButton>
+            </div>
+        </div>
+    </aside>
+}
+
+@code {
+    [Parameter]
+    public int CoachId { get; set; }
+
+    private readonly List<Coach> coaches =
+    [
+        new Coach("Nora", "Lemoine")
+        {
+            Id = 1,
+            Email = "nora.lemoine@gymxyz.fr",
+            Phone = "06 11 22 33 44",
+            Address = new Address
+            {
+                Street = "5 rue des Fleurs",
+                ZipCode = "69006",
+                City = "Lyon",
+                Country = "France"
+            }
+        },
+        new Coach("Samir", "El Amrani")
+        {
+            Id = 2,
+            Email = "samir.elamrani@gymxyz.fr",
+            Phone = "06 98 76 54 32",
+            Address = new Address
+            {
+                Street = "18 boulevard Lafayette",
+                ZipCode = "59000",
+                City = "Lille",
+                Country = "France"
+            }
+        }
+    ];
+
+    private Coach selectedCoach = default!;
+    private CoachStats coachStats = new(4, 18, 96, 14);
+    private DrawerMode drawerMode = DrawerMode.None;
+    private CoachEditModel editModel = new();
+
+    private bool isDrawerOpen => drawerMode != DrawerMode.None;
+    private string drawerTitle => "Editer le coach";
+
+    private readonly List<CoachLessonItem> upcomingLessons =
+    [
+        new CoachLessonItem(
+            new CollectiveLesson
+            {
+                Id = 1,
+                Name = "HIIT Blast",
+                Type = LessonType.Collective,
+                StartDate = DateTime.Today.AddDays(1).AddHours(9),
+                EndDate = DateTime.Today.AddDays(1).AddHours(10),
+                Coach = new Coach("Nora", "Lemoine")
+            },
+            16,
+            5),
+        new CoachLessonItem(
+            new PrivateLesson
+            {
+                Id = 2,
+                Name = "Coaching Perso",
+                Type = LessonType.Private,
+                StartDate = DateTime.Today.AddDays(2).AddHours(11),
+                EndDate = DateTime.Today.AddDays(2).AddHours(12),
+                Coach = new Coach("Nora", "Lemoine")
+            },
+            1,
+            0)
+    ];
+
+    private readonly List<CoachLessonItem> pastLessons =
+    [
+        new CoachLessonItem(
+            new CollectiveLesson
+            {
+                Id = 3,
+                Name = "Mobility Flow",
+                Type = LessonType.Collective,
+                StartDate = DateTime.Today.AddDays(-2).AddHours(18),
+                EndDate = DateTime.Today.AddDays(-2).AddHours(19),
+                Coach = new Coach("Nora", "Lemoine")
+            },
+            12,
+            0),
+        new CoachLessonItem(
+            new CollectiveLesson
+            {
+                Id = 4,
+                Name = "Power Cycle",
+                Type = LessonType.Collective,
+                StartDate = DateTime.Today.AddDays(-4).AddHours(19),
+                EndDate = DateTime.Today.AddDays(-4).AddHours(20),
+                Coach = new Coach("Nora", "Lemoine")
+            },
+            18,
+            0)
+    ];
+
+    protected override void OnParametersSet()
+    {
+        selectedCoach = coaches.FirstOrDefault(coach => coach.Id == CoachId) ?? coaches[0];
+    }
+
+    private static string FormatAddress(Address? address)
+    {
+        if (address is null)
+        {
+            return "-";
+        }
+
+        var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+        return string.Join(", ", parts);
+    }
+
+    private static string FormatLessonType(LessonType type)
+    {
+        return type == LessonType.Collective ? "Collectif" : "Prive";
+    }
+
+    private static string FormatLessonDate(DateTime start, DateTime end)
+    {
+        return $"{start:dd/MM/yyyy} · {start:HH:mm} - {end:HH:mm}";
+    }
+
+    private static int GetLessonAvailabilityPercent(CoachLessonItem item)
+    {
+        if (item.Capacity <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round(item.RemainingSpots * 100d / item.Capacity);
+    }
+
+    private static bool ShouldShowAvailability(CoachLessonItem item)
+    {
+        return item.Lesson is CollectiveLesson && item.Capacity > 0;
+    }
+
+    private sealed record CoachStats(int UpcomingLessons, int MonthLessons, int Satisfaction, int AverageAttendance);
+    private sealed record CoachLessonItem(Lesson Lesson, int Capacity, int RemainingSpots);
+
+    private void OpenEditDrawer()
+    {
+        editModel = new CoachEditModel
+        {
+            FirstName = selectedCoach.FirstName,
+            LastName = selectedCoach.LastName,
+            Email = selectedCoach.Email,
+            Phone = selectedCoach.Phone,
+            Street = selectedCoach.Address?.Street ?? string.Empty,
+            ZipCode = selectedCoach.Address?.ZipCode ?? string.Empty,
+            City = selectedCoach.Address?.City ?? string.Empty,
+            Country = selectedCoach.Address?.Country ?? string.Empty
+        };
+        drawerMode = DrawerMode.EditDetails;
+    }
+
+    private void SaveCoach()
+    {
+        selectedCoach.FirstName = editModel.FirstName;
+        selectedCoach.LastName = editModel.LastName;
+        selectedCoach.Email = editModel.Email;
+        selectedCoach.Phone = editModel.Phone;
+        selectedCoach.Address ??= new Address();
+        selectedCoach.Address.Street = editModel.Street;
+        selectedCoach.Address.ZipCode = editModel.ZipCode;
+        selectedCoach.Address.City = editModel.City;
+        selectedCoach.Address.Country = editModel.Country;
+        CloseDrawer();
+    }
+
+    private void CloseDrawer()
+    {
+        drawerMode = DrawerMode.None;
+    }
+
+    private enum DrawerMode
+    {
+        None,
+        EditDetails
+    }
+
+    private sealed class CoachEditModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? Email { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string ZipCode { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Country { get; set; } = string.Empty;
+    }
+}
