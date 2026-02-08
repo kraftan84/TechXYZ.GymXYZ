@@ -150,12 +150,8 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="planning-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="planning-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.Details && selectedLesson is not null)
             {
@@ -184,17 +180,6 @@
                         <span class="drawer-label">Description</span>
                         <span class="drawer-value">@selectedLesson.Description</span>
                     </div>
-                </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonPage">
-                        Voir la fiche
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLesson">
-                        Supprimer
-                    </FluentButton>
                 </div>
             }
             else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
@@ -247,6 +232,26 @@
                                @bind-value:format="yyyy-MM-ddTHH:mm" />
                     </div>
                 </div>
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.Details && selectedLesson is not null)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonPage">
+                        Voir la fiche
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLesson">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveLesson">
@@ -254,8 +259,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {

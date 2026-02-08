@@ -1,0 +1,17 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Shared
+
+<div class="drawer-form">
+    <FluentTextField Label="Prenom" @bind-Value="Model.FirstName" />
+    <FluentTextField Label="Nom" @bind-Value="Model.LastName" />
+    <FluentTextField Label="Email" @bind-Value="Model.Email" />
+    <FluentTextField Label="Telephone" @bind-Value="Model.Phone" />
+    <FluentTextField Label="Adresse" @bind-Value="Model.Street" />
+    <FluentTextField Label="Code postal" @bind-Value="Model.ZipCode" />
+    <FluentTextField Label="Ville" @bind-Value="Model.City" />
+    <FluentTextField Label="Pays" @bind-Value="Model.Country" />
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IPersonEditModel Model { get; set; } = default!;
+}

@@ -34,10 +34,12 @@
             </div>
             @foreach (var member in pagedMembers)
             {
-                <button class="members-row members-row-item"
-                        type="button"
-                        @onclick="() => OpenDetailsDrawer(member)"
-                        aria-label="@($"Voir {member.FirstName} {member.LastName}")">
+                <div class="members-row members-row-item"
+                     role="button"
+                     tabindex="0"
+                     @onclick="() => OpenDetailsDrawer(member)"
+                     @onkeydown="(args) => OnMemberRowKeyDown(args, member)"
+                     aria-label="@($"Voir {member.FirstName} {member.LastName}")">
                     <span class="members-col members-col-photo">
                         <img class="member-avatar"
                              src="images/avatar-placeholder.svg"
@@ -58,7 +60,7 @@
                     </span>
                         <span class="members-col members-actions">
                             <span class="members-phone">@member.Phone</span>
-                            <div class="members-inline-actions">
+                            <div class="members-inline-actions" @onclick:stopPropagation="true">
                             <FluentButton Appearance="Appearance.Stealth"
                                           Size="ButtonSize.Small"
                                           IconEnd="@(new Icons.Regular.Size20.ChevronRight())"
@@ -71,7 +73,7 @@
                                           @onclick="() => OpenEditDrawer(member)" />
                             </div>
                         </span>
-                </button>
+                </div>
             }
         </div>
         <div class="members-pagination">
@@ -94,12 +96,8 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="member-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="member-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.Details && selectedMember is not null)
             {
@@ -126,6 +124,16 @@
                         <span class="drawer-value">@FormatAddress(selectedMember.Address)</span>
                     </div>
                 </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
+                <PersonEditForm Model="editModel" />
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.Details && selectedMember is not null)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenMemberPage">
                         Voir la fiche
@@ -140,16 +148,6 @@
             }
             else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
-                    <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
-                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
-                    <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
-                    <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
-                    <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
-                    <FluentTextField Label="Ville" @bind-Value="editModel.City" />
-                    <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveMember">
@@ -157,8 +155,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {
@@ -334,6 +332,14 @@
         drawerTitle = "Modifier le membre";
     }
 
+    private void OnMemberRowKeyDown(KeyboardEventArgs args, Member member)
+    {
+        if (args.Key == "Enter" || args.Key == " ")
+        {
+            OpenDetailsDrawer(member);
+        }
+    }
+
     private void CancelEdit()
     {
         if (drawerMode == DrawerMode.Edit && selectedMember is not null)
@@ -483,12 +489,12 @@
         Edit
     }
 
-    private sealed class MemberEditModel
+    private sealed class MemberEditModel : IPersonEditModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
+        public string? Email { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;
         public string ZipCode { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;

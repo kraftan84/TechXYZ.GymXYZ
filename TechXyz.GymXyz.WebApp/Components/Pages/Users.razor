@@ -67,12 +67,8 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="user-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="user-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.Details && selectedUser is not null)
             {
@@ -95,6 +91,20 @@
                         <span class="drawer-value">@selectedUser.PhoneNumber</span>
                     </div>
                 </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
+                <div class="drawer-form">
+                    <FluentTextField Label="Nom d'utilisateur" @bind-Value="editModel.UserName" />
+                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
+                    <FluentTextField Label="Telephone" @bind-Value="editModel.PhoneNumber" />
+                </div>
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.Details && selectedUser is not null)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
                         Editer
@@ -106,11 +116,6 @@
             }
             else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom d'utilisateur" @bind-Value="editModel.UserName" />
-                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
-                    <FluentTextField Label="Telephone" @bind-Value="editModel.PhoneNumber" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveUser">
@@ -118,8 +123,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {

@@ -141,60 +141,61 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="member-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
-        <div class="drawer-content">
-            @if (drawerMode == DrawerMode.SubscriptionDetails && selectedSubscription is not null)
-            {
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Statut</span>
-                        <span class="drawer-value">@GetSubscriptionStatusLabel(selectedSubscription.Status)</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Debut</span>
-                        <span class="drawer-value">@FormatDate(selectedSubscription.StartDate)</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Fin</span>
-                        <span class="drawer-value">@FormatDate(selectedSubscription.EndDate)</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Seances achetees</span>
-                        <span class="drawer-value">@selectedSubscription.LessonsTotal</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Seances restantes</span>
-                        <span class="drawer-value">@selectedSubscription.LessonsRemaining</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Progression</span>
-                        <div class="progress-bar" role="progressbar"
-                             aria-valuemin="0"
-                             aria-valuemax="100"
-                             aria-valuenow="@GetLessonsRemainingPercent(selectedSubscription)"
-                             style="--progress:@GetLessonsRemainingPercent(selectedSubscription);">
-                            <span></span>
+    <DrawerShell DrawerClass="member-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
+            <div class="drawer-content">
+                @if (drawerMode == DrawerMode.SubscriptionDetails && selectedSubscription is not null)
+                {
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Statut</span>
+                            <span class="drawer-value">@GetSubscriptionStatusLabel(selectedSubscription.Status)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Debut</span>
+                            <span class="drawer-value">@FormatDate(selectedSubscription.StartDate)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Fin</span>
+                            <span class="drawer-value">@FormatDate(selectedSubscription.EndDate)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Seances achetees</span>
+                            <span class="drawer-value">@selectedSubscription.LessonsTotal</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Seances restantes</span>
+                            <span class="drawer-value">@selectedSubscription.LessonsRemaining</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Progression</span>
+                            <div class="progress-bar" role="progressbar"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"
+                                 aria-valuenow="@GetLessonsRemainingPercent(selectedSubscription)"
+                                 style="--progress:@GetLessonsRemainingPercent(selectedSubscription);">
+                                <span></span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.EditDetails)
+                }
+                else if (drawerMode == DrawerMode.EditDetails)
+                {
+                    <PersonEditForm Model="editModel" />
+                }
+                else if (drawerMode == DrawerMode.SubscriptionCreate)
+                {
+                    <div class="drawer-form">
+                        <FluentTextField Label="Debut (dd/MM/yyyy)" @bind-Value="subscriptionCreateModel.StartDate" />
+                        <FluentTextField Label="Fin (dd/MM/yyyy)" @bind-Value="subscriptionCreateModel.EndDate" />
+                        <FluentNumberField Label="Seances achetees" @bind-Value="subscriptionCreateModel.LessonsTotal" />
+                    </div>
+                }
+            </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.EditDetails)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
-                    <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
-                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
-                    <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
-                    <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
-                    <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
-                    <FluentTextField Label="Ville" @bind-Value="editModel.City" />
-                    <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveMember">
@@ -204,11 +205,6 @@
             }
             else if (drawerMode == DrawerMode.SubscriptionCreate)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Debut (dd/MM/yyyy)" @bind-Value="subscriptionCreateModel.StartDate" />
-                    <FluentTextField Label="Fin (dd/MM/yyyy)" @bind-Value="subscriptionCreateModel.EndDate" />
-                    <FluentNumberField Label="Seances achetees" @bind-Value="subscriptionCreateModel.LessonsTotal" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="CreateSubscription">
@@ -216,8 +212,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {
@@ -542,12 +538,12 @@
         SubscriptionCreate
     }
 
-    private sealed class MemberEditModel
+    private sealed class MemberEditModel : IPersonEditModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
+        public string? Email { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;
         public string ZipCode { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;

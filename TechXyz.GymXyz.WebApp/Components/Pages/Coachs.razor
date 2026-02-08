@@ -18,7 +18,11 @@
     <div class="coach-grid">
         @foreach (var coach in coaches)
         {
-            <button class="coach-card" type="button" @onclick="() => OpenDetailsDrawer(coach)">
+            <div class="coach-card"
+                 role="button"
+                 tabindex="0"
+                 @onclick="() => OpenDetailsDrawer(coach)"
+                 @onkeydown="(args) => OnCoachCardKeyDown(args, coach)">
                 <img class="coach-avatar" src="images/avatar-placeholder.svg" alt="@($"Photo de {coach.FirstName} {coach.LastName}")" />
                 <div class="coach-name">@coach.FirstName @coach.LastName</div>
                 <div class="coach-meta">@coach.Email</div>
@@ -38,19 +42,15 @@
                         </FluentButton>
                     </span>
                 </div>
-            </button>
+            </div>
         }
     </div>
 </div>
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="coach-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="coach-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
             {
@@ -77,6 +77,16 @@
                         <span class="drawer-value">@FormatAddress(selectedCoach.Address)</span>
                     </div>
                 </div>
+            }
+            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+            {
+                <PersonEditForm Model="editModel" />
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenCoachPage">
                         Voir la fiche
@@ -91,16 +101,6 @@
             }
             else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
-                    <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
-                    <FluentTextField Label="Email" @bind-Value="editModel.Email" />
-                    <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
-                    <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
-                    <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
-                    <FluentTextField Label="Ville" @bind-Value="editModel.City" />
-                    <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoach">
@@ -108,8 +108,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {
@@ -226,6 +226,14 @@
 
         drawerMode = DrawerMode.Edit;
         drawerTitle = "Modifier le coach";
+    }
+
+    private void OnCoachCardKeyDown(KeyboardEventArgs args, Coach coach)
+    {
+        if (args.Key == "Enter" || args.Key == " ")
+        {
+            OpenDetailsDrawer(coach);
+        }
     }
 
     private void CloseDrawer()
@@ -346,12 +354,12 @@
         Edit
     }
 
-    private sealed class CoachEditModel
+    private sealed class CoachEditModel : IPersonEditModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
+        public string? Email { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;
         public string ZipCode { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;

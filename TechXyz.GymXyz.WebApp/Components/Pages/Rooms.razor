@@ -76,12 +76,8 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="room-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="room-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
             {
@@ -99,14 +95,6 @@
                         <span class="drawer-value">@($"{selectedLocation.Rooms?.Count ?? 0} salle(s)")</span>
                     </div>
                 </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLocationEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLocation">
-                        Supprimer
-                    </FluentButton>
-                </div>
             }
             else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
             {
@@ -116,12 +104,6 @@
                     <FluentTextField Label="Code postal" @bind-Value="locationEditModel.ZipCode" />
                     <FluentTextField Label="Ville" @bind-Value="locationEditModel.City" />
                     <FluentTextField Label="Pays" @bind-Value="locationEditModel.Country" />
-                </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLocation">
-                        @(drawerMode == DrawerMode.LocationCreate ? "Creer l'emplacement" : "Enregistrer")
-                    </FluentButton>
                 </div>
             }
             else if (drawerMode == DrawerMode.RoomDetails && selectedRoom is not null)
@@ -135,14 +117,6 @@
                         <span class="drawer-label">Emplacement</span>
                         <span class="drawer-value">@FindLocationName(selectedRoom)</span>
                     </div>
-                </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenRoomEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteRoom">
-                        Supprimer
-                    </FluentButton>
                 </div>
             }
             else if (drawerMode == DrawerMode.RoomCreate || drawerMode == DrawerMode.RoomEdit)
@@ -159,6 +133,43 @@
                         </select>
                     </div>
                 </div>
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLocationEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLocation">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLocation">
+                        @(drawerMode == DrawerMode.LocationCreate ? "Creer l'emplacement" : "Enregistrer")
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.RoomDetails && selectedRoom is not null)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenRoomEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteRoom">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.RoomCreate || drawerMode == DrawerMode.RoomEdit)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveRoom">
@@ -166,8 +177,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {

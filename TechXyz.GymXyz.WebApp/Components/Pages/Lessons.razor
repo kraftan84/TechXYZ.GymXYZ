@@ -71,12 +71,8 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="lesson-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
+    <DrawerShell DrawerClass="lesson-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
         <div class="drawer-content">
             @if (drawerMode == DrawerMode.LessonDetails && selectedLesson is not null)
             {
@@ -113,17 +109,6 @@
                         <span class="drawer-label">Description</span>
                         <span class="drawer-value">@selectedLesson.Description</span>
                     </div>
-                </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonPage">
-                        Voir la fiche
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLesson">
-                        Supprimer
-                    </FluentButton>
                 </div>
             }
             else if (drawerMode == DrawerMode.LessonCreate || drawerMode == DrawerMode.LessonEdit)
@@ -181,12 +166,6 @@
                         <FluentNumberField Label="Capacite max" @bind-Value="lessonEditModel.MaxParticipants" />
                     }
                 </div>
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLesson">
-                        @(drawerMode == DrawerMode.LessonCreate ? "Creer le cours" : "Enregistrer")
-                    </FluentButton>
-                </div>
             }
             else if (drawerMode == DrawerMode.ThemeDetails && selectedTheme is not null)
             {
@@ -200,6 +179,42 @@
                         <span class="drawer-value">@selectedTheme.Description</span>
                     </div>
                 </div>
+            }
+            else if (drawerMode == DrawerMode.ThemeCreate || drawerMode == DrawerMode.ThemeEdit)
+            {
+                <div class="drawer-form">
+                    <FluentTextField Label="Nom" @bind-Value="themeEditModel.Name" />
+                    <FluentTextField Label="Description" @bind-Value="themeEditModel.Description" />
+                </div>
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (drawerMode == DrawerMode.LessonDetails && selectedLesson is not null)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonPage">
+                        Voir la fiche
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLesson">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.LessonCreate || drawerMode == DrawerMode.LessonEdit)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLesson">
+                        @(drawerMode == DrawerMode.LessonCreate ? "Creer le cours" : "Enregistrer")
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.ThemeDetails && selectedTheme is not null)
+            {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenThemeEditDrawer">
                         Editer
@@ -211,10 +226,6 @@
             }
             else if (drawerMode == DrawerMode.ThemeCreate || drawerMode == DrawerMode.ThemeEdit)
             {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom" @bind-Value="themeEditModel.Name" />
-                    <FluentTextField Label="Description" @bind-Value="themeEditModel.Description" />
-                </div>
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveTheme">
@@ -222,8 +233,8 @@
                     </FluentButton>
                 </div>
             }
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {

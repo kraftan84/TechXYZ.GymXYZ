@@ -75,6 +75,11 @@
     background: var(--neutral-layer-2, #ffffff);
 }
 
+.members-row-item:focus-visible {
+    outline: 2px solid var(--accent-foreground-rest, #115ea3);
+    outline-offset: 2px;
+}
+
 .members-pagination {
     display: flex;
     align-items: center;

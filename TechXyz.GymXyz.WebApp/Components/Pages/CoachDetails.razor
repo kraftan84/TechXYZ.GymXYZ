@@ -134,31 +134,21 @@
 
 @if (isDrawerOpen)
 {
-    <button class="drawer-scrim" type="button" aria-hidden="true" @onclick="CloseDrawer"></button>
-    <aside class="coach-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
-        <div class="drawer-header">
-            <h2 id="drawer-title">@drawerTitle</h2>
-            <FluentButton Appearance="Appearance.Stealth" @onclick="CloseDrawer">Fermer</FluentButton>
-        </div>
-        <div class="drawer-content">
-            <div class="drawer-form">
-                <FluentTextField Label="Prenom" @bind-Value="editModel.FirstName" />
-                <FluentTextField Label="Nom" @bind-Value="editModel.LastName" />
-                <FluentTextField Label="Email" @bind-Value="editModel.Email" />
-                <FluentTextField Label="Telephone" @bind-Value="editModel.Phone" />
-                <FluentTextField Label="Adresse" @bind-Value="editModel.Street" />
-                <FluentTextField Label="Code postal" @bind-Value="editModel.ZipCode" />
-                <FluentTextField Label="Ville" @bind-Value="editModel.City" />
-                <FluentTextField Label="Pays" @bind-Value="editModel.Country" />
+    <DrawerShell DrawerClass="coach-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
+        <ChildContent>
+            <div class="drawer-content">
+                <PersonEditForm Model="editModel" />
             </div>
+        </ChildContent>
+        <FooterContent>
             <div class="drawer-actions">
                 <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
                 <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoach">
                     Enregistrer
                 </FluentButton>
             </div>
-        </div>
-    </aside>
+        </FooterContent>
+    </DrawerShell>
 }
 
 @code {
@@ -351,7 +341,7 @@
         EditDetails
     }
 
-    private sealed class CoachEditModel
+    private sealed class CoachEditModel : IPersonEditModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;

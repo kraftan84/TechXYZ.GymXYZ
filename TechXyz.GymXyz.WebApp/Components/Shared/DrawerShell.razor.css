@@ -1,0 +1,25 @@
+.drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+    z-index: 1200;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.drawer-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.drawer-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+}

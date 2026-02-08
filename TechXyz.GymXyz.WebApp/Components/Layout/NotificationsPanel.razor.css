@@ -14,6 +14,13 @@
     margin: 0;
 }
 
+.panel-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .notifications-list {
     list-style: none;
     padding: 0;
