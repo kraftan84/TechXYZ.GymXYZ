@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Collections.Generic;
 using TechXyz.GymXyz.Application.Interfaces.Repositories;
 using TechXyz.GymXyz.Domain.Common;
 using TechXyz.GymXyz.Persistence.Contexts;
@@ -8,30 +8,26 @@ namespace TechXyz.GymXyz.Persistence.Repositories;
 public class UnitOfWork : IUnitOfWork
 {
     private readonly GymDbContext _dbContext;
-    private readonly Hashtable _repositories;
+    private readonly Dictionary<string, object> _repositories;
     private bool disposed;
 
     public UnitOfWork(GymDbContext dbContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _repositories = new Hashtable();
+        _repositories = new Dictionary<string, object>();
     }
 
     public IGenericRepository<T, TU> Repository<T, TU>() where T : EntityBase<TU>
     {
         // Cache repositories by entity type to avoid recreating instances per call.
         var type = typeof(T).Name;
-
-        if (!_repositories.ContainsKey(type))
+        if (!_repositories.TryGetValue(type, out var repository))
         {
-            var repositoryType = typeof(GenericRepository<T, TU>);
-
-            var repositoryInstance = Activator.CreateInstance(repositoryType.MakeGenericType(typeof(T)), _dbContext);
-
-            _repositories.Add(type, repositoryInstance);
+            repository = new GenericRepository<T, TU>(_dbContext);
+            _repositories[type] = repository;
         }
 
-        return (IGenericRepository<T, TU>)_repositories[type];
+        return (IGenericRepository<T, TU>)repository;
     }
 
     public Task Rollback()
@@ -58,12 +54,16 @@ public class UnitOfWork : IUnitOfWork
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposed)
+        if (!disposed)
+        {
             if (disposing)
+            {
                 // Dispose managed resources once.
                 _dbContext.Dispose();
+            }
 
-        //dispose unmanaged resources
-        disposed = true;
+            //dispose unmanaged resources
+            disposed = true;
+        }
     }
 }

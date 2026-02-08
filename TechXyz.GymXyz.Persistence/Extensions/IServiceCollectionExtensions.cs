@@ -20,7 +20,7 @@ public static class IServiceCollectionExtensions
     public static void AddDbContext(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         var dbConnectionString = configuration.GetConnectionString("GymXyzDb")
-                                 ?? throw new InvalidOperationException("Connection string 'TeamTacDb' not found");
+                                 ?? throw new InvalidOperationException("Connection string 'GymXyzDb' not found");
         
         services.AddDbContext<GymDbContext>(options =>
         {

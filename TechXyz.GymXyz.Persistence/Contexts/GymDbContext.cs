@@ -81,16 +81,17 @@ public class GymDbContext : DbContext
             .Entries()
             .Where(e => e is { Entity: AuditableEntityBase, State: EntityState.Added or EntityState.Modified });
 
-        var username = _currentUserService.UserName;
+        var username = _currentUserService.UserName ?? "system";
+        var now = DateTime.UtcNow;
         foreach (var entityEntry in entries)
         {
             ((AuditableEntityBase)entityEntry.Entity).UpdatedBy = username;
-            ((AuditableEntityBase)entityEntry.Entity).UpdatedOn = DateTime.Now;
+            ((AuditableEntityBase)entityEntry.Entity).UpdatedOn = now;
 
             if (entityEntry.State == EntityState.Added)
             {
                 ((AuditableEntityBase)entityEntry.Entity).CreatedBy = username;
-                ((AuditableEntityBase)entityEntry.Entity).CreatedOn = DateTime.Now;
+                ((AuditableEntityBase)entityEntry.Entity).CreatedOn = now;
             }
         }
         return await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

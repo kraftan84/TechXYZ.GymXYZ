@@ -26,6 +26,10 @@ public class GenericRepository<T, TU> : IGenericRepository<T, TU> where T : Enti
     {
         // Load the tracked entity first so EF can apply changes to the existing row.
         var exist = _dbContext.Set<T>().Find(entity.Id);
+        if (exist is null)
+        {
+            throw new KeyNotFoundException($"Entity {typeof(T).Name} ({entity.Id}) not found.");
+        }
         _dbContext.Entry(exist).CurrentValues.SetValues(entity);
         return Task.CompletedTask;
     }
@@ -43,7 +47,7 @@ public class GenericRepository<T, TU> : IGenericRepository<T, TU> where T : Enti
             .ToListAsync();
     }
 
-    public async Task<T?> GetByIdAsync(int id)
+    public async Task<T?> GetByIdAsync(TU id)
     {
         return await _dbContext.Set<T>().FindAsync(id);
     }
