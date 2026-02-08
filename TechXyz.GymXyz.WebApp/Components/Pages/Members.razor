@@ -28,9 +28,9 @@
                 <span class="members-col members-col-photo">Photo</span>
                 <span class="members-col">Prenom</span>
                 <span class="members-col">Nom</span>
-                <span class="members-col">Email</span>
-                <span class="members-col">Abonnement</span>
-                <span class="members-col">Telephone</span>
+                <span class="members-col members-col-email">Email</span>
+                <span class="members-col members-col-plan">Abonnement</span>
+                <span class="members-col members-col-actions">Actions</span>
             </div>
             @foreach (var member in pagedMembers)
             {
@@ -47,8 +47,8 @@
                     </span>
                     <span class="members-col">@member.FirstName</span>
                     <span class="members-col">@member.LastName</span>
-                    <span class="members-col">@member.Email</span>
-                    <span class="members-col">
+                    <span class="members-col members-col-email">@member.Email</span>
+                    <span class="members-col members-col-plan">
                         @if (HasActiveSubscription(member))
                         {
                             <span class="members-badge members-badge-active">Actif</span>
@@ -58,8 +58,7 @@
                             <span class="members-badge members-badge-inactive">Inactif</span>
                         }
                     </span>
-                        <span class="members-col members-actions">
-                            <span class="members-phone">@member.Phone</span>
+                        <span class="members-col members-col-actions">
                             <div class="members-inline-actions" @onclick:stopPropagation="true">
                             <FluentButton Appearance="Appearance.Stealth"
                                           Size="ButtonSize.Small"

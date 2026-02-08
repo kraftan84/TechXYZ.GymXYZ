@@ -104,7 +104,7 @@
 .coach-avatar {
     width: 64px;
     height: 64px;
-    border-radius: 16px;
+    border-radius: 50%;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-2, #ffffff);
     object-fit: cover;
@@ -196,7 +196,7 @@
 .member-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 50%;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-2, #ffffff);
     object-fit: cover;

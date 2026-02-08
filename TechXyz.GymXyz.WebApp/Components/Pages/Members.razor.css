@@ -46,7 +46,7 @@
 
 .members-row {
     display: grid;
-    grid-template-columns: 64px minmax(140px, 1fr) minmax(140px, 1fr) minmax(220px, 2fr) minmax(140px, 1fr) minmax(220px, 1fr);
+    grid-template-columns: 64px minmax(140px, 1fr) minmax(140px, 1fr) minmax(220px, 2fr) minmax(140px, 1fr) minmax(140px, 0.8fr);
     align-items: center;
     gap: 0.5rem;
     padding: 0.85rem 1rem;
@@ -106,24 +106,26 @@
     justify-content: center;
 }
 
-.members-actions {
+.members-col-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.5rem;
+    justify-self: end;
+    min-width: 0;
 }
 
-.members-phone {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.members-row-header .members-col-actions {
+    justify-self: end;
+    text-align: right;
 }
 
 .members-inline-actions {
-    display: inline-flex;
+    display: flex;
     gap: 0.35rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
 }
 
 .members-badge {
@@ -149,7 +151,7 @@
 .member-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-1, #f5f5f5);
@@ -208,7 +210,7 @@
 .drawer-avatar {
     width: 64px;
     height: 64px;
-    border-radius: 16px;
+    border-radius: 50%;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-1, #f5f5f5);
     object-fit: cover;
@@ -267,13 +269,18 @@
 
 @media (max-width: 1024px) {
     .members-row {
-        grid-template-columns: 56px minmax(120px, 1fr) minmax(120px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr);
+        grid-template-columns: 56px minmax(120px, 1fr) minmax(120px, 1fr) minmax(200px, 1fr) minmax(160px, 1fr) minmax(120px, 0.8fr);
     }
 }
 
 @media (max-width: 768px) {
     .members-row {
-        min-width: 720px;
+        grid-template-columns: 56px minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr);
+    }
+
+    .members-col-email,
+    .members-col-actions {
+        display: none;
     }
 
     .drawer-actions {

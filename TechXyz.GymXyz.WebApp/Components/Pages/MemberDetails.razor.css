@@ -31,7 +31,7 @@
 .member-avatar {
     width: 72px;
     height: 72px;
-    border-radius: 18px;
+    border-radius: 50%;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-2, #ffffff);
     object-fit: cover;

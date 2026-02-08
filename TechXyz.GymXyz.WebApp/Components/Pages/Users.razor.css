@@ -91,7 +91,7 @@
 .user-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
+    border-radius: 50%;
     object-fit: cover;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-1, #f5f5f5);
@@ -163,7 +163,7 @@
 .drawer-avatar {
     width: 64px;
     height: 64px;
-    border-radius: 16px;
+    border-radius: 50%;
     border: 1px solid var(--neutral-stroke-rest, #e1e1e1);
     background: var(--neutral-layer-1, #f5f5f5);
     object-fit: cover;

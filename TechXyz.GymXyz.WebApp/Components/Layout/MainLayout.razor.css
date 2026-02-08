@@ -92,6 +92,15 @@
     display: none;
 }
 
+.top-bar-actions ::deep .fluent-profile-menu .fluent-persona .initials {
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.top-bar-actions ::deep .fluent-profile-menu .fluent-persona .initials img {
+    border-radius: 50%;
+}
+
 .app-body {
     display: grid;
     grid-template-columns: minmax(240px, max-content) minmax(0, 1fr);
