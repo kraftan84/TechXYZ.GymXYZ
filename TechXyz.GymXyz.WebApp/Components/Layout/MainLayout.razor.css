@@ -52,16 +52,6 @@
     transform: scale(0.97);
 }
 
-.nav-toggle {
-    display: none;
-}
-
-@media (min-width: 1025px) {
-    .nav-toggle {
-        display: none !important;
-    }
-}
-
 .icon-menu {
     display: inline-block;
     width: 20px;
@@ -153,7 +143,7 @@
         transform: translateX(0);
     }
 
-    .nav-toggle {
+    fluent-button.nav-toggle {
         display: inline-flex;
     }
 

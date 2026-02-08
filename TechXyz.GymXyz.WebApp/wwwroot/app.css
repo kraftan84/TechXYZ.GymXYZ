@@ -39,3 +39,19 @@ a:hover {
     padding: 1rem 1rem 1rem 3.7rem;
     color: #6a0b0b;
 }
+
+fluent-button.nav-toggle {
+    display: none;
+}
+
+@media (min-width: 1025px) {
+    fluent-button.nav-toggle {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    fluent-button.nav-toggle {
+        display: inline-flex;
+    }
+}

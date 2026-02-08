@@ -67,7 +67,7 @@ public class GymDbContext : DbContext
                 x.HasMany(cl => cl.Rooms)
                     .WithMany();
 
-                x.HasMany(cl => cl.Members)
+                x.HasMany(cl => cl.Participants)
                     .WithMany(m => m.CollectiveLessons);
             });
 

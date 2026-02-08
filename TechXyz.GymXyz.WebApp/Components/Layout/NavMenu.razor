@@ -1,12 +1,15 @@
 ﻿<FluentNavMenu Title="Navigation"
                Collapsible="false"
                class="glass-nav">
-    <FluentNavLink Href="" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size24.BuildingHome())">
+    <FluentNavLink Href="" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size24.Home())">
         Accueil
     </FluentNavLink>
 
-    <div class="nav-section-title">Cours</div>
-    <FluentNavLink Href="/coachs" Icon="@(new Icons.Regular.Size24.PeopleTeam())">
+    <div class="nav-section-title">Coaching</div>
+    <FluentNavLink Href="/members" Icon="@(new Icons.Regular.Size24.PeopleQueue())">
+        Membres
+    </FluentNavLink>
+    <FluentNavLink Href="/coachs" Icon="@(new Icons.Regular.Size24.People())">
         Coachs
     </FluentNavLink>
     <FluentNavLink Href="/plannings" Icon="@(new Icons.Regular.Size24.CalendarAgenda())">
@@ -14,13 +17,13 @@
     </FluentNavLink>
 
     <div class="nav-section-title">Administration</div>
-    <FluentNavLink Href="/utilisateurs" Icon="@(new Icons.Regular.Size24.PeopleAudience())">
+    <FluentNavLink Href="/users" Icon="@(new Icons.Regular.Size24.PeopleAudience())">
         Utilisateurs
     </FluentNavLink>
-    <FluentNavLink Href="/salle" Icon="@(new Icons.Regular.Size24.BuildingMultiple())">
-        Salle
+    <FluentNavLink Href="/rooms" Icon="@(new Icons.Regular.Size24.BuildingMultiple())">
+        Salles
     </FluentNavLink>
-    <FluentNavLink Href="/cours" Icon="@(new Icons.Regular.Size24.Book())">
+    <FluentNavLink Href="/lessons" Icon="@(new Icons.Regular.Size24.Book())">
         Cours
     </FluentNavLink>
 </FluentNavMenu>
