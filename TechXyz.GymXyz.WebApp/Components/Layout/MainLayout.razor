@@ -25,13 +25,15 @@
                           class="icon-button"
                           title="Notifications"
                           @onclick="OpenNotificationsAsync">
-                <span class="icon-bell" aria-hidden="true"></span>
-                @if (notificationCount > 0)
-                {
-                    <span class="notification-badge" aria-label="@($"{notificationCount} notifications")">
-                        @notificationCount
-                    </span>
-                }
+                <span class="notification-anchor">
+                    <span class="icon-bell" aria-hidden="true"></span>
+                    @if (notificationCount > 0)
+                    {
+                        <span class="notification-badge" aria-label="@($"{notificationCount} notifications")">
+                            @notificationCount
+                        </span>
+                    }
+                </span>
             </FluentButton>
             <span class="user-name">Alex Johnson</span>
             <FluentProfileMenu FullName="Alex Johnson"
@@ -88,6 +90,7 @@
 @code {
     private bool isNavOpen;
     private int notificationCount = 3;
+    private bool isNotificationsOpen;
     private IReadOnlyList<BreadcrumbItem> breadcrumbItems = Array.Empty<BreadcrumbItem>();
 
     protected override void OnInitialized()
@@ -98,6 +101,13 @@
 
     private async Task OpenNotificationsAsync()
     {
+        if (isNotificationsOpen)
+        {
+            return;
+        }
+
+        isNotificationsOpen = true;
+
         var parameters = new DialogParameters
         {
             Title = "Notifications",
@@ -105,7 +115,9 @@
             Alignment = HorizontalAlignment.Right,
             Width = "360px",
             PreventScroll = true,
-            ShowDismiss = true
+            ShowDismiss = true,
+            OnDialogOpened = EventCallback.Factory.Create<DialogInstance>(this, OnNotificationsOpenedAsync),
+            OnDialogClosing = EventCallback.Factory.Create<DialogInstance>(this, OnNotificationsClosingAsync)
         };
 
         await DialogService.ShowPanelAsync<NotificationsPanel>(parameters);
@@ -120,6 +132,18 @@
     {
         breadcrumbItems = BreadcrumbService.Items;
         InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnNotificationsOpenedAsync(DialogInstance dialog)
+    {
+        isNotificationsOpen = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnNotificationsClosingAsync(DialogInstance dialog)
+    {
+        isNotificationsOpen = false;
+        return InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

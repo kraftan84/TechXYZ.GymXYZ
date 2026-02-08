@@ -105,6 +105,10 @@
     gap: 0.75rem;
     align-items: start;
     --minute-height: 1.6px;
+    max-height: 520px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding-right: 0.25rem;
 }
 
 .planning-time-column {
@@ -120,6 +124,11 @@
     color: var(--neutral-foreground-hint, #5e5e5e);
 }
 
+.planning-time-marker-current {
+    font-weight: 600;
+    color: var(--accent-fill-rest, #2b6cb0);
+}
+
 .planning-grid {
     position: relative;
     min-height: 320px;
@@ -131,6 +140,18 @@
         transparent 95%,
         rgba(0, 0, 0, 0.04) 100%
     );
+}
+
+.planning-current-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(var(--offset) * var(--minute-height, 2px));
+    height: 2px;
+    background: var(--accent-fill-rest, #2b6cb0);
+    box-shadow: 0 0 0 1px rgba(43, 108, 176, 0.2);
+    z-index: 2;
+    pointer-events: none;
 }
 
 .planning-grid-line {
