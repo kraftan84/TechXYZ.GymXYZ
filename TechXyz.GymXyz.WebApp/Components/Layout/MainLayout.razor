@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject IDialogService DialogService
+@inject BreadcrumbService BreadcrumbService
+@implements IDisposable
 
 <div class="app-shell @(isNavOpen ? "nav-open" : "nav-closed")">
     <header class="top-bar">
@@ -42,6 +44,26 @@
             <NavMenu/>
         </aside>
         <main class="app-content">
+            @if (breadcrumbItems.Count > 0)
+            {
+                <div class="app-breadcrumb">
+                    <FluentBreadcrumb aria-label="Fil d'ariane">
+                        @foreach (var item in breadcrumbItems)
+                        {
+                            <FluentBreadcrumbItem Href="@item.Href">
+                                @if (item.IsHome)
+                                {
+                                    <FluentIcon Value="@(new Icons.Regular.Size12.Home())"/>
+                                }
+                                else
+                                {
+                                    @item.Text
+                                }
+                            </FluentBreadcrumbItem>
+                        }
+                    </FluentBreadcrumb>
+                </div>
+            }
             @Body
         </main>
     </div>
@@ -66,6 +88,13 @@
 @code {
     private bool isNavOpen;
     private int notificationCount = 3;
+    private IReadOnlyList<BreadcrumbItem> breadcrumbItems = Array.Empty<BreadcrumbItem>();
+
+    protected override void OnInitialized()
+    {
+        breadcrumbItems = BreadcrumbService.Items;
+        BreadcrumbService.Changed += HandleBreadcrumbChanged;
+    }
 
     private async Task OpenNotificationsAsync()
     {
@@ -85,5 +114,16 @@
     private void ToggleNav()
     {
         isNavOpen = !isNavOpen;
+    }
+
+    private void HandleBreadcrumbChanged()
+    {
+        breadcrumbItems = BreadcrumbService.Items;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        BreadcrumbService.Changed -= HandleBreadcrumbChanged;
     }
 }

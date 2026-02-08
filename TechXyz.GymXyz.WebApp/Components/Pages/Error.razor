@@ -1,5 +1,6 @@
 ﻿@page "/Error"
 @using System.Diagnostics
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Erreur</PageTitle>
 
@@ -32,7 +33,14 @@
     private string? RequestId { get; set; }
     private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 
-    protected override void OnInitialized() =>
+    protected override void OnInitialized()
+    {
         RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Erreur" }
+        ]);
+    }
 
 }

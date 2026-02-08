@@ -19,6 +19,7 @@ builder.Services.AddDataGridEntityFrameworkAdapter();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<ICurrentUserOverride, CurrentUserOverride>();
+builder.Services.AddScoped<BreadcrumbService>();
 
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

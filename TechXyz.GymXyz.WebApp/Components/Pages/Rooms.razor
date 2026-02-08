@@ -1,4 +1,5 @@
 @page "/rooms"
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Salles</PageTitle>
 
@@ -170,6 +171,15 @@
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Salles" }
+        ]);
+    }
+
     private readonly Gym gym = new("GymXYZ") { Id = 1 };
     private readonly List<Location> locations;
     private readonly List<Room> rooms;

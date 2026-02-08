@@ -1,4 +1,5 @@
 @page "/members/{MemberId:int}"
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Membre</PageTitle>
 
@@ -349,6 +350,12 @@
     protected override void OnParametersSet()
     {
         selectedMember = members.FirstOrDefault(member => member.Id == MemberId) ?? members[0];
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Membres", Href = "/members" },
+            new BreadcrumbItem { Text = $"{selectedMember.FirstName} {selectedMember.LastName}" }
+        ]);
     }
 
     private static string FormatAddress(Address? address)

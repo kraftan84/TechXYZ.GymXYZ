@@ -1,5 +1,6 @@
 @page "/"
 @inject NavigationManager NavManager
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Accueil</PageTitle>
 
@@ -115,6 +116,14 @@
 </div>
 
 @code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" }
+        ]);
+    }
+
     private readonly List<LessonItem> LessonsToday = new()
     {
         new LessonItem(1, "06:30", "HIIT Blast", "Studio A", "Coach Maya", 60, 18, 24),

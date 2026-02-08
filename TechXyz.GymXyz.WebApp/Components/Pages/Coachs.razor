@@ -1,5 +1,6 @@
 @page "/coachs"
 @inject NavigationManager NavManager
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Coachs</PageTitle>
 
@@ -59,7 +60,7 @@
                          alt="@($"Photo de {selectedCoach.FirstName} {selectedCoach.LastName}")" />
                     <div>
                         <div class="drawer-name">@selectedCoach.FirstName @selectedCoach.LastName</div>
-                        <div class="drawer-subtitle">Coach #@selectedCoach.Id</div>
+                        <div class="drawer-subtitle">@selectedCoach.FirstName @selectedCoach.LastName</div>
                     </div>
                 </div>
                 <div class="drawer-section">
@@ -112,6 +113,15 @@
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Coachs" }
+        ]);
+    }
+
     private readonly List<Coach> coaches =
     [
         new Coach("Nora", "Lemoine")

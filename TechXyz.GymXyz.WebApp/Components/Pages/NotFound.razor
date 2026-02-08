@@ -1,7 +1,19 @@
 ﻿@page "/not-found"
 @layout MainLayout
+@inject BreadcrumbService BreadcrumbService
 
 <FluentCard class="page-card">
     <h3>Introuvable</h3>
     <p>Désolé, le contenu que vous recherchez n'existe pas.</p>
 </FluentCard>
+
+@code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Introuvable" }
+        ]);
+    }
+}

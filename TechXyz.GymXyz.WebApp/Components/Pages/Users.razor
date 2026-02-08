@@ -1,5 +1,6 @@
 @page "/users"
 @using Microsoft.AspNetCore.Identity
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Utilisateurs</PageTitle>
 
@@ -81,7 +82,7 @@
                          alt="@($"Photo de {selectedUser.UserName}")" />
                     <div>
                         <div class="drawer-name">@selectedUser.UserName</div>
-                        <div class="drawer-subtitle">ID @selectedUser.Id</div>
+                        <div class="drawer-subtitle">@selectedUser.UserName</div>
                     </div>
                 </div>
                 <div class="drawer-section">
@@ -122,6 +123,15 @@
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Utilisateurs" }
+        ]);
+    }
+
     private readonly List<IdentityUser> allUsers =
     [
         new IdentityUser

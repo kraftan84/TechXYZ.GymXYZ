@@ -1,7 +1,10 @@
 .app-shell {
+    --top-bar-height: 64px;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .top-bar {
@@ -11,6 +14,9 @@
     padding: 0.75rem 1.5rem;
     background: var(--neutral-layer-2, #ffffff);
     border-bottom: 1px solid var(--neutral-stroke-rest, #e1e1e1);
+    min-height: var(--top-bar-height);
+    flex: 0 0 var(--top-bar-height);
+    z-index: 1200;
 }
 
 .top-bar-left {
@@ -93,12 +99,24 @@
     grid-template-columns: minmax(240px, max-content) minmax(0, 1fr);
     flex: 1;
     min-width: 0;
+    height: calc(100vh - var(--top-bar-height));
+    overflow: hidden;
 }
 
 .app-content {
     padding: 1.5rem;
     flex: 1;
     min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.app-breadcrumb {
+    margin-bottom: 1rem;
+}
+
+.app-breadcrumb ::deep fluent-breadcrumb-item {
+    font-size: 0.9rem;
 }
 
 .app-nav {
@@ -147,12 +165,12 @@
 
     .app-nav {
         position: fixed;
-        top: 0;
+        top: var(--top-bar-height);
         left: 0;
-        bottom: 0;
+        height: calc(100vh - var(--top-bar-height));
         width: 260px;
         min-width: 260px;
-        padding-top: 4.5rem;
+        padding-top: 1rem;
         transform: translateX(-110%);
         transition: transform 0.25s ease;
         z-index: 1100;

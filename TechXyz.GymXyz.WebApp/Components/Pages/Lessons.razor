@@ -1,4 +1,5 @@
 @page "/lessons"
+@inject BreadcrumbService BreadcrumbService
 @inject NavigationManager NavManager
 
 <PageTitle>Cours</PageTitle>
@@ -226,6 +227,15 @@
 }
 
 @code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbService.SetItems(
+        [
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Cours" }
+        ]);
+    }
+
     private readonly List<Coach> coaches =
     [
         new Coach("Nora", "Lemoine") { Id = 1 },
