@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Interfaces.Repositories;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -21,7 +22,7 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var repository = _unitOfWork.Repository<Location, int>();
-        var location = repository.Entities.FirstOrDefault(candidate => candidate.Id == request.Id);
+        var location = await repository.Entities.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (location is null)
         {
             return false;

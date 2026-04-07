@@ -1,4 +1,5 @@
 @page "/rooms"
+@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
@@ -310,13 +311,18 @@
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new UpdateLocationCommand(
+                var updated = await Sender.Send(new UpdateLocationCommand(
                     selectedLocation.Id,
                     locationEditModel.Name,
                     locationEditModel.Street,
                     locationEditModel.ZipCode,
                     locationEditModel.City,
                     locationEditModel.Country));
+
+                if (!updated)
+                {
+                    throw new ValidationException("Emplacement introuvable.");
+                }
 
                 await RefreshRoomsPageAsync();
                 selectedLocation = locations.FirstOrDefault(location => location.Id == selectedLocation.Id);
@@ -341,7 +347,12 @@
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
+            var deleted = await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Emplacement introuvable.");
+            }
+
             await RefreshRoomsPageAsync();
             CloseDrawer();
         }, "supprimer l'emplacement", "Emplacement supprime.");
@@ -409,7 +420,12 @@
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.LocationId));
+                var updated = await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.LocationId));
+                if (!updated)
+                {
+                    throw new ValidationException("Salle ou emplacement introuvable.");
+                }
+
                 await RefreshRoomsPageAsync();
                 selectedRoom = rooms.FirstOrDefault(room => room.Id == selectedRoom.Id);
                 if (selectedRoom is null)
@@ -433,7 +449,12 @@
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            await Sender.Send(new DeleteRoomCommand(selectedRoom.Id));
+            var deleted = await Sender.Send(new DeleteRoomCommand(selectedRoom.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Salle introuvable.");
+            }
+
             await RefreshRoomsPageAsync();
             CloseDrawer();
         }, "supprimer la salle", "Salle supprimee.");

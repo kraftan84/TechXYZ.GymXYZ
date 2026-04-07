@@ -1,5 +1,7 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces.Repositories;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -21,7 +23,7 @@ public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachComma
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var repository = _unitOfWork.Repository<Coach, int>();
-        var coach = repository.Entities.FirstOrDefault(candidate => candidate.Id == request.Id);
+        var coach = await repository.Entities.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (coach is null)
         {
             return false;
@@ -29,55 +31,15 @@ public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachComma
 
         coach.FirstName = request.FirstName.Trim();
         coach.LastName = request.LastName.Trim();
-        coach.Email = Normalize(request.Email);
-        coach.Phone = Normalize(request.Phone);
+        coach.Email = AddressHelper.NormalizeOptional(request.Email);
+        coach.Phone = AddressHelper.NormalizeOptional(request.Phone);
 
-        var updatedAddress = BuildAddress(request.Street, request.ZipCode, request.City, request.Country);
-        if (updatedAddress is null)
-        {
-            coach.Address = null;
-        }
-        else if (coach.Address is null)
-        {
-            coach.Address = updatedAddress;
-        }
-        else
-        {
-            coach.Address.Street = updatedAddress.Street;
-            coach.Address.ZipCode = updatedAddress.ZipCode;
-            coach.Address.City = updatedAddress.City;
-            coach.Address.Country = updatedAddress.Country;
-        }
+        var updatedAddress = AddressHelper.BuildOptionalAddress(request.Street, request.ZipCode, request.City, request.Country);
+        coach.Address = AddressHelper.Apply(coach.Address, updatedAddress);
 
         await repository.UpdateAsync(coach);
         await _unitOfWork.Save(cancellationToken);
 
         return true;
-    }
-
-    private static string? Normalize(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private static Address? BuildAddress(string? street, string? zipCode, string? city, string? country)
-    {
-        var normalizedStreet = Normalize(street);
-        var normalizedZipCode = Normalize(zipCode);
-        var normalizedCity = Normalize(city);
-        var normalizedCountry = Normalize(country);
-
-        if (normalizedStreet is null && normalizedZipCode is null && normalizedCity is null && normalizedCountry is null)
-        {
-            return null;
-        }
-
-        return new Address
-        {
-            Street = normalizedStreet ?? string.Empty,
-            ZipCode = normalizedZipCode ?? string.Empty,
-            City = normalizedCity ?? string.Empty,
-            Country = normalizedCountry ?? string.Empty
-        };
     }
 }

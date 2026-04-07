@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces.Repositories;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -20,15 +21,11 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var defaultGym = _unitOfWork
-            .Repository<Gym, int>()
-            .Entities
-            .OrderBy(gym => gym.Id)
-            .FirstOrDefault();
+        var defaultGym = await _unitOfWork.GetDefaultGymAsync(cancellationToken);
 
         if (defaultGym is null)
         {
-            throw new InvalidOperationException("Default gym not found.");
+            throw new ValidationException("Default gym not found.");
         }
 
         var location = new Location(request.Name.Trim())

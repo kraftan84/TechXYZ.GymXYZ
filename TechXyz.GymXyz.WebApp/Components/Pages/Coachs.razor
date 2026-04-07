@@ -1,4 +1,5 @@
 @page "/coachs"
+@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
@@ -264,7 +265,7 @@
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new UpdateCoachCommand(
+                var updated = await Sender.Send(new UpdateCoachCommand(
                     selectedCoach.Id,
                     editModel.FirstName,
                     editModel.LastName,
@@ -274,6 +275,11 @@
                     editModel.ZipCode,
                     editModel.City,
                     editModel.Country));
+
+                if (!updated)
+                {
+                    throw new ValidationException("Coach introuvable.");
+                }
 
                 await RefreshCoachesAsync();
                 selectedCoach = coaches.FirstOrDefault(coach => coach.Id == selectedCoach.Id);
@@ -298,7 +304,12 @@
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
+            var deleted = await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Coach introuvable.");
+            }
+
             await RefreshCoachesAsync();
         }, "supprimer le coach", "Coach supprime.");
     }

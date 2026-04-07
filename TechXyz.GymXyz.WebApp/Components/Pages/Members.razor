@@ -1,4 +1,5 @@
 @page "/members"
+@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
@@ -349,7 +350,7 @@
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new UpdateMemberCommand(
+                var updated = await Sender.Send(new UpdateMemberCommand(
                     selectedMember.Id,
                     editModel.FirstName,
                     editModel.LastName,
@@ -359,6 +360,11 @@
                     editModel.ZipCode,
                     editModel.City,
                     editModel.Country));
+
+                if (!updated)
+                {
+                    throw new ValidationException("Membre introuvable.");
+                }
 
                 await RefreshMembersAsync();
                 selectedMember = allMembers.FirstOrDefault(member => member.Id == selectedMember.Id);
@@ -383,7 +389,12 @@
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            await Sender.Send(new DeleteMemberCommand(selectedMember.Id));
+            var deleted = await Sender.Send(new DeleteMemberCommand(selectedMember.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Membre introuvable.");
+            }
+
             await RefreshMembersAsync();
         }, "supprimer le membre", "Membre supprime.");
     }

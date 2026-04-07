@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Interfaces.Repositories;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -20,10 +21,10 @@ public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var location = _unitOfWork
+        var location = await _unitOfWork
             .Repository<Location, int>()
             .Entities
-            .FirstOrDefault(candidate => candidate.Id == request.LocationId);
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId, cancellationToken);
 
         if (location is null)
         {

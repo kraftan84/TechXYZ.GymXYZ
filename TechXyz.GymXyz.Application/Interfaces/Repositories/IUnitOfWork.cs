@@ -8,7 +8,5 @@ public interface IUnitOfWork : IDisposable
 
     Task<int> Save(CancellationToken cancellationToken);
 
-    Task<int> SaveAndRemoveCache(CancellationToken cancellationToken, params string[] cacheKeys);
-
     Task Rollback();
 }

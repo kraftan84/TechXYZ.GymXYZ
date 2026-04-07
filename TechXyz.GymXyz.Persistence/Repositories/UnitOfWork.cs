@@ -41,11 +41,6 @@ public class UnitOfWork : IUnitOfWork
         return await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<int> SaveAndRemoveCache(CancellationToken cancellationToken, params string[] cacheKeys)
-    {
-        throw new NotImplementedException();
-    }
-
     public void Dispose()
     {
         Dispose(true);

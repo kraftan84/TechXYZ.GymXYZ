@@ -22,10 +22,10 @@ public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var locationRepository = _unitOfWork.Repository<Location, int>();
-        var locations = locationRepository.Entities
+        var locations = await locationRepository.Entities
             .Include(location => location.Rooms)
             .Where(location => location.Id == request.LocationId || location.Rooms!.Any(room => room.Id == request.Id))
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         var targetLocation = locations.FirstOrDefault(location => location.Id == request.LocationId);
         var currentLocation = locations.FirstOrDefault(location => location.Rooms!.Any(room => room.Id == request.Id));

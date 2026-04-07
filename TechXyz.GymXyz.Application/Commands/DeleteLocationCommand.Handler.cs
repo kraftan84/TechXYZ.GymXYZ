@@ -24,9 +24,9 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
         var locationRepository = _unitOfWork.Repository<Location, int>();
         var roomRepository = _unitOfWork.Repository<Room, int>();
 
-        var location = locationRepository.Entities
+        var location = await locationRepository.Entities
             .Include(candidate => candidate.Rooms)
-            .FirstOrDefault(candidate => candidate.Id == request.Id);
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
 
         if (location is null)
         {
