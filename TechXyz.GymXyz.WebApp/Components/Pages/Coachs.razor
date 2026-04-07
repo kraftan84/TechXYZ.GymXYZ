@@ -1,6 +1,12 @@
 @page "/coachs"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
 @inject NavigationManager NavManager
 @inject BreadcrumbService BreadcrumbService
+@inject ISender Sender
 
 <PageTitle>Coachs</PageTitle>
 
@@ -51,38 +57,38 @@
 {
     <DrawerShell DrawerClass="coach-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
         <ChildContent>
-        <div class="drawer-content">
-            @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
-            {
-                <div class="drawer-profile">
-                    <img class="drawer-avatar"
-                         src="images/avatar-placeholder.svg"
-                         alt="@($"Photo de {selectedCoach.FirstName} {selectedCoach.LastName}")" />
-                    <div>
-                        <div class="drawer-name">@selectedCoach.FirstName @selectedCoach.LastName</div>
-                        <div class="drawer-subtitle">@selectedCoach.FirstName @selectedCoach.LastName</div>
+            <div class="drawer-content">
+                @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
+                {
+                    <div class="drawer-profile">
+                        <img class="drawer-avatar"
+                             src="images/avatar-placeholder.svg"
+                             alt="@($"Photo de {selectedCoach.FirstName} {selectedCoach.LastName}")" />
+                        <div>
+                            <div class="drawer-name">@selectedCoach.FirstName @selectedCoach.LastName</div>
+                            <div class="drawer-subtitle">@selectedCoach.FirstName @selectedCoach.LastName</div>
+                        </div>
                     </div>
-                </div>
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Email</span>
-                        <span class="drawer-value">@selectedCoach.Email</span>
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Email</span>
+                            <span class="drawer-value">@selectedCoach.Email</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Telephone</span>
+                            <span class="drawer-value">@selectedCoach.Phone</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Adresse</span>
+                            <span class="drawer-value">@FormatAddress(selectedCoach.Address)</span>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Telephone</span>
-                        <span class="drawer-value">@selectedCoach.Phone</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Adresse</span>
-                        <span class="drawer-value">@FormatAddress(selectedCoach.Address)</span>
-                    </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
-            {
-                <PersonEditForm Model="editModel" />
-            }
-        </div>
+                }
+                else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+                {
+                    <PersonEditForm Model="editModel" />
+                }
+            </div>
         </ChildContent>
         <FooterContent>
             @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
@@ -94,7 +100,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteCoach">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteCoachAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -103,7 +109,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoach">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoachAsync">
                         @(drawerMode == DrawerMode.Create ? "Creer le coach" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -113,79 +119,42 @@
 }
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         BreadcrumbService.SetItems(
         [
             new BreadcrumbItem { IsHome = true, Href = "/" },
             new BreadcrumbItem { Text = "Coachs" }
         ]);
+
+        await RefreshCoachesAsync();
     }
 
-    private readonly List<Coach> coaches =
-    [
-        new Coach("Nora", "Lemoine")
-        {
-            Id = 1,
-            Email = "nora.lemoine@gymxyz.fr",
-            Phone = "06 11 22 33 44",
-            Address = new Address
-            {
-                Street = "5 rue des Fleurs",
-                ZipCode = "69006",
-                City = "Lyon",
-                Country = "France"
-            }
-        },
-        new Coach("Samir", "El Amrani")
-        {
-            Id = 2,
-            Email = "samir.elamrani@gymxyz.fr",
-            Phone = "06 98 76 54 32",
-            Address = new Address
-            {
-                Street = "18 boulevard Lafayette",
-                ZipCode = "59000",
-                City = "Lille",
-                Country = "France"
-            }
-        },
-        new Coach("Juliette", "Moreau")
-        {
-            Id = 3,
-            Email = "juliette.moreau@gymxyz.fr",
-            Phone = "07 21 34 55 66",
-            Address = new Address
-            {
-                Street = "2 place Gambetta",
-                ZipCode = "33000",
-                City = "Bordeaux",
-                Country = "France"
-            }
-        },
-        new Coach("Hugo", "Riviere")
-        {
-            Id = 4,
-            Email = "hugo.riviere@gymxyz.fr",
-            Phone = "06 45 67 89 01",
-            Address = new Address
-            {
-                Street = "9 avenue Jean Jaures",
-                ZipCode = "31000",
-                City = "Toulouse",
-                Country = "France"
-            }
-        }
-    ];
-
-    private Coach? selectedCoach;
+    private List<CoachDto> coaches = [];
+    private CoachDto? selectedCoach;
     private CoachEditModel editModel = new();
     private DrawerMode drawerMode = DrawerMode.None;
     private string drawerTitle = string.Empty;
 
     private bool isDrawerOpen => drawerMode != DrawerMode.None;
 
-    private void OpenDetailsDrawer(Coach coach)
+    private async Task RefreshCoachesAsync()
+    {
+        coaches = await Sender.Send(new GetCoachesQuery());
+
+        if (selectedCoach is null)
+        {
+            return;
+        }
+
+        selectedCoach = coaches.FirstOrDefault(coach => coach.Id == selectedCoach.Id);
+        if (selectedCoach is null)
+        {
+            CloseDrawer();
+        }
+    }
+
+    private void OpenDetailsDrawer(CoachDto coach)
     {
         selectedCoach = coach;
         drawerMode = DrawerMode.Details;
@@ -199,7 +168,7 @@
         drawerTitle = "Nouveau coach";
     }
 
-    private void OpenEditDrawer(Coach coach)
+    private void OpenEditDrawer(CoachDto coach)
     {
         selectedCoach = coach;
         OpenEditDrawer();
@@ -228,7 +197,7 @@
         drawerTitle = "Modifier le coach";
     }
 
-    private void OnCoachCardKeyDown(KeyboardEventArgs args, Coach coach)
+    private void OnCoachCardKeyDown(KeyboardEventArgs args, CoachDto coach)
     {
         if (args.Key == "Enter" || args.Key == " ")
         {
@@ -255,44 +224,67 @@
         CloseDrawer();
     }
 
-    private void SaveCoach()
+    private async Task SaveCoachAsync()
     {
-        if (drawerMode == DrawerMode.Create)
+        try
         {
-            var newCoach = new Coach(editModel.FirstName, editModel.LastName)
+            if (drawerMode == DrawerMode.Create)
             {
-                Id = NextCoachId(),
-                Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email,
-                Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone,
-                Address = BuildAddress(editModel)
-            };
+                await Sender.Send(new CreateCoachCommand(
+                    editModel.FirstName,
+                    editModel.LastName,
+                    editModel.Email,
+                    editModel.Phone,
+                    editModel.Street,
+                    editModel.ZipCode,
+                    editModel.City,
+                    editModel.Country));
 
-            coaches.Add(newCoach);
-            CloseDrawer();
-            return;
+                await RefreshCoachesAsync();
+                CloseDrawer();
+                return;
+            }
+
+            if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
+            {
+                await Sender.Send(new UpdateCoachCommand(
+                    selectedCoach.Id,
+                    editModel.FirstName,
+                    editModel.LastName,
+                    editModel.Email,
+                    editModel.Phone,
+                    editModel.Street,
+                    editModel.ZipCode,
+                    editModel.City,
+                    editModel.Country));
+
+                await RefreshCoachesAsync();
+                selectedCoach = coaches.FirstOrDefault(coach => coach.Id == selectedCoach.Id);
+                if (selectedCoach is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.Details;
+                drawerTitle = "Details du coach";
+            }
         }
-
-        if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
+        catch (ValidationException)
         {
-            selectedCoach.FirstName = editModel.FirstName;
-            selectedCoach.LastName = editModel.LastName;
-            selectedCoach.Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email;
-            selectedCoach.Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone;
-            selectedCoach.Address = BuildAddress(editModel);
-            drawerMode = DrawerMode.Details;
-            drawerTitle = "Details du coach";
+            // Validation feedback can be surfaced in a notification panel later.
         }
     }
 
-    private void DeleteCoach()
+    private async Task DeleteCoachAsync()
     {
         if (selectedCoach is null)
         {
             return;
         }
 
-        coaches.Remove(selectedCoach);
-        CloseDrawer();
+        await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
+        await RefreshCoachesAsync();
     }
 
     private void OpenCoachPage()
@@ -305,31 +297,12 @@
         NavManager.NavigateTo($"/coachs/{selectedCoach.Id}");
     }
 
-    private void GoToCoach(Coach coach)
+    private void GoToCoach(CoachDto coach)
     {
         NavManager.NavigateTo($"/coachs/{coach.Id}");
     }
 
-    private static Address? BuildAddress(CoachEditModel model)
-    {
-        if (string.IsNullOrWhiteSpace(model.Street) &&
-            string.IsNullOrWhiteSpace(model.ZipCode) &&
-            string.IsNullOrWhiteSpace(model.City) &&
-            string.IsNullOrWhiteSpace(model.Country))
-        {
-            return null;
-        }
-
-        return new Address
-        {
-            Street = model.Street,
-            ZipCode = model.ZipCode,
-            City = model.City,
-            Country = model.Country
-        };
-    }
-
-    private static string FormatAddress(Address? address)
+    private static string FormatAddress(AddressDto? address)
     {
         if (address is null)
         {
@@ -338,12 +311,8 @@
 
         var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
             .Where(value => !string.IsNullOrWhiteSpace(value));
-        return string.Join(", ", parts);
-    }
 
-    private int NextCoachId()
-    {
-        return coaches.Count == 0 ? 1 : coaches.Max(coach => coach.Id) + 1;
+        return string.Join(", ", parts);
     }
 
     private enum DrawerMode
