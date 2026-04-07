@@ -15,11 +15,11 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Li
         _unitOfWork = unitOfWork;
     }
 
-    public Task<List<MemberDto>> Handle(GetMembersQuery request, CancellationToken cancellationToken)
+    public async Task<List<MemberDto>> Handle(GetMembersQuery request, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        var members = _unitOfWork
+        return await _unitOfWork
             .Repository<Member, int>()
             .Entities
             .AsNoTracking()
@@ -40,8 +40,6 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Li
                         member.Address.ZipCode,
                         member.Address.City,
                         member.Address.Country)))
-            .ToList();
-
-        return Task.FromResult(members);
+            .ToListAsync(cancellationToken);
     }
 }

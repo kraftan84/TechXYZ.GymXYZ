@@ -15,10 +15,10 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
         _unitOfWork = unitOfWork;
     }
 
-    public Task<RoomsPageDto?> Handle(GetRoomsPageQuery request, CancellationToken cancellationToken)
+    public async Task<RoomsPageDto?> Handle(GetRoomsPageQuery request, CancellationToken cancellationToken)
     {
         // For now, the first gym is treated as the default gym.
-        var gym = _unitOfWork
+        var gym = await _unitOfWork
             .Repository<Gym, int>()
             .Entities
             .AsNoTracking()
@@ -27,11 +27,11 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
             .Include(candidate => candidate.Locations!)
             .ThenInclude(location => location.Address)
             .OrderBy(gym => gym.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (gym is null)
         {
-            return Task.FromResult<RoomsPageDto?>(null);
+            return null;
         }
 
         var mappedLocations = gym.Locations?
@@ -68,6 +68,6 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
             mappedLocations,
             mappedRooms);
 
-        return Task.FromResult<RoomsPageDto?>(page);
+        return page;
     }
 }

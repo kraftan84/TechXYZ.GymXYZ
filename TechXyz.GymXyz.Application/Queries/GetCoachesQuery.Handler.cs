@@ -15,9 +15,9 @@ public sealed class GetCoachesQueryHandler : IRequestHandler<GetCoachesQuery, Li
         _unitOfWork = unitOfWork;
     }
 
-    public Task<List<CoachDto>> Handle(GetCoachesQuery request, CancellationToken cancellationToken)
+    public async Task<List<CoachDto>> Handle(GetCoachesQuery request, CancellationToken cancellationToken)
     {
-        var coaches = _unitOfWork
+        return await _unitOfWork
             .Repository<Coach, int>()
             .Entities
             .AsNoTracking()
@@ -36,8 +36,6 @@ public sealed class GetCoachesQueryHandler : IRequestHandler<GetCoachesQuery, Li
                         coach.Address.ZipCode,
                         coach.Address.City,
                         coach.Address.Country)))
-            .ToList();
-
-        return Task.FromResult(coaches);
+            .ToListAsync(cancellationToken);
     }
 }

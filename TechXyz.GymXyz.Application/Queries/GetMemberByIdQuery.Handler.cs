@@ -15,11 +15,11 @@ public sealed class GetMemberByIdQueryHandler : IRequestHandler<GetMemberByIdQue
         _unitOfWork = unitOfWork;
     }
 
-    public Task<MemberDto?> Handle(GetMemberByIdQuery request, CancellationToken cancellationToken)
+    public async Task<MemberDto?> Handle(GetMemberByIdQuery request, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        var member = _unitOfWork
+        return await _unitOfWork
             .Repository<Member, int>()
             .Entities
             .AsNoTracking()
@@ -39,8 +39,6 @@ public sealed class GetMemberByIdQueryHandler : IRequestHandler<GetMemberByIdQue
                         candidate.Address.ZipCode,
                         candidate.Address.City,
                         candidate.Address.Country)))
-            .FirstOrDefault();
-
-        return Task.FromResult(member);
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

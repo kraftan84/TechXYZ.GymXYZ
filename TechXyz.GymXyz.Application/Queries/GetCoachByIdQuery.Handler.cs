@@ -15,9 +15,9 @@ public sealed class GetCoachByIdQueryHandler : IRequestHandler<GetCoachByIdQuery
         _unitOfWork = unitOfWork;
     }
 
-    public Task<CoachDto?> Handle(GetCoachByIdQuery request, CancellationToken cancellationToken)
+    public async Task<CoachDto?> Handle(GetCoachByIdQuery request, CancellationToken cancellationToken)
     {
-        var coach = _unitOfWork
+        return await _unitOfWork
             .Repository<Coach, int>()
             .Entities
             .AsNoTracking()
@@ -35,8 +35,6 @@ public sealed class GetCoachByIdQueryHandler : IRequestHandler<GetCoachByIdQuery
                         candidate.Address.ZipCode,
                         candidate.Address.City,
                         candidate.Address.Country)))
-            .FirstOrDefault();
-
-        return Task.FromResult(coach);
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }
