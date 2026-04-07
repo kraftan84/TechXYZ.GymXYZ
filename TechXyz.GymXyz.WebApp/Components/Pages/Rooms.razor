@@ -1,5 +1,11 @@
 @page "/rooms"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
 @inject BreadcrumbService BreadcrumbService
+@inject ISender Sender
 
 <PageTitle>Salles</PageTitle>
 
@@ -14,7 +20,7 @@
     <FluentCard class="gym-card">
         <div class="gym-header">
             <div>
-                <h2>@gym.Name</h2>
+                <h2>@(roomsPage?.GymName ?? "Gym")</h2>
                 <p>Gym principal</p>
             </div>
             <div class="gym-meta">
@@ -41,7 +47,7 @@
                             aria-label="@($"Voir {location.Name}")">
                         <div class="location-name">@location.Name</div>
                         <div class="location-meta">@FormatAddress(location.Address)</div>
-                        <div class="location-meta">@($"{location.Rooms?.Count ?? 0} salle(s)")</div>
+                        <div class="location-meta">@($"{location.Rooms.Count} salle(s)")</div>
                     </button>
                 }
             </div>
@@ -66,7 +72,7 @@
                             @onclick="() => OpenRoomDetailsDrawer(room)"
                             aria-label="@($"Voir {room.Name}")">
                         <span class="rooms-col">@room.Name</span>
-                        <span class="rooms-col">@FindLocationName(room)</span>
+                        <span class="rooms-col">@room.LocationName</span>
                     </button>
                 }
             </div>
@@ -78,63 +84,63 @@
 {
     <DrawerShell DrawerClass="room-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
         <ChildContent>
-        <div class="drawer-content">
-            @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
-            {
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Nom</span>
-                        <span class="drawer-value">@selectedLocation.Name</span>
+            <div class="drawer-content">
+                @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
+                {
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Nom</span>
+                            <span class="drawer-value">@selectedLocation.Name</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Adresse</span>
+                            <span class="drawer-value">@FormatAddress(selectedLocation.Address)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Salles</span>
+                            <span class="drawer-value">@($"{selectedLocation.Rooms.Count} salle(s)")</span>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Adresse</span>
-                        <span class="drawer-value">@FormatAddress(selectedLocation.Address)</span>
+                }
+                else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
+                {
+                    <div class="drawer-form">
+                        <FluentTextField Label="Nom" @bind-Value="locationEditModel.Name" />
+                        <FluentTextField Label="Adresse" @bind-Value="locationEditModel.Street" />
+                        <FluentTextField Label="Code postal" @bind-Value="locationEditModel.ZipCode" />
+                        <FluentTextField Label="Ville" @bind-Value="locationEditModel.City" />
+                        <FluentTextField Label="Pays" @bind-Value="locationEditModel.Country" />
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Salles</span>
-                        <span class="drawer-value">@($"{selectedLocation.Rooms?.Count ?? 0} salle(s)")</span>
+                }
+                else if (drawerMode == DrawerMode.RoomDetails && selectedRoom is not null)
+                {
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Salle</span>
+                            <span class="drawer-value">@selectedRoom.Name</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Emplacement</span>
+                            <span class="drawer-value">@selectedRoom.LocationName</span>
+                        </div>
                     </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
-            {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom" @bind-Value="locationEditModel.Name" />
-                    <FluentTextField Label="Adresse" @bind-Value="locationEditModel.Street" />
-                    <FluentTextField Label="Code postal" @bind-Value="locationEditModel.ZipCode" />
-                    <FluentTextField Label="Ville" @bind-Value="locationEditModel.City" />
-                    <FluentTextField Label="Pays" @bind-Value="locationEditModel.Country" />
-                </div>
-            }
-            else if (drawerMode == DrawerMode.RoomDetails && selectedRoom is not null)
-            {
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Salle</span>
-                        <span class="drawer-value">@selectedRoom.Name</span>
+                }
+                else if (drawerMode == DrawerMode.RoomCreate || drawerMode == DrawerMode.RoomEdit)
+                {
+                    <div class="drawer-form">
+                        <FluentTextField Label="Nom de la salle" @bind-Value="roomEditModel.Name" />
+                        <div class="drawer-field">
+                            <span class="drawer-label">Emplacement</span>
+                            <select class="drawer-select" @bind="roomEditModel.LocationId">
+                                @foreach (var location in locations)
+                                {
+                                    <option value="@location.Id">@location.Name</option>
+                                }
+                            </select>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Emplacement</span>
-                        <span class="drawer-value">@FindLocationName(selectedRoom)</span>
-                    </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.RoomCreate || drawerMode == DrawerMode.RoomEdit)
-            {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom de la salle" @bind-Value="roomEditModel.Name" />
-                    <div class="drawer-field">
-                        <span class="drawer-label">Emplacement</span>
-                        <select class="drawer-select" @bind="roomEditModel.LocationId">
-                            @foreach (var location in locations)
-                            {
-                                <option value="@location.Id">@location.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
         </ChildContent>
         <FooterContent>
             @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
@@ -143,7 +149,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenLocationEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLocation">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLocationAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -152,7 +158,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLocation">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLocationAsync">
                         @(drawerMode == DrawerMode.LocationCreate ? "Creer l'emplacement" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -163,7 +169,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenRoomEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteRoom">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteRoomAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -172,7 +178,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveRoom">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveRoomAsync">
                         @(drawerMode == DrawerMode.RoomCreate ? "Creer la salle" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -182,21 +188,24 @@
 }
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         BreadcrumbService.SetItems(
         [
             new BreadcrumbItem { IsHome = true, Href = "/" },
             new BreadcrumbItem { Text = "Salles" }
         ]);
+
+        await RefreshRoomsPageAsync();
     }
 
-    private readonly Gym gym = new("GymXYZ") { Id = 1 };
-    private readonly List<Location> locations;
-    private readonly List<Room> rooms;
+    private RoomsPageDto? roomsPage;
 
-    private Location? selectedLocation;
-    private Room? selectedRoom;
+    private IReadOnlyList<LocationWithRoomsDto> locations => roomsPage?.Locations ?? new List<LocationWithRoomsDto>();
+    private IReadOnlyList<RoomWithLocationDto> rooms => roomsPage?.Rooms ?? new List<RoomWithLocationDto>();
+
+    private LocationWithRoomsDto? selectedLocation;
+    private RoomWithLocationDto? selectedRoom;
     private LocationEditModel locationEditModel = new();
     private RoomEditModel roomEditModel = new();
     private DrawerMode drawerMode = DrawerMode.None;
@@ -204,46 +213,31 @@
 
     private bool isDrawerOpen => drawerMode != DrawerMode.None;
 
-    public Rooms()
+    private async Task RefreshRoomsPageAsync()
     {
-        var downtown = new Location("Centre-ville")
+        roomsPage = await Sender.Send(new GetRoomsPageQuery());
+
+        if (selectedLocation is not null)
         {
-            Id = 1,
-            Address = new Address
+            selectedLocation = locations.FirstOrDefault(location => location.Id == selectedLocation.Id);
+            if (selectedLocation is null && drawerMode is DrawerMode.LocationDetails or DrawerMode.LocationEdit)
             {
-                Street = "12 rue des Lilas",
-                ZipCode = "69003",
-                City = "Lyon",
-                Country = "France"
+                CloseDrawer();
+                return;
             }
-        };
+        }
 
-        var riverside = new Location("Rive gauche")
+        if (selectedRoom is not null)
         {
-            Id = 2,
-            Address = new Address
+            selectedRoom = rooms.FirstOrDefault(room => room.Id == selectedRoom.Id);
+            if (selectedRoom is null && drawerMode is DrawerMode.RoomDetails or DrawerMode.RoomEdit)
             {
-                Street = "5 quai Pierre",
-                ZipCode = "69002",
-                City = "Lyon",
-                Country = "France"
+                CloseDrawer();
             }
-        };
-
-        locations = [downtown, riverside];
-
-        var studioA = new Room("Studio A") { Id = 1 };
-        var studioB = new Room("Studio B") { Id = 2 };
-        var salleYoga = new Room("Salle Yoga") { Id = 3 };
-
-        rooms = [studioA, studioB, salleYoga];
-        downtown.Rooms = new List<Room> { studioA, studioB };
-        riverside.Rooms = new List<Room> { salleYoga };
-
-        gym.Locations = locations;
+        }
     }
 
-    private void OpenLocationDetailsDrawer(Location location)
+    private void OpenLocationDetailsDrawer(LocationWithRoomsDto location)
     {
         selectedLocation = location;
         selectedRoom = null;
@@ -279,53 +273,65 @@
         drawerTitle = "Modifier l'emplacement";
     }
 
-    private void SaveLocation()
+    private async Task SaveLocationAsync()
     {
-        if (drawerMode == DrawerMode.LocationCreate)
+        try
         {
-            var newLocation = new Location(locationEditModel.Name)
+            if (drawerMode == DrawerMode.LocationCreate)
             {
-                Id = NextLocationId(),
-                Address = new Address
+                await Sender.Send(new CreateLocationCommand(
+                    locationEditModel.Name,
+                    locationEditModel.Street,
+                    locationEditModel.ZipCode,
+                    locationEditModel.City,
+                    locationEditModel.Country));
+
+                await RefreshRoomsPageAsync();
+                CloseDrawer();
+                return;
+            }
+
+            if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+            {
+                await Sender.Send(new UpdateLocationCommand(
+                    selectedLocation.Id,
+                    locationEditModel.Name,
+                    locationEditModel.Street,
+                    locationEditModel.ZipCode,
+                    locationEditModel.City,
+                    locationEditModel.Country));
+
+                await RefreshRoomsPageAsync();
+                selectedLocation = locations.FirstOrDefault(location => location.Id == selectedLocation.Id);
+                if (selectedLocation is null)
                 {
-                    Street = locationEditModel.Street,
-                    ZipCode = locationEditModel.ZipCode,
-                    City = locationEditModel.City,
-                    Country = locationEditModel.Country
+                    CloseDrawer();
+                    return;
                 }
-            };
 
-            locations.Add(newLocation);
-            gym.AddLocation(newLocation);
-            CloseDrawer();
-            return;
+                drawerMode = DrawerMode.LocationDetails;
+                drawerTitle = "Details de l'emplacement";
+            }
         }
-
-        if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+        catch (ValidationException)
         {
-            selectedLocation.Name = locationEditModel.Name;
-            selectedLocation.Address.Street = locationEditModel.Street;
-            selectedLocation.Address.ZipCode = locationEditModel.ZipCode;
-            selectedLocation.Address.City = locationEditModel.City;
-            selectedLocation.Address.Country = locationEditModel.Country;
-            drawerMode = DrawerMode.LocationDetails;
-            drawerTitle = "Details de l'emplacement";
+            // Validation feedback can be surfaced in a notification panel later.
         }
     }
 
-    private void DeleteLocation()
+    private async Task DeleteLocationAsync()
     {
         if (selectedLocation is null)
         {
             return;
         }
 
-        rooms.RemoveAll(room => selectedLocation.Rooms?.Contains(room) ?? false);
-        locations.Remove(selectedLocation);
+        await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
+        await RefreshRoomsPageAsync();
         CloseDrawer();
     }
 
-    private void OpenRoomDetailsDrawer(Room room)
+    private void OpenRoomDetailsDrawer(RoomWithLocationDto room)
     {
         selectedRoom = room;
         selectedLocation = null;
@@ -359,56 +365,55 @@
         roomEditModel = new RoomEditModel
         {
             Name = selectedRoom.Name,
-            LocationId = FindLocationId(selectedRoom)
+            LocationId = selectedRoom.LocationId
         };
 
         drawerMode = DrawerMode.RoomEdit;
         drawerTitle = "Modifier la salle";
     }
 
-    private void SaveRoom()
+    private async Task SaveRoomAsync()
     {
-        var location = locations.FirstOrDefault(item => item.Id == roomEditModel.LocationId);
-        if (location is null)
+        try
         {
-            return;
-        }
-
-        if (drawerMode == DrawerMode.RoomCreate)
-        {
-            var newRoom = new Room(roomEditModel.Name)
+            if (drawerMode == DrawerMode.RoomCreate)
             {
-                Id = NextRoomId()
-            };
+                await Sender.Send(new CreateRoomCommand(roomEditModel.Name, roomEditModel.LocationId));
+                await RefreshRoomsPageAsync();
+                CloseDrawer();
+                return;
+            }
 
-            rooms.Add(newRoom);
-            location.AddRoom(newRoom);
-            CloseDrawer();
-            return;
+            if (drawerMode == DrawerMode.RoomEdit && selectedRoom is not null)
+            {
+                await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.LocationId));
+                await RefreshRoomsPageAsync();
+                selectedRoom = rooms.FirstOrDefault(room => room.Id == selectedRoom.Id);
+                if (selectedRoom is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.RoomDetails;
+                drawerTitle = "Details de la salle";
+            }
         }
-
-        if (drawerMode == DrawerMode.RoomEdit && selectedRoom is not null)
+        catch (ValidationException)
         {
-            selectedRoom.Name = roomEditModel.Name;
-            MoveRoomToLocation(selectedRoom, location);
-            drawerMode = DrawerMode.RoomDetails;
-            drawerTitle = "Details de la salle";
+            // Validation feedback can be surfaced in a notification panel later.
         }
     }
 
-    private void DeleteRoom()
+    private async Task DeleteRoomAsync()
     {
         if (selectedRoom is null)
         {
             return;
         }
 
-        foreach (var location in locations)
-        {
-            location.Rooms?.Remove(selectedRoom);
-        }
-
-        rooms.Remove(selectedRoom);
+        await Sender.Send(new DeleteRoomCommand(selectedRoom.Id));
+        await RefreshRoomsPageAsync();
         CloseDrawer();
     }
 
@@ -439,41 +444,12 @@
         drawerTitle = string.Empty;
     }
 
-    private void MoveRoomToLocation(Room room, Location targetLocation)
-    {
-        foreach (var location in locations)
-        {
-            location.Rooms?.Remove(room);
-        }
-
-        targetLocation.AddRoom(room);
-    }
-
-    private string FindLocationName(Room room)
-    {
-        return locations.FirstOrDefault(location => location.Rooms?.Contains(room) ?? false)?.Name ?? "-";
-    }
-
-    private int FindLocationId(Room room)
-    {
-        return locations.FirstOrDefault(location => location.Rooms?.Contains(room) ?? false)?.Id ?? 0;
-    }
-
-    private static string FormatAddress(Address address)
+    private static string FormatAddress(AddressDto address)
     {
         var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
             .Where(value => !string.IsNullOrWhiteSpace(value));
+
         return string.Join(", ", parts);
-    }
-
-    private int NextLocationId()
-    {
-        return locations.Count == 0 ? 1 : locations.Max(location => location.Id) + 1;
-    }
-
-    private int NextRoomId()
-    {
-        return rooms.Count == 0 ? 1 : rooms.Max(room => room.Id) + 1;
     }
 
     private enum DrawerMode
