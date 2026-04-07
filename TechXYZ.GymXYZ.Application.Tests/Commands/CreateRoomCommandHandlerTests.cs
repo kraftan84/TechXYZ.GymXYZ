@@ -47,4 +47,16 @@ public class CreateRoomCommandHandlerTests
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 0), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Handle_ShouldThrowValidationException_WhenLocationDoesNotExist()
+    {
+        var faker = TestInfrastructure.Faker();
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenLocationDoesNotExist));
+        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
+
+        var handler = new CreateRoomCommandHandler(unitOfWork, new CreateRoomCommandValidator());
+
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 999), CancellationToken.None));
+    }
 }

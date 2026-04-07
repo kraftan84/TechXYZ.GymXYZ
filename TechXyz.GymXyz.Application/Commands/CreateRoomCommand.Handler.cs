@@ -27,7 +27,7 @@ public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand
 
         if (location is null)
         {
-            return 0;
+            throw new ValidationException("Location not found.");
         }
 
         var room = new Room(request.Name.Trim());

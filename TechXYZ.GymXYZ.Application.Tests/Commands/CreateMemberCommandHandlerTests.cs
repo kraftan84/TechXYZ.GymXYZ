@@ -62,4 +62,24 @@ public class CreateMemberCommandHandlerTests
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(command, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task Handle_ShouldThrowValidationException_WhenDefaultGymDoesNotExist()
+    {
+        var faker = TestInfrastructure.Faker();
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenDefaultGymDoesNotExist));
+        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
+
+        var handler = new CreateMemberCommandHandler(unitOfWork, new CreateMemberCommandValidator());
+
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateMemberCommand(
+            faker.Name.FirstName(),
+            faker.Name.LastName(),
+            faker.Internet.Email(),
+            null,
+            null,
+            null,
+            null,
+            null), CancellationToken.None));
+    }
 }

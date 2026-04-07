@@ -28,7 +28,7 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
 
         if (defaultGym is null)
         {
-            throw new InvalidOperationException("Default gym not found.");
+            throw new ValidationException("Default gym not found.");
         }
 
         var coach = new Coach(request.FirstName.Trim(), request.LastName.Trim())

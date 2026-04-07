@@ -28,7 +28,7 @@ public sealed class CreateMemberCommandHandler : IRequestHandler<CreateMemberCom
 
         if (defaultGym is null)
         {
-            throw new InvalidOperationException("Default gym not found.");
+            throw new ValidationException("Default gym not found.");
         }
 
         var member = new Member(request.FirstName.Trim(), request.LastName.Trim())
