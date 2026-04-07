@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @inject IDialogService DialogService
 @inject BreadcrumbService BreadcrumbService
+@inject IUserFeedbackService UserFeedback
 @implements IDisposable
 
 <div class="app-shell @(isNavOpen ? "nav-open" : "nav-closed")">
@@ -67,7 +68,9 @@
                     </FluentBreadcrumb>
                 </div>
             }
-            @Body
+            <ErrorBoundary OnError="HandleUnhandledError">
+                @Body
+            </ErrorBoundary>
         </main>
     </div>
     @if (isNavOpen)
@@ -133,6 +136,11 @@
     {
         breadcrumbItems = BreadcrumbService.Items;
         InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleUnhandledError(Exception exception)
+    {
+        UserFeedback.Handle(exception, "afficher la page");
     }
 
     private Task OnNotificationsOpenedAsync(DialogInstance dialog)

@@ -1,5 +1,4 @@
 @page "/coachs"
-@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
@@ -7,6 +6,7 @@
 @inject NavigationManager NavManager
 @inject BreadcrumbService BreadcrumbService
 @inject ISender Sender
+@inject IUserFeedbackService UserFeedback
 
 <PageTitle>Coachs</PageTitle>
 
@@ -140,7 +140,17 @@
 
     private async Task RefreshCoachesAsync()
     {
-        coaches = await Sender.Send(new GetCoachesQuery());
+        var loaded = false;
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            coaches = await Sender.Send(new GetCoachesQuery());
+            loaded = true;
+        }, "charger la liste des coachs");
+
+        if (!loaded)
+        {
+            return;
+        }
 
         if (selectedCoach is null)
         {
@@ -226,9 +236,9 @@
 
     private async Task SaveCoachAsync()
     {
-        try
+        if (drawerMode == DrawerMode.Create)
         {
-            if (drawerMode == DrawerMode.Create)
+            var created = await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new CreateCoachCommand(
                     editModel.FirstName,
@@ -242,10 +252,17 @@
 
                 await RefreshCoachesAsync();
                 CloseDrawer();
+            }, "creer le coach", "Coach cree.");
+
+            if (!created)
+            {
                 return;
             }
+        }
 
-            if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
+        if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new UpdateCoachCommand(
                     selectedCoach.Id,
@@ -268,11 +285,7 @@
 
                 drawerMode = DrawerMode.Details;
                 drawerTitle = "Details du coach";
-            }
-        }
-        catch (ValidationException)
-        {
-            // Validation feedback can be surfaced in a notification panel later.
+            }, "mettre a jour le coach", "Coach mis a jour.");
         }
     }
 
@@ -283,8 +296,11 @@
             return;
         }
 
-        await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
-        await RefreshCoachesAsync();
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
+            await RefreshCoachesAsync();
+        }, "supprimer le coach", "Coach supprime.");
     }
 
     private void OpenCoachPage()

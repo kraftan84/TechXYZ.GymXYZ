@@ -1,5 +1,4 @@
 @page "/members"
-@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
@@ -7,6 +6,7 @@
 @inject NavigationManager NavManager
 @inject BreadcrumbService BreadcrumbService
 @inject ISender Sender
+@inject IUserFeedbackService UserFeedback
 
 <PageTitle>Membres</PageTitle>
 
@@ -221,7 +221,18 @@
 
     private async Task RefreshMembersAsync()
     {
-        allMembers = await Sender.Send(new GetMembersQuery());
+        var loaded = false;
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            allMembers = await Sender.Send(new GetMembersQuery());
+            loaded = true;
+        }, "charger la liste des membres");
+
+        if (!loaded)
+        {
+            return;
+        }
+
         ClampCurrentPage();
 
         if (selectedMember is null)
@@ -308,11 +319,12 @@
 
     private async Task SaveMemberAsync()
     {
-        try
+        if (drawerMode == DrawerMode.Create)
         {
-            if (drawerMode == DrawerMode.Create)
+            var createdMemberId = 0;
+            var created = await UserFeedback.ExecuteAsync(async () =>
             {
-                var createdMemberId = await Sender.Send(new CreateMemberCommand(
+                createdMemberId = await Sender.Send(new CreateMemberCommand(
                     editModel.FirstName,
                     editModel.LastName,
                     editModel.Email,
@@ -325,10 +337,17 @@
                 await RefreshMembersAsync();
                 selectedMember = allMembers.FirstOrDefault(member => member.Id == createdMemberId);
                 CloseDrawer();
+            }, "creer le membre", "Membre cree.");
+
+            if (!created)
+            {
                 return;
             }
+        }
 
-            if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+        if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new UpdateMemberCommand(
                     selectedMember.Id,
@@ -351,11 +370,7 @@
 
                 drawerMode = DrawerMode.Details;
                 drawerTitle = "Details du membre";
-            }
-        }
-        catch (ValidationException)
-        {
-            // Validation feedback can be surfaced in a notification panel later.
+            }, "mettre a jour le membre", "Membre mis a jour.");
         }
     }
 
@@ -366,8 +381,11 @@
             return;
         }
 
-        await Sender.Send(new DeleteMemberCommand(selectedMember.Id));
-        await RefreshMembersAsync();
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new DeleteMemberCommand(selectedMember.Id));
+            await RefreshMembersAsync();
+        }, "supprimer le membre", "Membre supprime.");
     }
 
     private void OpenMemberPage()

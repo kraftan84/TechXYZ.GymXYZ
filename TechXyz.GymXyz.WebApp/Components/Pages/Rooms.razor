@@ -1,11 +1,11 @@
 @page "/rooms"
-@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Models
 @using TechXyz.GymXyz.Application.Queries
 @inject BreadcrumbService BreadcrumbService
 @inject ISender Sender
+@inject IUserFeedbackService UserFeedback
 
 <PageTitle>Salles</PageTitle>
 
@@ -215,7 +215,17 @@
 
     private async Task RefreshRoomsPageAsync()
     {
-        roomsPage = await Sender.Send(new GetRoomsPageQuery());
+        var loaded = false;
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            roomsPage = await Sender.Send(new GetRoomsPageQuery());
+            loaded = true;
+        }, "charger les salles");
+
+        if (!loaded)
+        {
+            return;
+        }
 
         if (selectedLocation is not null)
         {
@@ -275,9 +285,9 @@
 
     private async Task SaveLocationAsync()
     {
-        try
+        if (drawerMode == DrawerMode.LocationCreate)
         {
-            if (drawerMode == DrawerMode.LocationCreate)
+            var created = await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new CreateLocationCommand(
                     locationEditModel.Name,
@@ -288,10 +298,17 @@
 
                 await RefreshRoomsPageAsync();
                 CloseDrawer();
+            }, "creer l'emplacement", "Emplacement cree.");
+
+            if (!created)
+            {
                 return;
             }
+        }
 
-            if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+        if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new UpdateLocationCommand(
                     selectedLocation.Id,
@@ -311,11 +328,7 @@
 
                 drawerMode = DrawerMode.LocationDetails;
                 drawerTitle = "Details de l'emplacement";
-            }
-        }
-        catch (ValidationException)
-        {
-            // Validation feedback can be surfaced in a notification panel later.
+            }, "mettre a jour l'emplacement", "Emplacement mis a jour.");
         }
     }
 
@@ -326,9 +339,12 @@
             return;
         }
 
-        await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
-        await RefreshRoomsPageAsync();
-        CloseDrawer();
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
+            await RefreshRoomsPageAsync();
+            CloseDrawer();
+        }, "supprimer l'emplacement", "Emplacement supprime.");
     }
 
     private void OpenRoomDetailsDrawer(RoomWithLocationDto room)
@@ -374,17 +390,24 @@
 
     private async Task SaveRoomAsync()
     {
-        try
+        if (drawerMode == DrawerMode.RoomCreate)
         {
-            if (drawerMode == DrawerMode.RoomCreate)
+            var created = await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new CreateRoomCommand(roomEditModel.Name, roomEditModel.LocationId));
                 await RefreshRoomsPageAsync();
                 CloseDrawer();
+            }, "creer la salle", "Salle creee.");
+
+            if (!created)
+            {
                 return;
             }
+        }
 
-            if (drawerMode == DrawerMode.RoomEdit && selectedRoom is not null)
+        if (drawerMode == DrawerMode.RoomEdit && selectedRoom is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
             {
                 await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.LocationId));
                 await RefreshRoomsPageAsync();
@@ -397,11 +420,7 @@
 
                 drawerMode = DrawerMode.RoomDetails;
                 drawerTitle = "Details de la salle";
-            }
-        }
-        catch (ValidationException)
-        {
-            // Validation feedback can be surfaced in a notification panel later.
+            }, "mettre a jour la salle", "Salle mise a jour.");
         }
     }
 
@@ -412,9 +431,12 @@
             return;
         }
 
-        await Sender.Send(new DeleteRoomCommand(selectedRoom.Id));
-        await RefreshRoomsPageAsync();
-        CloseDrawer();
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new DeleteRoomCommand(selectedRoom.Id));
+            await RefreshRoomsPageAsync();
+            CloseDrawer();
+        }, "supprimer la salle", "Salle supprimee.");
     }
 
     private void CancelEdit()

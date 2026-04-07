@@ -21,6 +21,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<ICurrentUserOverride, CurrentUserOverride>();
 builder.Services.AddScoped<BreadcrumbService>();
+builder.Services.AddScoped<IUserFeedbackService, UserFeedbackService>();
 
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);
