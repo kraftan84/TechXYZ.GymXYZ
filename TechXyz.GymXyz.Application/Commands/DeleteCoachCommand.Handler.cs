@@ -1,18 +1,19 @@
 using FluentValidation;
 using MediatR;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class DeleteCoachCommandHandler : IRequestHandler<DeleteCoachCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<DeleteCoachCommand> _validator;
 
-    public DeleteCoachCommandHandler(IUnitOfWork unitOfWork, IValidator<DeleteCoachCommand> validator)
+    public DeleteCoachCommandHandler(IGymDbContext dbContext, IValidator<DeleteCoachCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -20,15 +21,14 @@ public sealed class DeleteCoachCommandHandler : IRequestHandler<DeleteCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var repository = _unitOfWork.Repository<Coach, int>();
-        var coach = await repository.GetByIdAsync(request.Id);
+        var coach = await _dbContext.Coaches.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (coach is null)
         {
             return false;
         }
 
-        await repository.DeleteAsync(coach);
-        await _unitOfWork.Save(cancellationToken);
+        _dbContext.Coaches.Remove(coach);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

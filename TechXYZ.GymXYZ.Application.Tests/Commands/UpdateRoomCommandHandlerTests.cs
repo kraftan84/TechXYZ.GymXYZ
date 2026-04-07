@@ -26,8 +26,7 @@ public class UpdateRoomCommandHandlerTests
         dbContext.Locations.AddRange(source, target);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new UpdateRoomCommandHandler(unitOfWork, new UpdateRoomCommandValidator());
+        var handler = new UpdateRoomCommandHandler(dbContext, new UpdateRoomCommandValidator());
 
         var newName = faker.Commerce.ProductName();
         var updated = await handler.Handle(new UpdateRoomCommand(room.Id, $" {newName} ", target.Id), CancellationToken.None);

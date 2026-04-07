@@ -40,8 +40,7 @@ public class MemberQueriesHandlerTests
         dbContext.Members.AddRange(activeMember, inactiveMember);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new GetMembersQueryHandler(unitOfWork);
+        var handler = new GetMembersQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
@@ -56,9 +55,7 @@ public class MemberQueriesHandlerTests
     public async Task GetMemberById_ShouldReturnNull_WhenNotFound()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetMemberById_ShouldReturnNull_WhenNotFound));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new GetMemberByIdQueryHandler(unitOfWork);
+        var handler = new GetMemberByIdQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetMemberByIdQuery(12345), CancellationToken.None);
 
@@ -94,8 +91,7 @@ public class MemberQueriesHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new GetMemberByIdQueryHandler(unitOfWork);
+        var handler = new GetMemberByIdQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetMemberByIdQuery(member.Id), CancellationToken.None);
 

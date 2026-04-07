@@ -28,8 +28,7 @@ public class UpdateMemberCommandHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new UpdateMemberCommandHandler(unitOfWork, new UpdateMemberCommandValidator());
+        var handler = new UpdateMemberCommandHandler(dbContext, new UpdateMemberCommandValidator());
 
         var updatedFirstName = faker.Name.FirstName();
         var updatedLastName = faker.Name.LastName();
@@ -68,9 +67,7 @@ public class UpdateMemberCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenMemberDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new UpdateMemberCommandHandler(unitOfWork, new UpdateMemberCommandValidator());
+        var handler = new UpdateMemberCommandHandler(dbContext, new UpdateMemberCommandValidator());
 
         var updated = await handler.Handle(new UpdateMemberCommand(
             404,
@@ -92,9 +89,7 @@ public class UpdateMemberCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new UpdateMemberCommandHandler(unitOfWork, new UpdateMemberCommandValidator());
+        var handler = new UpdateMemberCommandHandler(dbContext, new UpdateMemberCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() =>
             handler.Handle(new UpdateMemberCommand(

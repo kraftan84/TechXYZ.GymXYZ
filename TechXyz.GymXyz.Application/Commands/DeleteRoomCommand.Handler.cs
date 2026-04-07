@@ -1,18 +1,19 @@
 using FluentValidation;
 using MediatR;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<DeleteRoomCommand> _validator;
 
-    public DeleteRoomCommandHandler(IUnitOfWork unitOfWork, IValidator<DeleteRoomCommand> validator)
+    public DeleteRoomCommandHandler(IGymDbContext dbContext, IValidator<DeleteRoomCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -20,15 +21,14 @@ public sealed class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var roomRepository = _unitOfWork.Repository<Room, int>();
-        var room = await roomRepository.GetByIdAsync(request.Id);
+        var room = await _dbContext.Rooms.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (room is null)
         {
             return false;
         }
 
-        await roomRepository.DeleteAsync(room);
-        await _unitOfWork.Save(cancellationToken);
+        _dbContext.Rooms.Remove(room);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

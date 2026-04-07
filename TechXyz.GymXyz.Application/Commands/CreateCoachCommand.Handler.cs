@@ -1,19 +1,19 @@
 using FluentValidation;
 using MediatR;
 using TechXyz.GymXyz.Application.Common;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachCommand, int>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<CreateCoachCommand> _validator;
 
-    public CreateCoachCommandHandler(IUnitOfWork unitOfWork, IValidator<CreateCoachCommand> validator)
+    public CreateCoachCommandHandler(IGymDbContext dbContext, IValidator<CreateCoachCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -21,7 +21,7 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var defaultGym = await _unitOfWork.GetDefaultGymAsync(cancellationToken);
+        var defaultGym = await _dbContext.GetDefaultGymAsync(cancellationToken);
 
         if (defaultGym is null)
         {
@@ -36,7 +36,7 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
         };
 
         defaultGym.AddCoach(coach);
-        await _unitOfWork.Save(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return coach.Id;
     }

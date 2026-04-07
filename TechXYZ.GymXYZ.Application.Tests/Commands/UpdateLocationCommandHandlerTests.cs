@@ -27,8 +27,7 @@ public class UpdateLocationCommandHandlerTests
         dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new UpdateLocationCommandHandler(unitOfWork, new UpdateLocationCommandValidator());
+        var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
 
         var updatedName = faker.Address.City();
         var updatedStreet = faker.Address.StreetAddress();
@@ -49,9 +48,7 @@ public class UpdateLocationCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new UpdateLocationCommandHandler(unitOfWork, new UpdateLocationCommandValidator());
+        var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new UpdateLocationCommand(
             0,

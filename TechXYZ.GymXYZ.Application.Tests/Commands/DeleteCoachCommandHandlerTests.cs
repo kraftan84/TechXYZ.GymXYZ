@@ -17,8 +17,7 @@ public class DeleteCoachCommandHandlerTests
         dbContext.Coaches.Add(coach);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new DeleteCoachCommandHandler(unitOfWork, new DeleteCoachCommandValidator());
+        var handler = new DeleteCoachCommandHandler(dbContext, new DeleteCoachCommandValidator());
 
         var deleted = await handler.Handle(new DeleteCoachCommand(coach.Id), CancellationToken.None);
 
@@ -30,9 +29,7 @@ public class DeleteCoachCommandHandlerTests
     public async Task Handle_ShouldReturnFalse_WhenCoachDoesNotExist()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenCoachDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new DeleteCoachCommandHandler(unitOfWork, new DeleteCoachCommandValidator());
+        var handler = new DeleteCoachCommandHandler(dbContext, new DeleteCoachCommandValidator());
 
         var deleted = await handler.Handle(new DeleteCoachCommand(999), CancellationToken.None);
 
@@ -43,9 +40,7 @@ public class DeleteCoachCommandHandlerTests
     public async Task Handle_ShouldThrowValidationException_WhenIdIsInvalid()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new DeleteCoachCommandHandler(unitOfWork, new DeleteCoachCommandValidator());
+        var handler = new DeleteCoachCommandHandler(dbContext, new DeleteCoachCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new DeleteCoachCommand(0), CancellationToken.None));
     }

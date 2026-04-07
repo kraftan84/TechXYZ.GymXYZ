@@ -17,8 +17,7 @@ public class DeleteMemberCommandHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+        var handler = new DeleteMemberCommandHandler(dbContext, new DeleteMemberCommandValidator());
 
         var deleted = await handler.Handle(new DeleteMemberCommand(member.Id), CancellationToken.None);
 
@@ -30,9 +29,7 @@ public class DeleteMemberCommandHandlerTests
     public async Task Handle_ShouldReturnFalse_WhenMemberDoesNotExist()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenMemberDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+        var handler = new DeleteMemberCommandHandler(dbContext, new DeleteMemberCommandValidator());
 
         var deleted = await handler.Handle(new DeleteMemberCommand(999), CancellationToken.None);
 
@@ -43,9 +40,7 @@ public class DeleteMemberCommandHandlerTests
     public async Task Handle_ShouldThrowValidationException_WhenIdIsInvalid()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+        var handler = new DeleteMemberCommandHandler(dbContext, new DeleteMemberCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() =>
             handler.Handle(new DeleteMemberCommand(0), CancellationToken.None));

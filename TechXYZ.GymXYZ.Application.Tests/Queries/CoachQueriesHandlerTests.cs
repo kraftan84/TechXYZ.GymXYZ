@@ -17,8 +17,7 @@ public class CoachQueriesHandlerTests
             new Coach(faker.Name.FirstName(), "Alpha"));
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new GetCoachesQueryHandler(unitOfWork);
+        var handler = new GetCoachesQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetCoachesQuery(), CancellationToken.None);
 
@@ -31,9 +30,7 @@ public class CoachQueriesHandlerTests
     public async Task GetCoachById_ShouldReturnNull_WhenNotFound()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetCoachById_ShouldReturnNull_WhenNotFound));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new GetCoachByIdQueryHandler(unitOfWork);
+        var handler = new GetCoachByIdQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetCoachByIdQuery(12345), CancellationToken.None);
 
@@ -65,8 +62,7 @@ public class CoachQueriesHandlerTests
         dbContext.Coaches.Add(coach);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new GetCoachByIdQueryHandler(unitOfWork);
+        var handler = new GetCoachByIdQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetCoachByIdQuery(coach.Id), CancellationToken.None);
 

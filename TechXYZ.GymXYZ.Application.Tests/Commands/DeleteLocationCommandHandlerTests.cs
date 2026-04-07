@@ -27,8 +27,7 @@ public class DeleteLocationCommandHandlerTests
         dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new DeleteLocationCommandHandler(unitOfWork, new DeleteLocationCommandValidator());
+        var handler = new DeleteLocationCommandHandler(dbContext, new DeleteLocationCommandValidator());
 
         var deleted = await handler.Handle(new DeleteLocationCommand(location.Id), CancellationToken.None);
 

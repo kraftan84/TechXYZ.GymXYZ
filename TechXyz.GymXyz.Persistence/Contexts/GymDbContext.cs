@@ -6,7 +6,7 @@ using TechXyz.GymXyz.Persistence.Converters;
 
 namespace TechXyz.GymXyz.Persistence.Contexts;
 
-public class GymDbContext : DbContext
+public class GymDbContext : DbContext, IGymDbContext
 {
     private readonly ICurrentUserService _currentUserService;
     

@@ -2,19 +2,19 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Common;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<UpdateCoachCommand> _validator;
 
-    public UpdateCoachCommandHandler(IUnitOfWork unitOfWork, IValidator<UpdateCoachCommand> validator)
+    public UpdateCoachCommandHandler(IGymDbContext dbContext, IValidator<UpdateCoachCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -22,8 +22,7 @@ public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var repository = _unitOfWork.Repository<Coach, int>();
-        var coach = await repository.Entities.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var coach = await _dbContext.Coaches.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (coach is null)
         {
             return false;
@@ -37,8 +36,7 @@ public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachComma
         var updatedAddress = AddressHelper.BuildOptionalAddress(request.Street, request.ZipCode, request.City, request.Country);
         coach.Address = AddressHelper.Apply(coach.Address, updatedAddress);
 
-        await repository.UpdateAsync(coach);
-        await _unitOfWork.Save(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

@@ -1,19 +1,19 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<DeleteLocationCommand> _validator;
 
-    public DeleteLocationCommandHandler(IUnitOfWork unitOfWork, IValidator<DeleteLocationCommand> validator)
+    public DeleteLocationCommandHandler(IGymDbContext dbContext, IValidator<DeleteLocationCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -21,10 +21,7 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var locationRepository = _unitOfWork.Repository<Location, int>();
-        var roomRepository = _unitOfWork.Repository<Room, int>();
-
-        var location = await locationRepository.Entities
+        var location = await _dbContext.Locations
             .Include(candidate => candidate.Rooms)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
 
@@ -35,11 +32,11 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
 
         foreach (var room in location.Rooms?.ToList() ?? [])
         {
-            await roomRepository.DeleteAsync(room);
+            _dbContext.Rooms.Remove(room);
         }
 
-        await locationRepository.DeleteAsync(location);
-        await _unitOfWork.Save(cancellationToken);
+        _dbContext.Locations.Remove(location);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

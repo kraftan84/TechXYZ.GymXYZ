@@ -1,19 +1,19 @@
 using FluentValidation;
 using MediatR;
 using TechXyz.GymXyz.Application.Common;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, int>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<CreateLocationCommand> _validator;
 
-    public CreateLocationCommandHandler(IUnitOfWork unitOfWork, IValidator<CreateLocationCommand> validator)
+    public CreateLocationCommandHandler(IGymDbContext dbContext, IValidator<CreateLocationCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -21,7 +21,7 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var defaultGym = await _unitOfWork.GetDefaultGymAsync(cancellationToken);
+        var defaultGym = await _dbContext.GetDefaultGymAsync(cancellationToken);
 
         if (defaultGym is null)
         {
@@ -40,7 +40,7 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
         };
 
         defaultGym.AddLocation(location);
-        await _unitOfWork.Save(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return location.Id;
     }

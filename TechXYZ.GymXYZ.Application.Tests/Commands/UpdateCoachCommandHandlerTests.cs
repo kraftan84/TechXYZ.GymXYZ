@@ -29,8 +29,7 @@ public class UpdateCoachCommandHandlerTests
         dbContext.Coaches.Add(coach);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new UpdateCoachCommandHandler(unitOfWork, new UpdateCoachCommandValidator());
+        var handler = new UpdateCoachCommandHandler(dbContext, new UpdateCoachCommandValidator());
 
         var firstName = faker.Name.FirstName();
         var lastName = faker.Name.LastName();
@@ -63,9 +62,7 @@ public class UpdateCoachCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenCoachDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new UpdateCoachCommandHandler(unitOfWork, new UpdateCoachCommandValidator());
+        var handler = new UpdateCoachCommandHandler(dbContext, new UpdateCoachCommandValidator());
 
         var updated = await handler.Handle(new UpdateCoachCommand(
             999,
@@ -87,9 +84,7 @@ public class UpdateCoachCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new UpdateCoachCommandHandler(unitOfWork, new UpdateCoachCommandValidator());
+        var handler = new UpdateCoachCommandHandler(dbContext, new UpdateCoachCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new UpdateCoachCommand(
             0,

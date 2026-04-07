@@ -1,27 +1,24 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
-using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
 public sealed class GetMemberByIdQueryHandler : IRequestHandler<GetMemberByIdQuery, MemberDto?>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
 
-    public GetMemberByIdQueryHandler(IUnitOfWork unitOfWork)
+    public GetMemberByIdQueryHandler(IGymDbContext dbContext)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public async Task<MemberDto?> Handle(GetMemberByIdQuery request, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        return await _unitOfWork
-            .Repository<Member, int>()
-            .Entities
+        return await _dbContext.Members
             .AsNoTracking()
             .Where(candidate => candidate.Id == request.Id)
             .Select(candidate => new MemberDto(

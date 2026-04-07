@@ -14,8 +14,7 @@ public class DeleteRoomCommandHandlerTests
         dbContext.Rooms.Add(room);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new DeleteRoomCommandHandler(unitOfWork, new DeleteRoomCommandValidator());
+        var handler = new DeleteRoomCommandHandler(dbContext, new DeleteRoomCommandValidator());
 
         var deleted = await handler.Handle(new DeleteRoomCommand(room.Id), CancellationToken.None);
 

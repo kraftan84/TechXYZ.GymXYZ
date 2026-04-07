@@ -16,9 +16,7 @@ public class CreateMemberCommandHandlerTests
         dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateMemberCommandHandler(unitOfWork, new CreateMemberCommandValidator());
+        var handler = new CreateMemberCommandHandler(dbContext, new CreateMemberCommandValidator());
         var command = new CreateMemberCommand(
             $"  {faker.Name.FirstName()}  ",
             $"  {faker.Name.LastName()}  ",
@@ -47,9 +45,7 @@ public class CreateMemberCommandHandlerTests
     public async Task Handle_ShouldThrowValidationException_WhenFirstNameIsEmpty()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenFirstNameIsEmpty));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateMemberCommandHandler(unitOfWork, new CreateMemberCommandValidator());
+        var handler = new CreateMemberCommandHandler(dbContext, new CreateMemberCommandValidator());
         var command = new CreateMemberCommand(
             string.Empty,
             "Martin",
@@ -68,9 +64,7 @@ public class CreateMemberCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenDefaultGymDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateMemberCommandHandler(unitOfWork, new CreateMemberCommandValidator());
+        var handler = new CreateMemberCommandHandler(dbContext, new CreateMemberCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateMemberCommand(
             faker.Name.FirstName(),

@@ -17,8 +17,7 @@ public class CreateLocationCommandHandlerTests
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new CreateLocationCommandHandler(unitOfWork, new CreateLocationCommandValidator());
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
         var command = new CreateLocationCommand(
             $" {faker.Address.City()} ",
@@ -43,8 +42,7 @@ public class CreateLocationCommandHandlerTests
         dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new CreateLocationCommandHandler(unitOfWork, new CreateLocationCommandValidator());
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(
             string.Empty,

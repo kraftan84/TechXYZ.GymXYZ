@@ -16,9 +16,7 @@ public class CreateCoachCommandHandlerTests
         dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateCoachCommandHandler(unitOfWork, new CreateCoachCommandValidator());
+        var handler = new CreateCoachCommandHandler(dbContext, new CreateCoachCommandValidator());
         var command = new CreateCoachCommand(
             $"  {faker.Name.FirstName()}  ",
             $"  {faker.Name.LastName()}  ",
@@ -46,9 +44,7 @@ public class CreateCoachCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenLastNameIsEmpty));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateCoachCommandHandler(unitOfWork, new CreateCoachCommandValidator());
+        var handler = new CreateCoachCommandHandler(dbContext, new CreateCoachCommandValidator());
         var command = new CreateCoachCommand(
             faker.Name.FirstName(),
             string.Empty,
@@ -67,9 +63,7 @@ public class CreateCoachCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenDefaultGymDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateCoachCommandHandler(unitOfWork, new CreateCoachCommandValidator());
+        var handler = new CreateCoachCommandHandler(dbContext, new CreateCoachCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateCoachCommand(
             faker.Name.FirstName(),

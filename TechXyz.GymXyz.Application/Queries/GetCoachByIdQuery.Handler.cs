@@ -1,25 +1,22 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
-using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
 public sealed class GetCoachByIdQueryHandler : IRequestHandler<GetCoachByIdQuery, CoachDto?>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
 
-    public GetCoachByIdQueryHandler(IUnitOfWork unitOfWork)
+    public GetCoachByIdQueryHandler(IGymDbContext dbContext)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public async Task<CoachDto?> Handle(GetCoachByIdQuery request, CancellationToken cancellationToken)
     {
-        return await _unitOfWork
-            .Repository<Coach, int>()
-            .Entities
+        return await _dbContext.Coaches
             .AsNoTracking()
             .Where(candidate => candidate.Id == request.Id)
             .Select(candidate => new CoachDto(

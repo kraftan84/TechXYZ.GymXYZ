@@ -26,8 +26,7 @@ public class CreateRoomCommandHandlerTests
         dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new CreateRoomCommandHandler(unitOfWork, new CreateRoomCommandValidator());
+        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
 
         var roomName = faker.Commerce.ProductName();
         var roomId = await handler.Handle(new CreateRoomCommand($" {roomName} ", location.Id), CancellationToken.None);
@@ -41,9 +40,7 @@ public class CreateRoomCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenLocationIdIsInvalid));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateRoomCommandHandler(unitOfWork, new CreateRoomCommandValidator());
+        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 0), CancellationToken.None));
     }
@@ -53,9 +50,7 @@ public class CreateRoomCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenLocationDoesNotExist));
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-
-        var handler = new CreateRoomCommandHandler(unitOfWork, new CreateRoomCommandValidator());
+        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
 
         await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 999), CancellationToken.None));
     }

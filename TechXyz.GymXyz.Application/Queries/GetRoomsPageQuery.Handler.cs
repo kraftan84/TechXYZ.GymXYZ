@@ -1,26 +1,23 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
-using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
 public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery, RoomsPageDto?>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
 
-    public GetRoomsPageQueryHandler(IUnitOfWork unitOfWork)
+    public GetRoomsPageQueryHandler(IGymDbContext dbContext)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
     }
 
     public async Task<RoomsPageDto?> Handle(GetRoomsPageQuery request, CancellationToken cancellationToken)
     {
         // For now, the first gym is treated as the default gym.
-        var gym = await _unitOfWork
-            .Repository<Gym, int>()
-            .Entities
+        var gym = await _dbContext.Gyms
             .AsNoTracking()
             .Include(candidate => candidate.Locations!)
             .ThenInclude(location => location.Rooms)

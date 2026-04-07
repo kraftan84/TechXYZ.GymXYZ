@@ -30,8 +30,7 @@ public class RoomsPageQueryHandlerTests
         dbContext.Gyms.AddRange(defaultGym, secondGym);
         await dbContext.SaveChangesAsync();
 
-        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
-        var handler = new GetRoomsPageQueryHandler(unitOfWork);
+        var handler = new GetRoomsPageQueryHandler(dbContext);
 
         var result = await handler.Handle(new GetRoomsPageQuery(), CancellationToken.None);
 

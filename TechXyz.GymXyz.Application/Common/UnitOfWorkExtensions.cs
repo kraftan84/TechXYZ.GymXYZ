@@ -1,16 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Common;
 
 public static class UnitOfWorkExtensions
 {
-    public static Task<Gym?> GetDefaultGymAsync(this IUnitOfWork unitOfWork, CancellationToken cancellationToken)
+    public static Task<Gym?> GetDefaultGymAsync(this IGymDbContext dbContext, CancellationToken cancellationToken)
     {
-        return unitOfWork
-            .Repository<Gym, int>()
-            .Entities
+        return dbContext.Gyms
             .OrderBy(gym => gym.Id)
             .FirstOrDefaultAsync(cancellationToken);
     }

@@ -1,18 +1,19 @@
 using FluentValidation;
 using MediatR;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class DeleteMemberCommandHandler : IRequestHandler<DeleteMemberCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<DeleteMemberCommand> _validator;
 
-    public DeleteMemberCommandHandler(IUnitOfWork unitOfWork, IValidator<DeleteMemberCommand> validator)
+    public DeleteMemberCommandHandler(IGymDbContext dbContext, IValidator<DeleteMemberCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -20,15 +21,14 @@ public sealed class DeleteMemberCommandHandler : IRequestHandler<DeleteMemberCom
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var repository = _unitOfWork.Repository<Member, int>();
-        var member = await repository.GetByIdAsync(request.Id);
+        var member = await _dbContext.Members.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (member is null)
         {
             return false;
         }
 
-        await repository.DeleteAsync(member);
-        await _unitOfWork.Save(cancellationToken);
+        _dbContext.Members.Remove(member);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

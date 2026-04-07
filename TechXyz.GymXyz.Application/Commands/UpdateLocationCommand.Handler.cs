@@ -1,19 +1,19 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<UpdateLocationCommand> _validator;
 
-    public UpdateLocationCommandHandler(IUnitOfWork unitOfWork, IValidator<UpdateLocationCommand> validator)
+    public UpdateLocationCommandHandler(IGymDbContext dbContext, IValidator<UpdateLocationCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -21,8 +21,7 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var repository = _unitOfWork.Repository<Location, int>();
-        var location = await repository.Entities.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var location = await _dbContext.Locations.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
         if (location is null)
         {
             return false;
@@ -35,8 +34,7 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
         location.Address.City = request.City.Trim();
         location.Address.Country = request.Country.Trim();
 
-        await repository.UpdateAsync(location);
-        await _unitOfWork.Save(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }

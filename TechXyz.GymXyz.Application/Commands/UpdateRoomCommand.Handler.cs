@@ -1,19 +1,19 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TechXyz.GymXyz.Application.Interfaces.Repositories;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGymDbContext _dbContext;
     private readonly IValidator<UpdateRoomCommand> _validator;
 
-    public UpdateRoomCommandHandler(IUnitOfWork unitOfWork, IValidator<UpdateRoomCommand> validator)
+    public UpdateRoomCommandHandler(IGymDbContext dbContext, IValidator<UpdateRoomCommand> validator)
     {
-        _unitOfWork = unitOfWork;
+        _dbContext = dbContext;
         _validator = validator;
     }
 
@@ -21,8 +21,7 @@ public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var locationRepository = _unitOfWork.Repository<Location, int>();
-        var locations = await locationRepository.Entities
+        var locations = await _dbContext.Locations
             .Include(location => location.Rooms)
             .Where(location => location.Id == request.LocationId || location.Rooms!.Any(room => room.Id == request.Id))
             .ToListAsync(cancellationToken);
@@ -44,7 +43,7 @@ public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand
             targetLocation.AddRoom(room);
         }
 
-        await _unitOfWork.Save(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }
