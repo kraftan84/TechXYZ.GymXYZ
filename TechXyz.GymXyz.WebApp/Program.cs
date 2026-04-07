@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
+using TechXyz.GymXyz.Application.Extensions;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Persistence.Contexts;
 using TechXyz.GymXyz.Persistence.Data;
@@ -21,6 +22,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<ICurrentUserOverride, CurrentUserOverride>();
 builder.Services.AddScoped<BreadcrumbService>();
 
+builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

@@ -1,3 +1,4 @@
+using FluentValidation;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,5 +14,6 @@ public static class IServiceCollectionExtensions
     private static void AddMediator(this IServiceCollection services)
     {
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }

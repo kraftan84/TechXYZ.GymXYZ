@@ -1,0 +1,6 @@
+using MediatR;
+using TechXyz.GymXyz.Application.Models;
+
+namespace TechXyz.GymXyz.Application.Queries;
+
+public sealed class GetMembersQuery : IRequest<List<MemberDto>>;

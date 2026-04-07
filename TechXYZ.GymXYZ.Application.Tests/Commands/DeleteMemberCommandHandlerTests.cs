@@ -1,0 +1,53 @@
+using FluentValidation;
+using Shouldly;
+using TechXyz.GymXyz.Application.Commands;
+using TechXyz.GymXyz.Domain.Entities;
+
+namespace TechXYZ.GymXYZ.Application.Tests.Members;
+
+public class DeleteMemberCommandHandlerTests
+{
+    [Fact]
+    public async Task Handle_ShouldDeleteMember_WhenItExists()
+    {
+        var faker = TestInfrastructure.Faker();
+
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldDeleteMember_WhenItExists));
+        var member = new Member(faker.Name.FirstName(), faker.Name.LastName());
+        dbContext.Members.Add(member);
+        await dbContext.SaveChangesAsync();
+
+        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
+        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+
+        var deleted = await handler.Handle(new DeleteMemberCommand(member.Id), CancellationToken.None);
+
+        deleted.ShouldBeTrue();
+        dbContext.Members.Any(candidate => candidate.Id == member.Id).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReturnFalse_WhenMemberDoesNotExist()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenMemberDoesNotExist));
+        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
+
+        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+
+        var deleted = await handler.Handle(new DeleteMemberCommand(999), CancellationToken.None);
+
+        deleted.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowValidationException_WhenIdIsInvalid()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
+        using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
+
+        var handler = new DeleteMemberCommandHandler(unitOfWork, new DeleteMemberCommandValidator());
+
+        await Should.ThrowAsync<ValidationException>(() =>
+            handler.Handle(new DeleteMemberCommand(0), CancellationToken.None));
+    }
+}

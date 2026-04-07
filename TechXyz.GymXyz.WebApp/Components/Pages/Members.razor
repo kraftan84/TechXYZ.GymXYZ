@@ -1,6 +1,12 @@
 @page "/members"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
 @inject NavigationManager NavManager
 @inject BreadcrumbService BreadcrumbService
+@inject ISender Sender
 
 <PageTitle>Membres</PageTitle>
 
@@ -49,7 +55,7 @@
                     <span class="members-col">@member.LastName</span>
                     <span class="members-col members-col-email">@member.Email</span>
                     <span class="members-col members-col-plan">
-                        @if (HasActiveSubscription(member))
+                        @if (member.HasActiveSubscription)
                         {
                             <span class="members-badge members-badge-active">Actif</span>
                         }
@@ -58,8 +64,8 @@
                             <span class="members-badge members-badge-inactive">Inactif</span>
                         }
                     </span>
-                        <span class="members-col members-col-actions">
-                            <div class="members-inline-actions" @onclick:stopPropagation="true">
+                    <span class="members-col members-col-actions">
+                        <div class="members-inline-actions" @onclick:stopPropagation="true">
                             <FluentButton Appearance="Appearance.Stealth"
                                           Size="ButtonSize.Small"
                                           IconEnd="@(new Icons.Regular.Size20.ChevronRight())"
@@ -70,8 +76,8 @@
                                           IconEnd="@(new Icons.Regular.Size20.Edit())"
                                           aria-label="@($"Editer {member.FirstName} {member.LastName}")"
                                           @onclick="() => OpenEditDrawer(member)" />
-                            </div>
-                        </span>
+                        </div>
+                    </span>
                 </div>
             }
         </div>
@@ -97,38 +103,38 @@
 {
     <DrawerShell DrawerClass="member-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
         <ChildContent>
-        <div class="drawer-content">
-            @if (drawerMode == DrawerMode.Details && selectedMember is not null)
-            {
-                <div class="drawer-profile">
-                    <img class="drawer-avatar"
-                         src="images/avatar-placeholder.svg"
-                         alt="@($"Photo de {selectedMember.FirstName} {selectedMember.LastName}")" />
-                    <div>
-                        <div class="drawer-name">@selectedMember.FirstName @selectedMember.LastName</div>
-                        <div class="drawer-subtitle">@selectedMember.FirstName @selectedMember.LastName</div>
+            <div class="drawer-content">
+                @if (drawerMode == DrawerMode.Details && selectedMember is not null)
+                {
+                    <div class="drawer-profile">
+                        <img class="drawer-avatar"
+                             src="images/avatar-placeholder.svg"
+                             alt="@($"Photo de {selectedMember.FirstName} {selectedMember.LastName}")" />
+                        <div>
+                            <div class="drawer-name">@selectedMember.FirstName @selectedMember.LastName</div>
+                            <div class="drawer-subtitle">@selectedMember.FirstName @selectedMember.LastName</div>
+                        </div>
                     </div>
-                </div>
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Email</span>
-                        <span class="drawer-value">@selectedMember.Email</span>
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Email</span>
+                            <span class="drawer-value">@selectedMember.Email</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Telephone</span>
+                            <span class="drawer-value">@selectedMember.Phone</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Adresse</span>
+                            <span class="drawer-value">@FormatAddress(selectedMember.Address)</span>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Telephone</span>
-                        <span class="drawer-value">@selectedMember.Phone</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Adresse</span>
-                        <span class="drawer-value">@FormatAddress(selectedMember.Address)</span>
-                    </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
-            {
-                <PersonEditForm Model="editModel" />
-            }
-        </div>
+                }
+                else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
+                {
+                    <PersonEditForm Model="editModel" />
+                }
+            </div>
         </ChildContent>
         <FooterContent>
             @if (drawerMode == DrawerMode.Details && selectedMember is not null)
@@ -140,7 +146,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteMember">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteMemberAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -149,7 +155,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMember">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMemberAsync">
                         @(drawerMode == DrawerMode.Create ? "Creer le membre" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -159,88 +165,19 @@
 }
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         BreadcrumbService.SetItems(
         [
             new BreadcrumbItem { IsHome = true, Href = "/" },
             new BreadcrumbItem { Text = "Membres" }
         ]);
+
+        await RefreshMembersAsync();
     }
 
-    private readonly List<Member> allMembers =
-    [
-        new Member("Camille", "Durand")
-        {
-            Id = 1,
-            Email = "camille.durand@gymxyz.fr",
-            Phone = "06 12 34 56 78",
-            Subscriptions =
-            [
-                new Subscription
-                {
-                    StartDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-1)),
-                    EndDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(1))
-                }
-            ],
-            Address = new Address
-            {
-                Street = "12 rue des Lilas",
-                ZipCode = "69003",
-                City = "Lyon",
-                Country = "France"
-            }
-        },
-        new Member("Lucas", "Martin")
-        {
-            Id = 2,
-            Email = "lucas.martin@gymxyz.fr",
-            Phone = "06 87 65 43 21",
-            Subscriptions =
-            [
-                new Subscription
-                {
-                    StartDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-3)),
-                    EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-1))
-                }
-            ],
-            Address = new Address
-            {
-                Street = "8 avenue du Prado",
-                ZipCode = "13008",
-                City = "Marseille",
-                Country = "France"
-            }
-        },
-        new Member("Amina", "Benali")
-        {
-            Id = 3,
-            Email = "amina.benali@gymxyz.fr",
-            Phone = "07 45 89 12 34",
-            Address = new Address
-            {
-                Street = "45 boulevard Voltaire",
-                ZipCode = "75011",
-                City = "Paris",
-                Country = "France"
-            }
-        },
-        new Member("Julien", "Petit")
-        {
-            Id = 4,
-            Email = "julien.petit@gymxyz.fr",
-            Phone = "06 55 44 33 22",
-            Address = new Address
-            {
-                Street = "3 place Bellecour",
-                ZipCode = "69002",
-                City = "Lyon",
-                Country = "France"
-            }
-        }
-    ];
-
-    private Member? selectedMember;
+    private List<MemberDto> allMembers = [];
+    private MemberDto? selectedMember;
     private MemberEditModel editModel = new();
     private DrawerMode drawerMode = DrawerMode.None;
     private string drawerTitle = string.Empty;
@@ -250,7 +187,7 @@
 
     private bool isDrawerOpen => drawerMode != DrawerMode.None;
 
-    private IEnumerable<Member> filteredMembers => string.IsNullOrWhiteSpace(searchText)
+    private IEnumerable<MemberDto> filteredMembers => string.IsNullOrWhiteSpace(searchText)
         ? allMembers
         : allMembers.Where(member =>
             member.FirstName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
@@ -259,7 +196,8 @@
             (member.Phone?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false));
 
     private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count() / (double)pageSize));
-    private IEnumerable<Member> pagedMembers => filteredMembers
+
+    private IEnumerable<MemberDto> pagedMembers => filteredMembers
         .Skip((currentPage - 1) * pageSize)
         .Take(pageSize);
 
@@ -281,14 +219,31 @@
         }
     }
 
-    private void OpenDetailsDrawer(Member member)
+    private async Task RefreshMembersAsync()
+    {
+        allMembers = await Sender.Send(new GetMembersQuery());
+        ClampCurrentPage();
+
+        if (selectedMember is null)
+        {
+            return;
+        }
+
+        selectedMember = allMembers.FirstOrDefault(member => member.Id == selectedMember.Id);
+        if (selectedMember is null)
+        {
+            CloseDrawer();
+        }
+    }
+
+    private void OpenDetailsDrawer(MemberDto member)
     {
         selectedMember = member;
         drawerMode = DrawerMode.Details;
         drawerTitle = "Details du membre";
     }
 
-    private void OpenEditDrawer(Member member)
+    private void OpenEditDrawer(MemberDto member)
     {
         selectedMember = member;
         OpenEditDrawer();
@@ -331,7 +286,7 @@
         drawerTitle = "Modifier le membre";
     }
 
-    private void OnMemberRowKeyDown(KeyboardEventArgs args, Member member)
+    private void OnMemberRowKeyDown(KeyboardEventArgs args, MemberDto member)
     {
         if (args.Key == "Enter" || args.Key == " ")
         {
@@ -351,45 +306,68 @@
         CloseDrawer();
     }
 
-    private void SaveMember()
+    private async Task SaveMemberAsync()
     {
-        if (drawerMode == DrawerMode.Create)
+        try
         {
-            var newMember = new Member(editModel.FirstName, editModel.LastName)
+            if (drawerMode == DrawerMode.Create)
             {
-                Id = NextMemberId(),
-                Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email,
-                Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone,
-                Address = BuildAddress(editModel)
-            };
+                var createdMemberId = await Sender.Send(new CreateMemberCommand(
+                    editModel.FirstName,
+                    editModel.LastName,
+                    editModel.Email,
+                    editModel.Phone,
+                    editModel.Street,
+                    editModel.ZipCode,
+                    editModel.City,
+                    editModel.Country));
 
-            allMembers.Add(newMember);
-            CloseDrawer();
-            return;
+                await RefreshMembersAsync();
+                selectedMember = allMembers.FirstOrDefault(member => member.Id == createdMemberId);
+                CloseDrawer();
+                return;
+            }
+
+            if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+            {
+                await Sender.Send(new UpdateMemberCommand(
+                    selectedMember.Id,
+                    editModel.FirstName,
+                    editModel.LastName,
+                    editModel.Email,
+                    editModel.Phone,
+                    editModel.Street,
+                    editModel.ZipCode,
+                    editModel.City,
+                    editModel.Country));
+
+                await RefreshMembersAsync();
+                selectedMember = allMembers.FirstOrDefault(member => member.Id == selectedMember.Id);
+                if (selectedMember is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.Details;
+                drawerTitle = "Details du membre";
+            }
         }
-
-        if (drawerMode == DrawerMode.Edit && selectedMember is not null)
+        catch (ValidationException)
         {
-            selectedMember.FirstName = editModel.FirstName;
-            selectedMember.LastName = editModel.LastName;
-            selectedMember.Email = string.IsNullOrWhiteSpace(editModel.Email) ? null : editModel.Email;
-            selectedMember.Phone = string.IsNullOrWhiteSpace(editModel.Phone) ? null : editModel.Phone;
-            selectedMember.Address = BuildAddress(editModel);
-            drawerMode = DrawerMode.Details;
-            drawerTitle = "Details du membre";
+            // Validation feedback can be surfaced in a notification panel later.
         }
     }
 
-    private void DeleteMember()
+    private async Task DeleteMemberAsync()
     {
         if (selectedMember is null)
         {
             return;
         }
 
-        allMembers.Remove(selectedMember);
-        CloseDrawer();
-        ClampCurrentPage();
+        await Sender.Send(new DeleteMemberCommand(selectedMember.Id));
+        await RefreshMembersAsync();
     }
 
     private void OpenMemberPage()
@@ -402,7 +380,7 @@
         NavManager.NavigateTo($"/members/{selectedMember.Id}");
     }
 
-    private void GoToMember(Member member)
+    private void GoToMember(MemberDto member)
     {
         NavManager.NavigateTo($"/members/{member.Id}");
     }
@@ -431,39 +409,7 @@
         }
     }
 
-    private static bool HasActiveSubscription(Member member)
-    {
-        if (member.Subscriptions is null || member.Subscriptions.Count == 0)
-        {
-            return false;
-        }
-
-        // Consider a subscription active when today's date is within its range.
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        return member.Subscriptions.Any(subscription =>
-            subscription.StartDate <= today && subscription.EndDate >= today);
-    }
-
-    private static Address? BuildAddress(MemberEditModel model)
-    {
-        if (string.IsNullOrWhiteSpace(model.Street) &&
-            string.IsNullOrWhiteSpace(model.ZipCode) &&
-            string.IsNullOrWhiteSpace(model.City) &&
-            string.IsNullOrWhiteSpace(model.Country))
-        {
-            return null;
-        }
-
-        return new Address
-        {
-            Street = model.Street,
-            ZipCode = model.ZipCode,
-            City = model.City,
-            Country = model.Country
-        };
-    }
-
-    private static string FormatAddress(Address? address)
+    private static string FormatAddress(AddressDto? address)
     {
         if (address is null)
         {
@@ -472,12 +418,8 @@
 
         var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
             .Where(value => !string.IsNullOrWhiteSpace(value));
-        return string.Join(", ", parts);
-    }
 
-    private int NextMemberId()
-    {
-        return allMembers.Count == 0 ? 1 : allMembers.Max(member => member.Id) + 1;
+        return string.Join(", ", parts);
     }
 
     private enum DrawerMode
