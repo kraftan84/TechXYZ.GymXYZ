@@ -20,6 +20,17 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
+        var defaultGym = _unitOfWork
+            .Repository<Gym, int>()
+            .Entities
+            .OrderBy(gym => gym.Id)
+            .FirstOrDefault();
+
+        if (defaultGym is null)
+        {
+            throw new InvalidOperationException("Default gym not found.");
+        }
+
         var coach = new Coach(request.FirstName.Trim(), request.LastName.Trim())
         {
             Email = Normalize(request.Email),
@@ -27,7 +38,7 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
             Address = BuildAddress(request.Street, request.ZipCode, request.City, request.Country)
         };
 
-        await _unitOfWork.Repository<Coach, int>().AddAsync(coach);
+        defaultGym.AddCoach(coach);
         await _unitOfWork.Save(cancellationToken);
 
         return coach.Id;

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Shouldly;
 using TechXyz.GymXyz.Application.Commands;
+using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
@@ -12,6 +13,9 @@ public class CreateCoachCommandHandlerTests
         var faker = TestInfrastructure.Faker();
 
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateCoachAndNormalizeValues));
+        dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
+        await dbContext.SaveChangesAsync();
+
         using var unitOfWork = TestInfrastructure.CreateUnitOfWork(dbContext);
 
         var handler = new CreateCoachCommandHandler(unitOfWork, new CreateCoachCommandValidator());
