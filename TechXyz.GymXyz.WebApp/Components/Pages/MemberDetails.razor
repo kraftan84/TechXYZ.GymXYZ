@@ -109,7 +109,12 @@ else
             </FluentCard>
 
             <FluentCard class="member-card">
-                <h2>Abonnements</h2>
+                <div class="card-header">
+                    <h2>Abonnements</h2>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="OpenSubscriptionCreateDrawer">
+                        + Ajouter
+                    </FluentButton>
+                </div>
                 <div class="subscription-list">
                     @foreach (var subscription in memberDetails.Subscriptions)
                     {
@@ -213,6 +218,14 @@ else
                 {
                     <PersonEditForm Model="editModel" />
                 }
+                else if (drawerMode == DrawerMode.SubscriptionCreate || drawerMode == DrawerMode.SubscriptionEdit)
+                {
+                    <div class="drawer-form">
+                        <FluentDatePicker Label="Date de debut" @bind-Value="subscriptionEditModel.StartDatePart" />
+                        <FluentDatePicker Label="Date de fin" @bind-Value="subscriptionEditModel.EndDatePart" />
+                        <FluentNumberField Label="Seances achetees" @bind-Value="subscriptionEditModel.LessonsTotal" />
+                    </div>
+                }
             </div>
         </ChildContent>
         <FooterContent>
@@ -222,6 +235,26 @@ else
                     <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
                     <FluentButton Appearance="Appearance.Accent" @onclick="SaveMemberAsync">
                         Enregistrer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.SubscriptionDetails && selectedSubscription is not null)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenSubscriptionEditDrawer">
+                        Editer
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteSubscriptionAsync">
+                        Supprimer
+                    </FluentButton>
+                </div>
+            }
+            else if (drawerMode == DrawerMode.SubscriptionCreate || drawerMode == DrawerMode.SubscriptionEdit)
+            {
+                <div class="drawer-actions">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelSubscriptionEdit">Annuler</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveSubscriptionAsync">
+                        @(drawerMode == DrawerMode.SubscriptionCreate ? "Creer" : "Enregistrer")
                     </FluentButton>
                 </div>
             }
@@ -237,12 +270,15 @@ else
     private MemberSubscriptionDto? selectedSubscription;
     private DrawerMode drawerMode = DrawerMode.None;
     private MemberEditModel editModel = new();
+    private SubscriptionEditModel subscriptionEditModel = new();
     private bool isLoading = true;
     private bool memberNotFound;
     private bool isDrawerOpen => drawerMode != DrawerMode.None;
     private string drawerTitle => drawerMode switch
     {
         DrawerMode.EditDetails => "Editer le membre",
+        DrawerMode.SubscriptionCreate => "Nouvel abonnement",
+        DrawerMode.SubscriptionEdit => "Modifier l'abonnement",
         DrawerMode.SubscriptionDetails when selectedSubscription is not null => GetSubscriptionTitle(selectedSubscription),
         _ => "Details"
     };
@@ -392,6 +428,115 @@ else
         drawerMode = DrawerMode.SubscriptionDetails;
     }
 
+    private void OpenSubscriptionCreateDrawer()
+    {
+        subscriptionEditModel = new SubscriptionEditModel
+        {
+            StartDatePart = DateTime.Today,
+            EndDatePart = DateTime.Today.AddMonths(1),
+            LessonsTotal = 10
+        };
+        selectedSubscription = null;
+        drawerMode = DrawerMode.SubscriptionCreate;
+    }
+
+    private void OpenSubscriptionEditDrawer()
+    {
+        if (selectedSubscription is null)
+        {
+            return;
+        }
+
+        subscriptionEditModel = new SubscriptionEditModel
+        {
+            StartDatePart = selectedSubscription.StartDate.ToDateTime(TimeOnly.MinValue),
+            EndDatePart = selectedSubscription.EndDate.ToDateTime(TimeOnly.MinValue),
+            LessonsTotal = selectedSubscription.LessonsTotal
+        };
+        drawerMode = DrawerMode.SubscriptionEdit;
+    }
+
+    private async Task SaveSubscriptionAsync()
+    {
+        if (memberDetails is null)
+        {
+            return;
+        }
+
+        if (drawerMode == DrawerMode.SubscriptionCreate)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                await Sender.Send(new CreateSubscriptionCommand(
+                    memberDetails.Id,
+                    ToDateOnly(subscriptionEditModel.StartDatePart, DateOnly.FromDateTime(DateTime.Today)),
+                    ToDateOnly(subscriptionEditModel.EndDatePart, DateOnly.FromDateTime(DateTime.Today.AddMonths(1))),
+                    subscriptionEditModel.LessonsTotal));
+
+                await RefreshMemberAsync();
+                CloseDrawer();
+            }, "creer l'abonnement", "Abonnement cree.");
+            return;
+        }
+
+        if (drawerMode == DrawerMode.SubscriptionEdit && selectedSubscription is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                var updated = await Sender.Send(new UpdateSubscriptionCommand(
+                    selectedSubscription.Id,
+                    ToDateOnly(subscriptionEditModel.StartDatePart, selectedSubscription.StartDate),
+                    ToDateOnly(subscriptionEditModel.EndDatePart, selectedSubscription.EndDate),
+                    subscriptionEditModel.LessonsTotal));
+                if (!updated)
+                {
+                    throw new ValidationException("Abonnement introuvable.");
+                }
+
+                await RefreshMemberAsync();
+                selectedSubscription = memberDetails?.Subscriptions.FirstOrDefault(subscription => subscription.Id == selectedSubscription.Id);
+                if (selectedSubscription is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.SubscriptionDetails;
+            }, "mettre a jour l'abonnement", "Abonnement mis a jour.");
+        }
+    }
+
+    private async Task DeleteSubscriptionAsync()
+    {
+        if (selectedSubscription is null)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeleteSubscriptionCommand(selectedSubscription.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Abonnement introuvable.");
+            }
+
+            await RefreshMemberAsync();
+            CloseDrawer();
+        }, "supprimer l'abonnement", "Abonnement supprime.");
+    }
+
+    private void CancelSubscriptionEdit()
+    {
+        if (drawerMode == DrawerMode.SubscriptionEdit && selectedSubscription is not null)
+        {
+            drawerMode = DrawerMode.SubscriptionDetails;
+            return;
+        }
+
+        CloseDrawer();
+    }
+
     private void OpenEditDrawer()
     {
         if (memberDetails is null)
@@ -455,11 +600,18 @@ else
         NavManager.NavigateTo("/members");
     }
 
+    private static DateOnly ToDateOnly(DateTime? value, DateOnly fallback)
+    {
+        return value.HasValue ? DateOnly.FromDateTime(value.Value) : fallback;
+    }
+
     private enum DrawerMode
     {
         None,
         SubscriptionDetails,
-        EditDetails
+        EditDetails,
+        SubscriptionCreate,
+        SubscriptionEdit
     }
 
     private sealed class MemberEditModel : IPersonEditModel
@@ -472,5 +624,12 @@ else
         public string ZipCode { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
+    }
+
+    private sealed class SubscriptionEditModel
+    {
+        public DateTime? StartDatePart { get; set; }
+        public DateTime? EndDatePart { get; set; }
+        public int LessonsTotal { get; set; }
     }
 }

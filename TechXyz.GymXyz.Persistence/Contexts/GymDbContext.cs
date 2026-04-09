@@ -25,6 +25,7 @@ public class GymDbContext : DbContext, IGymDbContext
     public DbSet<LessonTheme> LessonThemes => Set<LessonTheme>();
     public DbSet<Coach> Coaches =>  Set<Coach>();
     public DbSet<Member> Members =>  Set<Member>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Address> Addresses =>  Set<Address>();
     
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)

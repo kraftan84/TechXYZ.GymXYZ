@@ -14,6 +14,7 @@ public interface IGymDbContext
     DbSet<LessonTheme> LessonThemes { get; }
     DbSet<Coach> Coaches { get; }
     DbSet<Member> Members { get; }
+    DbSet<Subscription> Subscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
