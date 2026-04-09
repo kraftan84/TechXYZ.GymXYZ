@@ -21,13 +21,14 @@ public sealed class DeleteCoachCommandHandler : IRequestHandler<DeleteCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var coach = await _dbContext.Coaches.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var coach = await _dbContext.Coaches
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (coach is null)
         {
             return false;
         }
 
-        _dbContext.Coaches.Remove(coach);
+        coach.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

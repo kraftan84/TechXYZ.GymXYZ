@@ -21,13 +21,14 @@ public sealed class DeleteMemberCommandHandler : IRequestHandler<DeleteMemberCom
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var member = await _dbContext.Members.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var member = await _dbContext.Members
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (member is null)
         {
             return false;
         }
 
-        _dbContext.Members.Remove(member);
+        member.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

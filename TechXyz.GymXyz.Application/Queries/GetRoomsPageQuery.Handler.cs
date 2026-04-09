@@ -19,6 +19,7 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
         // For now, the first gym is treated as the default gym.
         var gym = await _dbContext.Gyms
             .AsNoTracking()
+            .Where(candidate => candidate.IsActive)
             .Include(candidate => candidate.Locations!)
             .ThenInclude(location => location.Rooms)
             .Include(candidate => candidate.Locations!)
@@ -32,6 +33,7 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
         }
 
         var mappedLocations = gym.Locations?
+            .Where(location => location.IsActive)
             .OrderBy(location => location.Name)
             .Select(location => new LocationWithRoomsDto(
                 location.Id,
@@ -44,6 +46,7 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
                         location.Address.City,
                         location.Address.Country),
                 location.Rooms?
+                    .Where(room => room.IsActive)
                     .OrderBy(room => room.Name)
                     .Select(room => new RoomDto(room.Id, room.Name))
                     .ToList() ?? []))

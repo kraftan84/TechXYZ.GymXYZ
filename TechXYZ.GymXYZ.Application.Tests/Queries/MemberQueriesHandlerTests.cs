@@ -25,7 +25,7 @@ public class MemberQueriesHandlerTests
             ]
         };
 
-        var inactiveMember = new Member(faker.Name.FirstName(), "Anderson")
+        var inactiveSubscriptionMember = new Member(faker.Name.FirstName(), "Anderson")
         {
             Subscriptions =
             [
@@ -36,8 +36,12 @@ public class MemberQueriesHandlerTests
                 }
             ]
         };
+        var softDeletedMember = new Member(faker.Name.FirstName(), "Zimmer")
+        {
+            IsActive = false
+        };
 
-        dbContext.Members.AddRange(activeMember, inactiveMember);
+        dbContext.Members.AddRange(activeMember, inactiveSubscriptionMember, softDeletedMember);
         await dbContext.SaveChangesAsync();
 
         var handler = new GetMembersQueryHandler(dbContext);

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
 
@@ -18,21 +19,10 @@ public sealed class GetCoachesQueryHandler : IRequestHandler<GetCoachesQuery, Li
     {
         return await _dbContext.Coaches
             .AsNoTracking()
+            .Where(coach => coach.IsActive)
             .OrderBy(coach => coach.LastName)
             .ThenBy(coach => coach.FirstName)
-            .Select(coach => new CoachDto(
-                coach.Id,
-                coach.FirstName,
-                coach.LastName,
-                coach.Email,
-                coach.Phone,
-                coach.Address == null
-                    ? null
-                    : new AddressDto(
-                        coach.Address.Street,
-                        coach.Address.ZipCode,
-                        coach.Address.City,
-                        coach.Address.Country)))
+            .SelectCoachDto()
             .ToListAsync(cancellationToken);
     }
 }

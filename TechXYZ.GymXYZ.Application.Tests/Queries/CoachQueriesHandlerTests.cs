@@ -14,7 +14,8 @@ public class CoachQueriesHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetCoaches_ShouldReturnSortedList));
         dbContext.Coaches.AddRange(
             new Coach(faker.Name.FirstName(), "Zulu"),
-            new Coach(faker.Name.FirstName(), "Alpha"));
+            new Coach(faker.Name.FirstName(), "Alpha"),
+            new Coach(faker.Name.FirstName(), "Omega") { IsActive = false });
         await dbContext.SaveChangesAsync();
 
         var handler = new GetCoachesQueryHandler(dbContext);

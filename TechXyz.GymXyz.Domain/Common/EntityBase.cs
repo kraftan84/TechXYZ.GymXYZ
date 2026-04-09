@@ -5,4 +5,5 @@ namespace TechXyz.GymXyz.Domain.Common;
 public class EntityBase<T> : AuditableEntityBase, IEntity<T>
 {
     public T Id { get; set; }
+    public bool IsActive { get; set; } = true;
 }

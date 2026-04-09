@@ -21,12 +21,7 @@ public sealed class CreateCoachCommandHandler : IRequestHandler<CreateCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var defaultGym = await _dbContext.GetDefaultGymAsync(cancellationToken);
-
-        if (defaultGym is null)
-        {
-            throw new ValidationException("Default gym not found.");
-        }
+        var defaultGym = await _dbContext.GetRequiredDefaultGymAsync(cancellationToken);
 
         var coach = new Coach(request.FirstName.Trim(), request.LastName.Trim())
         {

@@ -22,7 +22,7 @@ public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var location = await _dbContext.Locations
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId && candidate.IsActive, cancellationToken);
 
         if (location is null)
         {

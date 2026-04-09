@@ -22,7 +22,8 @@ public sealed class UpdateCoachCommandHandler : IRequestHandler<UpdateCoachComma
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var coach = await _dbContext.Coaches.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var coach = await _dbContext.Coaches
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (coach is null)
         {
             return false;

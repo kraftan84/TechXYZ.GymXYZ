@@ -21,7 +21,8 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var location = await _dbContext.Locations.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var location = await _dbContext.Locations
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (location is null)
         {
             return false;

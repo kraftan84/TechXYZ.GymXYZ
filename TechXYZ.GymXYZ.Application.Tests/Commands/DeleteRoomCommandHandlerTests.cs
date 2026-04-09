@@ -7,9 +7,9 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class DeleteRoomCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldDeleteRoom()
+    public async Task Handle_ShouldSoftDeleteRoom()
     {
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldDeleteRoom));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteRoom));
         var room = new Room("Room 1");
         dbContext.Rooms.Add(room);
         await dbContext.SaveChangesAsync();
@@ -19,6 +19,6 @@ public class DeleteRoomCommandHandlerTests
         var deleted = await handler.Handle(new DeleteRoomCommand(room.Id), CancellationToken.None);
 
         deleted.ShouldBeTrue();
-        dbContext.Rooms.Any(r => r.Id == room.Id).ShouldBeFalse();
+        dbContext.Rooms.Single(r => r.Id == room.Id).IsActive.ShouldBeFalse();
     }
 }

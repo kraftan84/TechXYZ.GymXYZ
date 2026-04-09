@@ -23,18 +23,18 @@ public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand
 
         var locations = await _dbContext.Locations
             .Include(location => location.Rooms)
-            .Where(location => location.Id == request.LocationId || location.Rooms!.Any(room => room.Id == request.Id))
+            .Where(location => location.IsActive && (location.Id == request.LocationId || location.Rooms!.Any(room => room.IsActive && room.Id == request.Id)))
             .ToListAsync(cancellationToken);
 
         var targetLocation = locations.FirstOrDefault(location => location.Id == request.LocationId);
-        var currentLocation = locations.FirstOrDefault(location => location.Rooms!.Any(room => room.Id == request.Id));
+        var currentLocation = locations.FirstOrDefault(location => location.Rooms!.Any(room => room.IsActive && room.Id == request.Id));
 
         if (targetLocation is null || currentLocation is null)
         {
             return false;
         }
 
-        var room = currentLocation.Rooms!.First(candidate => candidate.Id == request.Id);
+        var room = currentLocation.Rooms!.First(candidate => candidate.IsActive && candidate.Id == request.Id);
         room.Name = request.Name.Trim();
 
         if (currentLocation.Id != targetLocation.Id)

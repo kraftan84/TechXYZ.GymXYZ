@@ -21,13 +21,14 @@ public sealed class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var room = await _dbContext.Rooms.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var room = await _dbContext.Rooms
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (room is null)
         {
             return false;
         }
 
-        _dbContext.Rooms.Remove(room);
+        room.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

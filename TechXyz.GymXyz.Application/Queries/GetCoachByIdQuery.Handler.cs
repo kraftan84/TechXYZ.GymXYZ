@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
 
@@ -18,20 +19,8 @@ public sealed class GetCoachByIdQueryHandler : IRequestHandler<GetCoachByIdQuery
     {
         return await _dbContext.Coaches
             .AsNoTracking()
-            .Where(candidate => candidate.Id == request.Id)
-            .Select(candidate => new CoachDto(
-                candidate.Id,
-                candidate.FirstName,
-                candidate.LastName,
-                candidate.Email,
-                candidate.Phone,
-                candidate.Address == null
-                    ? null
-                    : new AddressDto(
-                        candidate.Address.Street,
-                        candidate.Address.ZipCode,
-                        candidate.Address.City,
-                        candidate.Address.Country)))
+            .Where(candidate => candidate.Id == request.Id && candidate.IsActive)
+            .SelectCoachDto()
             .FirstOrDefaultAsync(cancellationToken);
     }
 }

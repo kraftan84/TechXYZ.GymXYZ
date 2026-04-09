@@ -22,7 +22,8 @@ public sealed class UpdateMemberCommandHandler : IRequestHandler<UpdateMemberCom
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var member = await _dbContext.Members.FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+        var member = await _dbContext.Members
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (member is null)
         {
             return false;

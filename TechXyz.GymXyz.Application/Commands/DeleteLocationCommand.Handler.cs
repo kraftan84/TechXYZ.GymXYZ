@@ -23,7 +23,7 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
 
         var location = await _dbContext.Locations
             .Include(candidate => candidate.Rooms)
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
 
         if (location is null)
         {
@@ -32,10 +32,10 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
 
         foreach (var room in location.Rooms?.ToList() ?? [])
         {
-            _dbContext.Rooms.Remove(room);
+            room.IsActive = false;
         }
 
-        _dbContext.Locations.Remove(location);
+        location.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

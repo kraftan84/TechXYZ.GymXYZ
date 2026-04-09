@@ -25,7 +25,22 @@ public class RoomsPageQueryHandlerTests
             }
         };
         location.AddRoom(new Room("Room A"));
+        location.AddRoom(new Room("Room Inactive") { IsActive = false });
+
+        var inactiveLocation = new Location("Inactive")
+        {
+            IsActive = false,
+            Address = new Address
+            {
+                Street = "Other street",
+                ZipCode = "69000",
+                City = "Lyon",
+                Country = "France"
+            }
+        };
+
         defaultGym.AddLocation(location);
+        defaultGym.AddLocation(inactiveLocation);
 
         dbContext.Gyms.AddRange(defaultGym, secondGym);
         await dbContext.SaveChangesAsync();

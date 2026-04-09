@@ -7,10 +7,10 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class DeleteLocationCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldDeleteLocationAndItsRooms()
+    public async Task Handle_ShouldSoftDeleteLocationAndItsRooms()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldDeleteLocationAndItsRooms));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteLocationAndItsRooms));
 
         var location = new Location(faker.Address.City())
         {
@@ -32,7 +32,7 @@ public class DeleteLocationCommandHandlerTests
         var deleted = await handler.Handle(new DeleteLocationCommand(location.Id), CancellationToken.None);
 
         deleted.ShouldBeTrue();
-        dbContext.Locations.Any(l => l.Id == location.Id).ShouldBeFalse();
-        dbContext.Rooms.Any().ShouldBeFalse();
+        dbContext.Locations.Single(l => l.Id == location.Id).IsActive.ShouldBeFalse();
+        dbContext.Rooms.All(room => room.IsActive == false).ShouldBeTrue();
     }
 }

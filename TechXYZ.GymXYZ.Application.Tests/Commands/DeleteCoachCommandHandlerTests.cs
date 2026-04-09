@@ -8,11 +8,11 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class DeleteCoachCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldDeleteCoach_WhenItExists()
+    public async Task Handle_ShouldSoftDeleteCoach_WhenItExists()
     {
         var faker = TestInfrastructure.Faker();
 
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldDeleteCoach_WhenItExists));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteCoach_WhenItExists));
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
         dbContext.Coaches.Add(coach);
         await dbContext.SaveChangesAsync();
@@ -22,7 +22,7 @@ public class DeleteCoachCommandHandlerTests
         var deleted = await handler.Handle(new DeleteCoachCommand(coach.Id), CancellationToken.None);
 
         deleted.ShouldBeTrue();
-        dbContext.Coaches.Any(candidate => candidate.Id == coach.Id).ShouldBeFalse();
+        dbContext.Coaches.Single(candidate => candidate.Id == coach.Id).IsActive.ShouldBeFalse();
     }
 
     [Fact]

@@ -46,16 +46,22 @@ using (var scope = app.Services.CreateScope())
 {
     var serviceProvider = scope.ServiceProvider;
     var dbContext = serviceProvider.GetRequiredService<GymDbContext>();
+    var resetDatabaseOnStartup = app.Configuration.GetValue<bool>("ResetDatabaseOnStartup");
 
-    //await dbContext.Database.MigrateAsync();
-    
     if (app.Environment.IsDevelopment())
     {
-        // Reset the dev database on startup to keep the demo data consistent.
-        await dbContext.Database.EnsureDeletedAsync();
+        // Reset the dev database only when explicitly enabled.
+        if (resetDatabaseOnStartup)
+        {
+            await dbContext.Database.EnsureDeletedAsync();
+        }
+
         await dbContext.Database.EnsureCreatedAsync();
-        
-        DbInitializer.Initialize(serviceProvider, dbContext);
+
+        if (resetDatabaseOnStartup)
+        {
+            DbInitializer.Initialize(serviceProvider, dbContext);
+        }
     }
 }
 
