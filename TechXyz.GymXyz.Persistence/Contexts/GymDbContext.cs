@@ -22,6 +22,7 @@ public class GymDbContext : DbContext, IGymDbContext
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<PrivateLesson> PrivateLessons => Set<PrivateLesson>();
     public DbSet<CollectiveLesson> CollectiveLessons => Set<CollectiveLesson>();
+    public DbSet<LessonTheme> LessonThemes => Set<LessonTheme>();
     public DbSet<Coach> Coaches =>  Set<Coach>();
     public DbSet<Member> Members =>  Set<Member>();
     public DbSet<Address> Addresses =>  Set<Address>();

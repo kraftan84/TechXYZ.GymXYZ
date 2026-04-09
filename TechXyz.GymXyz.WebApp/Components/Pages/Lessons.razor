@@ -1,6 +1,13 @@
 @page "/lessons"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
 @inject BreadcrumbService BreadcrumbService
 @inject NavigationManager NavManager
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
 
 <PageTitle>Cours</PageTitle>
 
@@ -16,6 +23,9 @@
         <FluentCard class="lessons-card">
             <div class="lessons-card-header">
                 <h2>Liste des cours</h2>
+                <FluentButton Appearance="Appearance.Accent" @onclick="OpenLessonCreateDrawer">
+                    Nouveau cours
+                </FluentButton>
             </div>
             <div class="lessons-table">
                 <div class="lessons-row lessons-row-header">
@@ -34,8 +44,8 @@
                             aria-label="@($"Voir {lesson.Name}")">
                         <span class="lessons-col">@lesson.Name</span>
                         <span class="lessons-col">@FormatLessonType(lesson.Type)</span>
-                        <span class="lessons-col">@lesson.Theme?.Name</span>
-                        <span class="lessons-col">@FormatCoachName(lesson.Coach)</span>
+                        <span class="lessons-col">@lesson.ThemeName</span>
+                        <span class="lessons-col">@FormatCoachName(lesson)</span>
                         <span class="lessons-col">@lesson.StartDate.ToString("dd/MM/yyyy HH:mm")</span>
                         <span class="lessons-col">@lesson.EndDate.ToString("dd/MM/yyyy HH:mm")</span>
                     </button>
@@ -73,121 +83,125 @@
 {
     <DrawerShell DrawerClass="lesson-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
         <ChildContent>
-        <div class="drawer-content">
-            @if (drawerMode == DrawerMode.LessonDetails && selectedLesson is not null)
-            {
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Nom</span>
-                        <span class="drawer-value">@selectedLesson.Name</span>
+            <div class="drawer-content">
+                @if (drawerMode == DrawerMode.LessonDetails && selectedLesson is not null)
+                {
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Nom</span>
+                            <span class="drawer-value">@selectedLesson.Name</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Type</span>
+                            <span class="drawer-value">@FormatLessonType(selectedLesson.Type)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Theme</span>
+                            <span class="drawer-value">@selectedLesson.ThemeName</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Coach</span>
+                            <span class="drawer-value">@FormatCoachName(selectedLesson)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Debut</span>
+                            <span class="drawer-value">@selectedLesson.StartDate.ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Fin</span>
+                            <span class="drawer-value">@selectedLesson.EndDate.ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Salle</span>
+                            <span class="drawer-value">@FormatLessonRooms(selectedLesson)</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Description</span>
+                            <span class="drawer-value">@selectedLesson.Description</span>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Type</span>
-                        <span class="drawer-value">@FormatLessonType(selectedLesson.Type)</span>
+                }
+                else if (drawerMode == DrawerMode.LessonCreate || drawerMode == DrawerMode.LessonEdit)
+                {
+                    <div class="drawer-form">
+                        <FluentTextField Label="Nom" @bind-Value="lessonEditModel.Name" />
+                        <FluentTextField Label="Description" @bind-Value="lessonEditModel.Description" />
+                        <div class="drawer-field">
+                            <span class="drawer-label">Type</span>
+                            <select class="drawer-select" @bind="lessonEditModel.Type" disabled="@(drawerMode == DrawerMode.LessonEdit)">
+                                <option value="@LessonType.Collective">Collectif</option>
+                                <option value="@LessonType.Private">Prive</option>
+                            </select>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Theme</span>
+                            <select class="drawer-select" @bind="lessonEditModel.ThemeId">
+                                <option value="">-</option>
+                                @foreach (var theme in themes)
+                                {
+                                    <option value="@theme.Id">@theme.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Coach</span>
+                            <select class="drawer-select" @bind="lessonEditModel.CoachId">
+                                @foreach (var coach in coaches)
+                                {
+                                    <option value="@coach.Id">@($"{coach.FirstName} {coach.LastName}")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Debut</span>
+                            <input class="drawer-input"
+                                   type="datetime-local"
+                                   @bind-value="lessonEditModel.StartDate"
+                                   @bind-value:format="yyyy-MM-ddTHH:mm" />
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Fin</span>
+                            <input class="drawer-input"
+                                   type="datetime-local"
+                                   @bind-value="lessonEditModel.EndDate"
+                                   @bind-value:format="yyyy-MM-ddTHH:mm" />
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Salle</span>
+                            <select class="drawer-select" @bind="lessonEditModel.RoomId">
+                                @foreach (var room in rooms)
+                                {
+                                    <option value="@room.Id">@room.Name</option>
+                                }
+                            </select>
+                        </div>
+                        @if (lessonEditModel.Type == LessonType.Collective)
+                        {
+                            <FluentNumberField Label="Capacite max" @bind-Value="lessonEditModel.MaxParticipants" />
+                        }
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Theme</span>
-                        <span class="drawer-value">@selectedLesson.Theme?.Name</span>
+                }
+                else if (drawerMode == DrawerMode.ThemeDetails && selectedTheme is not null)
+                {
+                    <div class="drawer-section">
+                        <div class="drawer-field">
+                            <span class="drawer-label">Nom</span>
+                            <span class="drawer-value">@selectedTheme.Name</span>
+                        </div>
+                        <div class="drawer-field">
+                            <span class="drawer-label">Description</span>
+                            <span class="drawer-value">@selectedTheme.Description</span>
+                        </div>
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Coach</span>
-                        <span class="drawer-value">@FormatCoachName(selectedLesson.Coach)</span>
+                }
+                else if (drawerMode == DrawerMode.ThemeCreate || drawerMode == DrawerMode.ThemeEdit)
+                {
+                    <div class="drawer-form">
+                        <FluentTextField Label="Nom" @bind-Value="themeEditModel.Name" />
+                        <FluentTextField Label="Description" @bind-Value="themeEditModel.Description" />
                     </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Debut</span>
-                        <span class="drawer-value">@selectedLesson.StartDate.ToString("dd/MM/yyyy HH:mm")</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Fin</span>
-                        <span class="drawer-value">@selectedLesson.EndDate.ToString("dd/MM/yyyy HH:mm")</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Salle</span>
-                        <span class="drawer-value">@FormatLessonRooms(selectedLesson)</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Description</span>
-                        <span class="drawer-value">@selectedLesson.Description</span>
-                    </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.LessonCreate || drawerMode == DrawerMode.LessonEdit)
-            {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom" @bind-Value="lessonEditModel.Name" />
-                    <FluentTextField Label="Description" @bind-Value="lessonEditModel.Description" />
-                    <div class="drawer-field">
-                        <span class="drawer-label">Type</span>
-                        <select class="drawer-select" @bind="lessonEditModel.Type">
-                            <option value="@LessonType.Collective">Collectif</option>
-                            <option value="@LessonType.Private">Prive</option>
-                        </select>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Theme</span>
-                        <select class="drawer-select" @bind="lessonEditModel.ThemeName">
-                            <option value="">-</option>
-                            @foreach (var theme in themes)
-                            {
-                                <option value="@theme.Name">@theme.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Coach</span>
-                        <input class="drawer-input"
-                               list="coach-suggestions"
-                               placeholder="Selectionner un coach"
-                               @bind="lessonEditModel.CoachName" />
-                        <datalist id="coach-suggestions">
-                            @foreach (var coach in coaches)
-                            {
-                                <option value="@FormatCoachName(coach)"></option>
-                            }
-                        </datalist>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Debut</span>
-                        <input class="drawer-input"
-                               type="datetime-local"
-                               @bind-value="lessonEditModel.StartDate"
-                               @bind-value:format="yyyy-MM-ddTHH:mm" />
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Fin</span>
-                        <input class="drawer-input"
-                               type="datetime-local"
-                               @bind-value="lessonEditModel.EndDate"
-                               @bind-value:format="yyyy-MM-ddTHH:mm" />
-                    </div>
-                    <FluentTextField Label="Salle" @bind-Value="lessonEditModel.RoomName" />
-                    @if (lessonEditModel.Type == LessonType.Collective)
-                    {
-                        <FluentNumberField Label="Capacite max" @bind-Value="lessonEditModel.MaxParticipants" />
-                    }
-                </div>
-            }
-            else if (drawerMode == DrawerMode.ThemeDetails && selectedTheme is not null)
-            {
-                <div class="drawer-section">
-                    <div class="drawer-field">
-                        <span class="drawer-label">Nom</span>
-                        <span class="drawer-value">@selectedTheme.Name</span>
-                    </div>
-                    <div class="drawer-field">
-                        <span class="drawer-label">Description</span>
-                        <span class="drawer-value">@selectedTheme.Description</span>
-                    </div>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.ThemeCreate || drawerMode == DrawerMode.ThemeEdit)
-            {
-                <div class="drawer-form">
-                    <FluentTextField Label="Nom" @bind-Value="themeEditModel.Name" />
-                    <FluentTextField Label="Description" @bind-Value="themeEditModel.Description" />
-                </div>
-            }
-        </div>
+                }
+            </div>
         </ChildContent>
         <FooterContent>
             @if (drawerMode == DrawerMode.LessonDetails && selectedLesson is not null)
@@ -199,7 +213,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLesson">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLessonAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -208,7 +222,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLesson">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLessonAsync">
                         @(drawerMode == DrawerMode.LessonCreate ? "Creer le cours" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -219,7 +233,7 @@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenThemeEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteTheme">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteThemeAsync">
                         Supprimer
                     </FluentButton>
                 </div>
@@ -228,7 +242,7 @@
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveTheme">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveThemeAsync">
                         @(drawerMode == DrawerMode.ThemeCreate ? "Creer le theme" : "Enregistrer")
                     </FluentButton>
                 </div>
@@ -238,45 +252,15 @@
 }
 
 @code {
-    protected override void OnInitialized()
-    {
-        BreadcrumbService.SetItems(
-        [
-            new BreadcrumbItem { IsHome = true, Href = "/" },
-            new BreadcrumbItem { Text = "Cours" }
-        ]);
-    }
+    private LessonsPageDto? lessonsPage;
 
-    private readonly List<Coach> coaches =
-    [
-        new Coach("Nora", "Lemoine") { Id = 1 },
-        new Coach("Samir", "El Amrani") { Id = 2 },
-        new Coach("Juliette", "Moreau") { Id = 3 }
-    ];
+    private IReadOnlyList<LessonListItemDto> lessons => lessonsPage?.Lessons ?? new List<LessonListItemDto>();
+    private IReadOnlyList<LessonThemeDto> themes => lessonsPage?.Themes ?? new List<LessonThemeDto>();
+    private IReadOnlyList<LessonCoachDto> coaches => lessonsPage?.Coaches ?? new List<LessonCoachDto>();
+    private IReadOnlyList<RoomDto> rooms => lessonsPage?.Rooms ?? new List<RoomDto>();
 
-    private readonly List<LessonTheme> themes =
-    [
-        new LessonTheme("Force")
-        {
-            Id = 1,
-            Description = "Renforcement et puissance."
-        },
-        new LessonTheme("Cardio")
-        {
-            Id = 2,
-            Description = "Endurance et intensite."
-        },
-        new LessonTheme("Mobilite")
-        {
-            Id = 3,
-            Description = "Souplesse et recuperation."
-        }
-    ];
-
-    private readonly List<Lesson> lessons;
-
-    private Lesson? selectedLesson;
-    private LessonTheme? selectedTheme;
+    private LessonListItemDto? selectedLesson;
+    private LessonThemeDto? selectedTheme;
     private LessonEditModel lessonEditModel = new();
     private ThemeEditModel themeEditModel = new();
     private DrawerMode drawerMode = DrawerMode.None;
@@ -284,55 +268,52 @@
 
     private bool isDrawerOpen => drawerMode != DrawerMode.None;
 
-    public Lessons()
+    protected override async Task OnInitializedAsync()
     {
-        var roomA = new Room("Studio A") { Id = 1 };
-        var roomB = new Room("Studio B") { Id = 2 };
-
-        lessons =
+        BreadcrumbService.SetItems(
         [
-            new CollectiveLesson
-            {
-                Id = 1,
-                Name = "HIIT Blast",
-                Description = "Session intense pour booster le cardio.",
-                Type = LessonType.Collective,
-                Theme = themes[1],
-                Coach = coaches[0],
-                StartDate = DateTime.Today.AddHours(9),
-                EndDate = DateTime.Today.AddHours(10),
-                MaxParticipants = 16,
-                Rooms = new List<Room> { roomA }
-            },
-            new PrivateLesson
-            {
-                Id = 2,
-                Name = "Coaching Perso",
-                Description = "Programme personnalise.",
-                Type = LessonType.Private,
-                Theme = themes[0],
-                Coach = coaches[1],
-                StartDate = DateTime.Today.AddHours(11),
-                EndDate = DateTime.Today.AddHours(12),
-                Room = roomB
-            },
-            new CollectiveLesson
-            {
-                Id = 3,
-                Name = "Mobility Flow",
-                Description = "Etirements et mobilite.",
-                Type = LessonType.Collective,
-                Theme = themes[2],
-                Coach = coaches[2],
-                StartDate = DateTime.Today.AddDays(1).AddHours(18),
-                EndDate = DateTime.Today.AddDays(1).AddHours(19),
-                MaxParticipants = 20,
-                Rooms = new List<Room> { roomB }
-            }
-        ];
+            new BreadcrumbItem { IsHome = true, Href = "/" },
+            new BreadcrumbItem { Text = "Cours" }
+        ]);
+
+        await RefreshLessonsPageAsync();
     }
 
-    private void OpenLessonDetailsDrawer(Lesson lesson)
+    private async Task RefreshLessonsPageAsync()
+    {
+        var loaded = false;
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            lessonsPage = await Sender.Send(new GetLessonsPageQuery());
+            loaded = true;
+        }, "charger les cours");
+
+        if (!loaded)
+        {
+            return;
+        }
+
+        if (selectedLesson is not null)
+        {
+            selectedLesson = lessons.FirstOrDefault(lesson => lesson.Id == selectedLesson.Id);
+            if (selectedLesson is null && drawerMode is DrawerMode.LessonDetails or DrawerMode.LessonEdit)
+            {
+                CloseDrawer();
+                return;
+            }
+        }
+
+        if (selectedTheme is not null)
+        {
+            selectedTheme = themes.FirstOrDefault(theme => theme.Id == selectedTheme.Id);
+            if (selectedTheme is null && drawerMode is DrawerMode.ThemeDetails or DrawerMode.ThemeEdit)
+            {
+                CloseDrawer();
+            }
+        }
+    }
+
+    private void OpenLessonDetailsDrawer(LessonListItemDto lesson)
     {
         selectedLesson = lesson;
         selectedTheme = null;
@@ -342,11 +323,19 @@
 
     private void OpenLessonCreateDrawer()
     {
+        if (coaches.Count == 0 || rooms.Count == 0)
+        {
+            return;
+        }
+
         lessonEditModel = new LessonEditModel
         {
-            StartDate = DateTime.Today.AddHours(9),
-            EndDate = DateTime.Today.AddHours(10),
-            Type = LessonType.Collective
+            Type = LessonType.Collective,
+            CoachId = coaches[0].Id,
+            RoomId = rooms[0].Id,
+            StartDate = DateTime.Now.Date.AddHours(9),
+            EndDate = DateTime.Now.Date.AddHours(10),
+            MaxParticipants = 12
         };
         selectedLesson = null;
         drawerMode = DrawerMode.LessonCreate;
@@ -364,20 +353,107 @@
         {
             Name = selectedLesson.Name,
             Description = selectedLesson.Description ?? string.Empty,
-            ThemeName = selectedLesson.Theme?.Name ?? string.Empty,
-            CoachName = FormatCoachName(selectedLesson.Coach),
+            Type = selectedLesson.Type,
+            ThemeId = selectedLesson.ThemeId,
+            CoachId = selectedLesson.CoachId,
             StartDate = selectedLesson.StartDate,
             EndDate = selectedLesson.EndDate,
-            RoomName = FormatLessonRooms(selectedLesson),
-            Type = selectedLesson.Type,
-            MaxParticipants = selectedLesson is CollectiveLesson collective ? collective.MaxParticipants : 0
+            RoomId = selectedLesson.Rooms.FirstOrDefault()?.Id ?? rooms.FirstOrDefault()?.Id ?? 0,
+            MaxParticipants = selectedLesson.MaxParticipants
         };
 
         drawerMode = DrawerMode.LessonEdit;
         drawerTitle = "Modifier le cours";
     }
 
-    private void OpenThemeDetailsDrawer(LessonTheme theme)
+    private async Task SaveLessonAsync()
+    {
+        if (drawerMode == DrawerMode.LessonCreate)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                await Sender.Send(new CreateLessonCommand(
+                    lessonEditModel.Name,
+                    lessonEditModel.Description,
+                    lessonEditModel.Type,
+                    lessonEditModel.ThemeId,
+                    lessonEditModel.CoachId,
+                    lessonEditModel.StartDate,
+                    lessonEditModel.EndDate,
+                    lessonEditModel.RoomId,
+                    lessonEditModel.Type == LessonType.Collective ? lessonEditModel.MaxParticipants : null));
+
+                await RefreshLessonsPageAsync();
+                CloseDrawer();
+            }, "creer le cours", "Cours cree.");
+            return;
+        }
+
+        if (drawerMode == DrawerMode.LessonEdit && selectedLesson is not null)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                var updated = await Sender.Send(new UpdateLessonCommand(
+                    selectedLesson.Id,
+                    lessonEditModel.Name,
+                    lessonEditModel.Description,
+                    lessonEditModel.Type,
+                    lessonEditModel.ThemeId,
+                    lessonEditModel.CoachId,
+                    lessonEditModel.StartDate,
+                    lessonEditModel.EndDate,
+                    lessonEditModel.RoomId,
+                    lessonEditModel.Type == LessonType.Collective ? lessonEditModel.MaxParticipants : null));
+                if (!updated)
+                {
+                    throw new ValidationException("Cours introuvable.");
+                }
+
+                await RefreshLessonsPageAsync();
+                selectedLesson = lessons.FirstOrDefault(lesson => lesson.Id == selectedLesson.Id);
+                if (selectedLesson is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.LessonDetails;
+                drawerTitle = "Details du cours";
+            }, "mettre a jour le cours", "Cours mis a jour.");
+        }
+    }
+
+    private async Task DeleteLessonAsync()
+    {
+        if (selectedLesson is null)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeleteLessonCommand(selectedLesson.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Cours introuvable.");
+            }
+
+            await RefreshLessonsPageAsync();
+            CloseDrawer();
+        }, "supprimer le cours", "Cours supprime.");
+    }
+
+    private void OpenLessonPage()
+    {
+        if (selectedLesson is null)
+        {
+            return;
+        }
+
+        NavManager.NavigateTo($"/lessons/{selectedLesson.Id}");
+    }
+
+    private void OpenThemeDetailsDrawer(LessonThemeDto theme)
     {
         selectedTheme = theme;
         selectedLesson = null;
@@ -410,100 +486,64 @@
         drawerTitle = "Modifier le theme";
     }
 
-    private void SaveLesson()
-    {
-        if (drawerMode == DrawerMode.LessonCreate)
-        {
-            lessons.Add(BuildLessonFromModel(lessonEditModel));
-            CloseDrawer();
-            return;
-        }
-
-        if (drawerMode == DrawerMode.LessonEdit && selectedLesson is not null)
-        {
-            selectedLesson.Name = lessonEditModel.Name;
-            selectedLesson.Description = string.IsNullOrWhiteSpace(lessonEditModel.Description)
-                ? null
-                : lessonEditModel.Description;
-            selectedLesson.Type = lessonEditModel.Type;
-            selectedLesson.Theme = ResolveTheme(lessonEditModel.ThemeName);
-            selectedLesson.Coach = ResolveCoach(lessonEditModel.CoachName);
-            selectedLesson.StartDate = lessonEditModel.StartDate;
-            selectedLesson.EndDate = lessonEditModel.EndDate;
-
-            if (selectedLesson is CollectiveLesson collective)
-            {
-                collective.MaxParticipants = lessonEditModel.MaxParticipants;
-                collective.Rooms = new List<Room> { ResolveRoom(lessonEditModel.RoomName) };
-            }
-            else if (selectedLesson is PrivateLesson privateLesson)
-            {
-                privateLesson.Room = ResolveRoom(lessonEditModel.RoomName);
-            }
-
-            drawerMode = DrawerMode.LessonDetails;
-            drawerTitle = "Details du cours";
-        }
-    }
-
-    private void SaveTheme()
+    private async Task SaveThemeAsync()
     {
         if (drawerMode == DrawerMode.ThemeCreate)
         {
-            var newTheme = new LessonTheme(themeEditModel.Name)
+            await UserFeedback.ExecuteAsync(async () =>
             {
-                Id = NextThemeId(),
-                Description = string.IsNullOrWhiteSpace(themeEditModel.Description)
-                    ? null
-                    : themeEditModel.Description
-            };
-
-            themes.Add(newTheme);
-            CloseDrawer();
+                await Sender.Send(new CreateLessonThemeCommand(themeEditModel.Name, themeEditModel.Description));
+                await RefreshLessonsPageAsync();
+                CloseDrawer();
+            }, "creer le theme", "Theme cree.");
             return;
         }
 
         if (drawerMode == DrawerMode.ThemeEdit && selectedTheme is not null)
         {
-            selectedTheme.Name = themeEditModel.Name;
-            selectedTheme.Description = string.IsNullOrWhiteSpace(themeEditModel.Description)
-                ? null
-                : themeEditModel.Description;
-            drawerMode = DrawerMode.ThemeDetails;
-            drawerTitle = "Details du theme";
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                var updated = await Sender.Send(new UpdateLessonThemeCommand(
+                    selectedTheme.Id,
+                    themeEditModel.Name,
+                    themeEditModel.Description));
+                if (!updated)
+                {
+                    throw new ValidationException("Theme introuvable.");
+                }
+
+                await RefreshLessonsPageAsync();
+                selectedTheme = themes.FirstOrDefault(theme => theme.Id == selectedTheme.Id);
+                if (selectedTheme is null)
+                {
+                    CloseDrawer();
+                    return;
+                }
+
+                drawerMode = DrawerMode.ThemeDetails;
+                drawerTitle = "Details du theme";
+            }, "mettre a jour le theme", "Theme mis a jour.");
         }
     }
 
-    private void DeleteLesson()
-    {
-        if (selectedLesson is null)
-        {
-            return;
-        }
-
-        lessons.Remove(selectedLesson);
-        CloseDrawer();
-    }
-
-    private void OpenLessonPage()
-    {
-        if (selectedLesson is null)
-        {
-            return;
-        }
-
-        NavManager.NavigateTo($"/lessons/{selectedLesson.Id}");
-    }
-
-    private void DeleteTheme()
+    private async Task DeleteThemeAsync()
     {
         if (selectedTheme is null)
         {
             return;
         }
 
-        themes.Remove(selectedTheme);
-        CloseDrawer();
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeleteLessonThemeCommand(selectedTheme.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Theme introuvable.");
+            }
+
+            await RefreshLessonsPageAsync();
+            CloseDrawer();
+        }, "supprimer le theme", "Theme supprime.");
     }
 
     private void CancelEdit()
@@ -533,121 +573,21 @@
         drawerTitle = string.Empty;
     }
 
-    private Lesson BuildLessonFromModel(LessonEditModel model)
-    {
-        Lesson lesson;
-        if (model.Type == LessonType.Collective)
-        {
-            lesson = new CollectiveLesson
-            {
-                MaxParticipants = model.MaxParticipants,
-                Rooms = new List<Room> { ResolveRoom(model.RoomName) }
-            };
-        }
-        else
-        {
-            lesson = new PrivateLesson
-            {
-                Room = ResolveRoom(model.RoomName)
-            };
-        }
-
-        lesson.Id = NextLessonId();
-        lesson.Name = model.Name;
-        lesson.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description;
-        lesson.Type = model.Type;
-        lesson.Theme = ResolveTheme(model.ThemeName);
-        lesson.Coach = ResolveCoach(model.CoachName);
-        lesson.StartDate = model.StartDate;
-        lesson.EndDate = model.EndDate;
-        return lesson;
-    }
-
-    private Coach ResolveCoach(string coachName)
-    {
-        var match = coaches.FirstOrDefault(coach => FormatCoachName(coach).Equals(coachName, StringComparison.OrdinalIgnoreCase));
-        if (match is not null)
-        {
-            return match;
-        }
-
-        var parts = coachName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var firstName = parts.Length > 0 ? parts[0] : "Coach";
-        var lastName = parts.Length > 1 ? string.Join(' ', parts.Skip(1)) : "Equipe";
-        var newCoach = new Coach(firstName, lastName) { Id = NextCoachId() };
-        coaches.Add(newCoach);
-        return newCoach;
-    }
-
-    private LessonTheme? ResolveTheme(string themeName)
-    {
-        if (string.IsNullOrWhiteSpace(themeName))
-        {
-            return null;
-        }
-
-        var match = themes.FirstOrDefault(theme => theme.Name.Equals(themeName, StringComparison.OrdinalIgnoreCase));
-        if (match is not null)
-        {
-            return match;
-        }
-
-        var newTheme = new LessonTheme(themeName)
-        {
-            Id = NextThemeId()
-        };
-        themes.Add(newTheme);
-        return newTheme;
-    }
-
-    private Room ResolveRoom(string roomName)
-    {
-        return new Room(string.IsNullOrWhiteSpace(roomName) ? "Salle" : roomName)
-        {
-            Id = 1
-        };
-    }
-
     private static string FormatLessonType(LessonType type)
     {
         return type == LessonType.Collective ? "Collectif" : "Prive";
     }
 
-    private static string FormatCoachName(Coach coach)
+    private static string FormatCoachName(LessonListItemDto lesson)
     {
-        return $"{coach.FirstName} {coach.LastName}".Trim();
+        return $"{lesson.CoachFirstName} {lesson.CoachLastName}".Trim();
     }
 
-    private static string FormatLessonRooms(Lesson lesson)
+    private static string FormatLessonRooms(LessonListItemDto lesson)
     {
-        if (lesson is CollectiveLesson collective)
-        {
-            return collective.Rooms.Count == 0
-                ? "-"
-                : string.Join(", ", collective.Rooms.Select(room => room.Name));
-        }
-
-        if (lesson is PrivateLesson privateLesson)
-        {
-            return privateLesson.Room?.Name ?? "-";
-        }
-
-        return "-";
-    }
-
-    private int NextLessonId()
-    {
-        return lessons.Count == 0 ? 1 : lessons.Max(lesson => lesson.Id) + 1;
-    }
-
-    private int NextThemeId()
-    {
-        return themes.Count == 0 ? 1 : themes.Max(theme => theme.Id) + 1;
-    }
-
-    private int NextCoachId()
-    {
-        return coaches.Count == 0 ? 1 : coaches.Max(coach => coach.Id) + 1;
+        return lesson.Rooms.Count == 0
+            ? "-"
+            : string.Join(", ", lesson.Rooms.Select(room => room.Name));
     }
 
     private enum DrawerMode
@@ -666,12 +606,12 @@
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public LessonType Type { get; set; } = LessonType.Collective;
-        public string ThemeName { get; set; } = string.Empty;
-        public string CoachName { get; set; } = string.Empty;
+        public int? ThemeId { get; set; }
+        public int CoachId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string RoomName { get; set; } = string.Empty;
-        public int MaxParticipants { get; set; } = 12;
+        public int RoomId { get; set; }
+        public int? MaxParticipants { get; set; } = 12;
     }
 
     private sealed class ThemeEditModel
