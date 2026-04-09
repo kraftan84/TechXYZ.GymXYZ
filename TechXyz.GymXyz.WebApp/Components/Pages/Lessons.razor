@@ -125,55 +125,58 @@
                 {
                     <div class="drawer-form">
                         <FluentTextField Label="Nom" @bind-Value="lessonEditModel.Name" />
-                        <FluentTextField Label="Description" @bind-Value="lessonEditModel.Description" />
+                        <FluentTextArea Label="Description" @bind-Value="lessonEditModel.Description" />
                         <div class="drawer-field">
-                            <span class="drawer-label">Type</span>
-                            <select class="drawer-select" @bind="lessonEditModel.Type" disabled="@(drawerMode == DrawerMode.LessonEdit)">
-                                <option value="@LessonType.Collective">Collectif</option>
-                                <option value="@LessonType.Private">Prive</option>
-                            </select>
+                            <FluentSelect Label="Type"
+                                          TOption="string"
+                                          Value="@lessonEditModel.Type.ToString()"
+                                          ValueChanged="OnLessonTypeChanged"
+                                          Disabled="@(drawerMode == DrawerMode.LessonEdit)">
+                                <FluentOption TOption="string" Value="@LessonType.Collective.ToString()">Collectif</FluentOption>
+                                <FluentOption TOption="string" Value="@LessonType.Private.ToString()">Prive</FluentOption>
+                            </FluentSelect>
                         </div>
                         <div class="drawer-field">
-                            <span class="drawer-label">Theme</span>
-                            <select class="drawer-select" @bind="lessonEditModel.ThemeId">
-                                <option value="">-</option>
+                            <FluentSelect Label="Theme"
+                                          TOption="string"
+                                          Value="@(lessonEditModel.ThemeId?.ToString() ?? string.Empty)"
+                                          ValueChanged="OnLessonThemeChanged">
+                                <FluentOption TOption="string" Value="">-</FluentOption>
                                 @foreach (var theme in themes)
                                 {
-                                    <option value="@theme.Id">@theme.Name</option>
+                                    <FluentOption TOption="string" Value="@theme.Id.ToString()">@theme.Name</FluentOption>
                                 }
-                            </select>
+                            </FluentSelect>
                         </div>
                         <div class="drawer-field">
-                            <span class="drawer-label">Coach</span>
-                            <select class="drawer-select" @bind="lessonEditModel.CoachId">
+                            <FluentSelect Label="Coach"
+                                          TOption="string"
+                                          Value="@lessonEditModel.CoachId.ToString()"
+                                          ValueChanged="OnLessonCoachChanged">
                                 @foreach (var coach in coaches)
                                 {
-                                    <option value="@coach.Id">@($"{coach.FirstName} {coach.LastName}")</option>
+                                    <FluentOption TOption="string" Value="@coach.Id.ToString()">@($"{coach.FirstName} {coach.LastName}")</FluentOption>
                                 }
-                            </select>
+                            </FluentSelect>
                         </div>
                         <div class="drawer-field">
-                            <span class="drawer-label">Debut</span>
-                            <input class="drawer-input"
-                                   type="datetime-local"
-                                   @bind-value="lessonEditModel.StartDate"
-                                   @bind-value:format="yyyy-MM-ddTHH:mm" />
+                            <FluentDatePicker Label="Date de debut" @bind-Value="lessonEditModel.StartDatePart" />
+                            <FluentTimePicker Label="Heure de debut" @bind-Value="lessonEditModel.StartTimePart" />
                         </div>
                         <div class="drawer-field">
-                            <span class="drawer-label">Fin</span>
-                            <input class="drawer-input"
-                                   type="datetime-local"
-                                   @bind-value="lessonEditModel.EndDate"
-                                   @bind-value:format="yyyy-MM-ddTHH:mm" />
+                            <FluentDatePicker Label="Date de fin" @bind-Value="lessonEditModel.EndDatePart" />
+                            <FluentTimePicker Label="Heure de fin" @bind-Value="lessonEditModel.EndTimePart" />
                         </div>
                         <div class="drawer-field">
-                            <span class="drawer-label">Salle</span>
-                            <select class="drawer-select" @bind="lessonEditModel.RoomId">
+                            <FluentSelect Label="Salle"
+                                          TOption="string"
+                                          Value="@lessonEditModel.RoomId.ToString()"
+                                          ValueChanged="OnLessonRoomChanged">
                                 @foreach (var room in rooms)
                                 {
-                                    <option value="@room.Id">@room.Name</option>
+                                    <FluentOption TOption="string" Value="@room.Id.ToString()">@room.Name</FluentOption>
                                 }
-                            </select>
+                            </FluentSelect>
                         </div>
                         @if (lessonEditModel.Type == LessonType.Collective)
                         {
@@ -198,7 +201,7 @@
                 {
                     <div class="drawer-form">
                         <FluentTextField Label="Nom" @bind-Value="themeEditModel.Name" />
-                        <FluentTextField Label="Description" @bind-Value="themeEditModel.Description" />
+                        <FluentTextArea Label="Description" @bind-Value="themeEditModel.Description" />
                     </div>
                 }
             </div>
@@ -333,8 +336,10 @@
             Type = LessonType.Collective,
             CoachId = coaches[0].Id,
             RoomId = rooms[0].Id,
-            StartDate = DateTime.Now.Date.AddHours(9),
-            EndDate = DateTime.Now.Date.AddHours(10),
+            StartDatePart = DateTime.Now.Date,
+            EndDatePart = DateTime.Now.Date,
+            StartTimePart = DateTime.Now.Date.AddHours(9),
+            EndTimePart = DateTime.Now.Date.AddHours(10),
             MaxParticipants = 12
         };
         selectedLesson = null;
@@ -356,8 +361,10 @@
             Type = selectedLesson.Type,
             ThemeId = selectedLesson.ThemeId,
             CoachId = selectedLesson.CoachId,
-            StartDate = selectedLesson.StartDate,
-            EndDate = selectedLesson.EndDate,
+            StartDatePart = selectedLesson.StartDate.Date,
+            EndDatePart = selectedLesson.EndDate.Date,
+            StartTimePart = DateTime.Now.Date.Add(selectedLesson.StartDate.TimeOfDay),
+            EndTimePart = DateTime.Now.Date.Add(selectedLesson.EndDate.TimeOfDay),
             RoomId = selectedLesson.Rooms.FirstOrDefault()?.Id ?? rooms.FirstOrDefault()?.Id ?? 0,
             MaxParticipants = selectedLesson.MaxParticipants
         };
@@ -378,8 +385,8 @@
                     lessonEditModel.Type,
                     lessonEditModel.ThemeId,
                     lessonEditModel.CoachId,
-                    lessonEditModel.StartDate,
-                    lessonEditModel.EndDate,
+                    BuildDateTime(lessonEditModel.StartDatePart, lessonEditModel.StartTimePart),
+                    BuildDateTime(lessonEditModel.EndDatePart, lessonEditModel.EndTimePart),
                     lessonEditModel.RoomId,
                     lessonEditModel.Type == LessonType.Collective ? lessonEditModel.MaxParticipants : null));
 
@@ -400,8 +407,8 @@
                     lessonEditModel.Type,
                     lessonEditModel.ThemeId,
                     lessonEditModel.CoachId,
-                    lessonEditModel.StartDate,
-                    lessonEditModel.EndDate,
+                    BuildDateTime(lessonEditModel.StartDatePart, lessonEditModel.StartTimePart),
+                    BuildDateTime(lessonEditModel.EndDatePart, lessonEditModel.EndTimePart),
                     lessonEditModel.RoomId,
                     lessonEditModel.Type == LessonType.Collective ? lessonEditModel.MaxParticipants : null));
                 if (!updated)
@@ -590,6 +597,42 @@
             : string.Join(", ", lesson.Rooms.Select(room => room.Name));
     }
 
+    private static DateTime BuildDateTime(DateTime? datePart, DateTime? timePart)
+    {
+        var date = (datePart ?? DateTime.Now).Date;
+        var time = (timePart ?? DateTime.Now).TimeOfDay;
+        return date.Add(time);
+    }
+
+    private void OnLessonTypeChanged(string? value)
+    {
+        if (Enum.TryParse<LessonType>(value, out var type))
+        {
+            lessonEditModel.Type = type;
+        }
+    }
+
+    private void OnLessonThemeChanged(string? value)
+    {
+        lessonEditModel.ThemeId = int.TryParse(value, out var id) ? id : null;
+    }
+
+    private void OnLessonCoachChanged(string? value)
+    {
+        if (int.TryParse(value, out var id))
+        {
+            lessonEditModel.CoachId = id;
+        }
+    }
+
+    private void OnLessonRoomChanged(string? value)
+    {
+        if (int.TryParse(value, out var id))
+        {
+            lessonEditModel.RoomId = id;
+        }
+    }
+
     private enum DrawerMode
     {
         None,
@@ -608,8 +651,10 @@
         public LessonType Type { get; set; } = LessonType.Collective;
         public int? ThemeId { get; set; }
         public int CoachId { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? StartDatePart { get; set; }
+        public DateTime? EndDatePart { get; set; }
+        public DateTime? StartTimePart { get; set; }
+        public DateTime? EndTimePart { get; set; }
         public int RoomId { get; set; }
         public int? MaxParticipants { get; set; } = 12;
     }

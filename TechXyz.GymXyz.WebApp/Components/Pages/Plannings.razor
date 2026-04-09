@@ -186,23 +186,27 @@
             {
                 <div class="drawer-form">
                     <FluentTextField Label="Nom" @bind-Value="editModel.Name" />
-                    <FluentTextField Label="Description" @bind-Value="editModel.Description" />
+                    <FluentTextArea Label="Description" @bind-Value="editModel.Description" />
                     <div class="drawer-field">
-                        <span class="drawer-label">Type</span>
-                        <select class="drawer-select" @bind="editModel.Type">
-                            <option value="@LessonType.Collective">Collectif</option>
-                            <option value="@LessonType.Private">Prive</option>
-                        </select>
+                        <FluentSelect Label="Type"
+                                      TOption="string"
+                                      Value="@editModel.Type.ToString()"
+                                      ValueChanged="OnEditTypeChanged">
+                            <FluentOption TOption="string" Value="@LessonType.Collective.ToString()">Collectif</FluentOption>
+                            <FluentOption TOption="string" Value="@LessonType.Private.ToString()">Prive</FluentOption>
+                        </FluentSelect>
                     </div>
                     <div class="drawer-field">
-                        <span class="drawer-label">Theme</span>
-                        <select class="drawer-select" @bind="editModel.ThemeName">
-                            <option value="">-</option>
+                        <FluentSelect Label="Theme"
+                                      TOption="string"
+                                      Value="@editModel.ThemeName"
+                                      ValueChanged="OnEditThemeChanged">
+                            <FluentOption TOption="string" Value="">-</FluentOption>
                             @foreach (var theme in themes)
                             {
-                                <option value="@theme.Name">@theme.Name</option>
+                                <FluentOption TOption="string" Value="@theme.Name">@theme.Name</FluentOption>
                             }
-                        </select>
+                        </FluentSelect>
                     </div>
                     <div class="drawer-field">
                         <span class="drawer-label">Coach</span>
@@ -218,18 +222,12 @@
                         </datalist>
                     </div>
                     <div class="drawer-field">
-                        <span class="drawer-label">Debut</span>
-                        <input class="drawer-input"
-                               type="datetime-local"
-                               @bind-value="editModel.StartDate"
-                               @bind-value:format="yyyy-MM-ddTHH:mm" />
+                        <FluentDatePicker Label="Date de debut" @bind-Value="editModel.StartDatePart" />
+                        <FluentTimePicker Label="Heure de debut" @bind-Value="editModel.StartTimePart" />
                     </div>
                     <div class="drawer-field">
-                        <span class="drawer-label">Fin</span>
-                        <input class="drawer-input"
-                               type="datetime-local"
-                               @bind-value="editModel.EndDate"
-                               @bind-value:format="yyyy-MM-ddTHH:mm" />
+                        <FluentDatePicker Label="Date de fin" @bind-Value="editModel.EndDatePart" />
+                        <FluentTimePicker Label="Heure de fin" @bind-Value="editModel.EndTimePart" />
                     </div>
                 </div>
             }
@@ -413,8 +411,10 @@
     {
         editModel = new LessonEditModel
         {
-            StartDate = selectedDate.Date.AddHours(9),
-            EndDate = selectedDate.Date.AddHours(10),
+            StartDatePart = selectedDate.Date,
+            EndDatePart = selectedDate.Date,
+            StartTimePart = selectedDate.Date.AddHours(9),
+            EndTimePart = selectedDate.Date.AddHours(10),
             Type = LessonType.Collective
         };
         selectedLesson = null;
@@ -435,8 +435,10 @@
             Description = selectedLesson.Description ?? string.Empty,
             ThemeName = selectedLesson.Theme?.Name ?? string.Empty,
             CoachName = FormatCoachName(selectedLesson.Coach),
-            StartDate = selectedLesson.StartDate,
-            EndDate = selectedLesson.EndDate,
+            StartDatePart = selectedLesson.StartDate.Date,
+            EndDatePart = selectedLesson.EndDate.Date,
+            StartTimePart = DateTime.Now.Date.Add(selectedLesson.StartDate.TimeOfDay),
+            EndTimePart = DateTime.Now.Date.Add(selectedLesson.EndDate.TimeOfDay),
             Type = selectedLesson.Type
         };
 
@@ -460,8 +462,8 @@
             selectedLesson.Type = editModel.Type;
             selectedLesson.Theme = ResolveTheme(editModel.ThemeName);
             selectedLesson.Coach = ResolveCoach(editModel.CoachName);
-            selectedLesson.StartDate = editModel.StartDate;
-            selectedLesson.EndDate = editModel.EndDate;
+            selectedLesson.StartDate = BuildDateTime(editModel.StartDatePart, editModel.StartTimePart);
+            selectedLesson.EndDate = BuildDateTime(editModel.EndDatePart, editModel.EndTimePart);
             drawerMode = DrawerMode.Details;
             drawerTitle = "Details du cours";
         }
@@ -519,8 +521,8 @@
         lesson.Type = model.Type;
         lesson.Theme = ResolveTheme(model.ThemeName);
         lesson.Coach = ResolveCoach(model.CoachName);
-        lesson.StartDate = model.StartDate;
-        lesson.EndDate = model.EndDate;
+        lesson.StartDate = BuildDateTime(model.StartDatePart, model.StartTimePart);
+        lesson.EndDate = BuildDateTime(model.EndDatePart, model.EndTimePart);
         return lesson;
     }
 
@@ -569,6 +571,26 @@
     private static string FormatCoachName(Coach coach)
     {
         return $"{coach.FirstName} {coach.LastName}".Trim();
+    }
+
+    private static DateTime BuildDateTime(DateTime? datePart, DateTime? timePart)
+    {
+        var date = (datePart ?? DateTime.Now).Date;
+        var time = (timePart ?? DateTime.Now).TimeOfDay;
+        return date.Add(time);
+    }
+
+    private void OnEditTypeChanged(string? value)
+    {
+        if (Enum.TryParse<LessonType>(value, out var type))
+        {
+            editModel.Type = type;
+        }
+    }
+
+    private void OnEditThemeChanged(string? value)
+    {
+        editModel.ThemeName = value ?? string.Empty;
     }
 
     private int NextLessonId()
@@ -647,8 +669,10 @@
         public LessonType Type { get; set; } = LessonType.Collective;
         public string ThemeName { get; set; } = string.Empty;
         public string CoachName { get; set; } = string.Empty;
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? StartDatePart { get; set; }
+        public DateTime? EndDatePart { get; set; }
+        public DateTime? StartTimePart { get; set; }
+        public DateTime? EndTimePart { get; set; }
     }
 
     private sealed record WeekDay(DateTime Date, string Label);

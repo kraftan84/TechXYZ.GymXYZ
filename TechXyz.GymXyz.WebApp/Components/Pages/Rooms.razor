@@ -131,13 +131,15 @@
                     <div class="drawer-form">
                         <FluentTextField Label="Nom de la salle" @bind-Value="roomEditModel.Name" />
                         <div class="drawer-field">
-                            <span class="drawer-label">Emplacement</span>
-                            <select class="drawer-select" @bind="roomEditModel.LocationId">
+                            <FluentSelect Label="Emplacement"
+                                          TOption="string"
+                                          Value="@roomEditModel.LocationId.ToString()"
+                                          ValueChanged="OnRoomLocationChanged">
                                 @foreach (var location in locations)
                                 {
-                                    <option value="@location.Id">@location.Name</option>
+                                    <FluentOption TOption="string" Value="@location.Id.ToString()">@location.Name</FluentOption>
                                 }
-                            </select>
+                            </FluentSelect>
                         </div>
                     </div>
                 }
@@ -493,6 +495,14 @@
             .Where(value => !string.IsNullOrWhiteSpace(value));
 
         return string.Join(", ", parts);
+    }
+
+    private void OnRoomLocationChanged(string? value)
+    {
+        if (int.TryParse(value, out var id))
+        {
+            roomEditModel.LocationId = id;
+        }
     }
 
     private enum DrawerMode
