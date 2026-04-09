@@ -5,10 +5,10 @@ namespace TechXyz.GymXyz.WebApp.Services;
 
 public sealed class UserFeedbackService : IUserFeedbackService
 {
-    private readonly ToastService _toastService;
+    private readonly IToastService _toastService;
     private readonly ILogger<UserFeedbackService> _logger;
 
-    public UserFeedbackService(ToastService toastService, ILogger<UserFeedbackService> logger)
+    public UserFeedbackService(IToastService toastService, ILogger<UserFeedbackService> logger)
     {
         _toastService = toastService;
         _logger = logger;

@@ -3,6 +3,7 @@
 @inject NavigationManager NavManager
 @inject BreadcrumbService BreadcrumbService
 @inject IJSRuntime JSRuntime
+@inject ILogger<Home> Logger
 
 <PageTitle>Accueil</PageTitle>
 
@@ -158,17 +159,24 @@
             return;
         }
 
-        _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./Components/Pages/Home.razor.js");
+        try
+        {
+            _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./Components/Pages/Home.razor.js");
 
-        await _module.InvokeVoidAsync("initFollow", _dailyPlanningRef);
+            await _module.InvokeVoidAsync("initFollow", _dailyPlanningRef);
 
-        await _module.InvokeVoidAsync(
-            "scrollToCurrentTime",
-            _dailyPlanningRef,
-            CurrentOffsetMinutes,
-            CurrentTimeTopOffsetPx);
+            await _module.InvokeVoidAsync(
+                "scrollToCurrentTime",
+                _dailyPlanningRef,
+                CurrentOffsetMinutes,
+                CurrentTimeTopOffsetPx);
+        }
+        catch (JSException exception)
+        {
+            Logger.LogWarning(exception, "Home page enhancement module could not be loaded.");
+        }
     }
 
     private readonly List<LessonItem> LessonsToday = new()

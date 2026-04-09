@@ -63,6 +63,7 @@ using (var scope = app.Services.CreateScope())
             DbInitializer.Initialize(serviceProvider, dbContext);
         }
     }
+
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
