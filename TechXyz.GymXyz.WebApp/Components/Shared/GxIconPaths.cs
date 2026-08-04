@@ -34,6 +34,9 @@ public static class GxIconPaths
     public const string Clock = "clock";
     public const string Alert = "alert";
     public const string Euro = "euro";
+    public const string Copy = "copy";
+    public const string Target = "target";
+    public const string Trend = "trend";
 
     private static readonly Dictionary<string, string> Paths = new(StringComparer.OrdinalIgnoreCase)
     {

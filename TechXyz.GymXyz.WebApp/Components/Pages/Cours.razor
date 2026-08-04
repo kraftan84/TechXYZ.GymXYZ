@@ -1,0 +1,171 @@
+@page "/cours"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Cours
+@implements IDisposable
+
+@inject NavigationManager NavManager
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+
+<PageTitle>Cours</PageTitle>
+
+@* One page, one set of state, two presentations. The queries and the actions
+   below are shared; only the markup differs. Unlike Coachs, a solo tenant keeps
+   this section: they still run a catalogue, they are simply alone in it. *@
+@if (Responsive.IsMobile)
+{
+    <CoursMobile Page="_page"
+                 OnOpen="OpenCourse"
+                 OnCreate="OpenCreateDrawer"/>
+}
+else
+{
+    <div class="gx-screen">
+        <CoursDesktop Page="_page"
+                      Search="@_search"
+                      Format="_format"
+                      IsSolo="@IsSolo"
+                      ManagerName="@User.DisplayName"
+                      OnSearchChanged="ApplySearchAsync"
+                      OnFormatChanged="ApplyFormatAsync"
+                      OnOpen="OpenCourse"
+                      OnCreate="OpenCreateDrawer"/>
+    </div>
+}
+
+@if (_isDrawerOpen)
+{
+    <CourseDrawer Model="_editModel"
+                  Disciplines="_disciplines"
+                  Rooms="_rooms"
+                  Coaches="_coaches"
+                  IsNew="true"
+                  IsSolo="@IsSolo"
+                  IsSaving="_isSaving"
+                  OnSave="CreateCourseAsync"
+                  OnCancel="CloseDrawer"/>
+}
+
+@code {
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+    [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+
+    private CourseTemplatesPageDto _page = CourseTemplatesPageDto.Empty;
+    private IReadOnlyList<DisciplineDto> _disciplines = [];
+    private IReadOnlyList<RoomDto> _rooms = [];
+    private IReadOnlyList<CoachListItemDto> _coaches = [];
+
+    private string? _search;
+    private CourseFormat? _format;
+
+    private bool _isDrawerOpen;
+    private bool _isSaving;
+    private CourseEditModel _editModel = new();
+
+    private bool IsSolo => Brand?.IsSolo == true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Responsive.Changed += OnResponsiveChanged;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _page = await Sender.Send(new GetCourseTemplatesQuery
+            {
+                Search = _search,
+                Format = _format
+            });
+        }, "charger le catalogue des cours");
+    }
+
+    private async Task ApplySearchAsync(string? search)
+    {
+        _search = string.IsNullOrWhiteSpace(search) ? null : search;
+        await RefreshAsync();
+    }
+
+    private async Task ApplyFormatAsync(CourseFormat? format)
+    {
+        _format = format;
+        await RefreshAsync();
+    }
+
+    private void OpenCourse(CourseTemplateListItemDto course)
+        => NavManager.NavigateTo($"/cours/{course.Id}");
+
+    private async Task OpenCreateDrawer()
+    {
+        _editModel = CourseEditModel.ForCreate();
+
+        // Loaded on demand, and before the drawer opens: a picker rendered
+        // against an empty list latches its first option and never picks the
+        // value up.
+        await LoadReferentialsAsync();
+
+        _editModel.DisciplineId = _disciplines.FirstOrDefault()?.Id ?? 0;
+        _isDrawerOpen = true;
+    }
+
+    private async Task LoadReferentialsAsync()
+    {
+        if (_disciplines.Count > 0)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _disciplines = await Sender.Send(new GetDisciplinesQuery());
+            _rooms = await Sender.Send(new GetRoomsQuery());
+            _coaches = (await Sender.Send(new GetCoachesQuery())).Items;
+        }, "charger les référentiels");
+    }
+
+    private void CloseDrawer()
+    {
+        _isDrawerOpen = false;
+        _isSaving = false;
+    }
+
+    private async Task CreateCourseAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var createdId = await Sender.Send(new CreateCourseTemplateCommand(
+                _editModel.Name,
+                _editModel.DisciplineId,
+                _editModel.DurationMinutes,
+                _editModel.Capacity,
+                _editModel.Level,
+                _editModel.Intensity,
+                _editModel.DefaultRoomId,
+                _editModel.Price,
+                _editModel.Description,
+                _editModel.IconKey,
+                _editModel.CoachIds));
+
+            CloseDrawer();
+            NavManager.NavigateTo($"/cours/{createdId}");
+        }, "créer le cours", "Cours créé.");
+
+        _isSaving = false;
+    }
+
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Responsive.Changed -= OnResponsiveChanged;
+}

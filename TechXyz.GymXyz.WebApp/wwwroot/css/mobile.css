@@ -29,7 +29,10 @@
 /* ---------- Header (sticky) ---------- */
 .gx-m-head {
   flex: none;
-  padding: 54px 18px 12px;
+  /* The status bar is a device inset, not a constant: the prototype draws a
+     phone frame and bakes in 54px, which is dead space in a browser. Same
+     pattern as the bottom bars below. */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 12px;
   background: var(--gx-tb-bg);
   -webkit-backdrop-filter: var(--blur-glass); backdrop-filter: var(--blur-glass);
   border-bottom: 1px solid var(--border-subtle);

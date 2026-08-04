@@ -17,6 +17,8 @@ public interface IGymDbContext
     DbSet<Discipline> Disciplines { get; }
     DbSet<CoachDiscipline> CoachDisciplines { get; }
     DbSet<CoachCertification> CoachCertifications { get; }
+    DbSet<CourseTemplate> CourseTemplates { get; }
+    DbSet<CourseTemplateCoach> CourseTemplateCoaches { get; }
     DbSet<Member> Members { get; }
     DbSet<Subscription> Subscriptions { get; }
 

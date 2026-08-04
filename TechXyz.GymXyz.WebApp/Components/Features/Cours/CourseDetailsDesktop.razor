@@ -1,0 +1,187 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Cours
+
+@* Desktop course record: discipline head, then two columns — figures,
+   description and upcoming sessions on the left, default settings and coaches
+   on the right. *@
+
+<Crumb Parts="@Crumbs"/>
+
+<div class="gx-fiche-head">
+    <span class="gx-disc-ic big t-@CourseFilters.ToneClass(Course.Intensity)">
+        <GxIcon Name="@(Course.IconKey ?? GxIconPaths.Dumbbell)" Size="28"/>
+    </span>
+    <div class="info">
+        <div class="name-row">
+            <span class="name">@Course.Name</span>
+            <GxChip>@CourseFilters.LabelFor(Course.Level)</GxChip>
+        </div>
+        <div class="contact">@Summary</div>
+    </div>
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnDuplicate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Copy" Size="18"/>
+        Dupliquer
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
+        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
+        Éditer
+    </FluentButton>
+</div>
+
+<div class="gx-grid2" style="grid-template-columns:1.3fr 1fr;align-items:start">
+    <div class="gx-col">
+        <div class="gx-grid3">
+            <Kpi Label="Séances / sem."
+                 Value="@(Course.Stats.SessionsPerWeek?.ToString() ?? "—")"
+                 Sub="@PendingHint"/>
+            <Kpi Label="Remplissage"
+                 Value="@(Course.Stats.FillRate is { } fill ? $"{fill} %" : "—")"
+                 Sub="@PendingHint"/>
+            <Kpi Label="Habitués"
+                 Value="@(Course.Stats.Regulars?.ToString() ?? "—")"
+                 Sub="@PendingHint"/>
+        </div>
+
+        <GxCard Padded="false">
+            <CardHead Title="Description"/>
+            <div style="padding:14px 18px 16px;font-size:var(--text-sm);color:var(--text-body);line-height:1.55">
+                @(string.IsNullOrWhiteSpace(Course.Description)
+                    ? "Aucune description pour l'instant."
+                    : Course.Description)
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Prochaines séances">
+                <FluentButton Appearance="Appearance.Stealth" @onclick="OnPlanning">
+                    <GxIcon Slot="start" Name="@GxIconPaths.Calendar" Size="16"/>
+                    Planning
+                </FluentButton>
+            </CardHead>
+            <div style="padding:4px 18px 10px">
+                @if (Course.NextSessions.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune séance programmée. Le planning arrive avec les séances datées.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var session in Course.NextSessions)
+                    {
+                        var percent = session.Capacity == 0
+                            ? 0
+                            : (int)Math.Round(session.Occupancy * 100d / session.Capacity);
+
+                        <div class="gx-listrow">
+                            <span style="width:62px;flex:none;font-size:var(--text-2xs);font-weight:var(--weight-bold);color:var(--color-brand);text-transform:uppercase;letter-spacing:.03em">
+                                @session.DayLabel · @session.Time
+                            </span>
+                            <div class="main">
+                                <div class="t">@session.RoomName</div>
+                            </div>
+                            <GxChip Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)">
+                                @(session.Capacity == 1 ? "Privé" : $"{session.Occupancy}/{session.Capacity}")
+                            </GxChip>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Paramètres par défaut"/>
+            <div style="padding:4px 18px 12px">
+                <div class="gx-kv">
+                    <span class="k">Durée</span>
+                    <span class="v">@CourseFilters.DurationLabel(Course.DurationMinutes)</span>
+                </div>
+                <div class="gx-kv">
+                    <span class="k">Capacité</span>
+                    <span class="v">@CourseFilters.CapacityDetailLabel(Course.Capacity)</span>
+                </div>
+                <div class="gx-kv">
+                    <span class="k">Studio</span>
+                    <span class="v">@(Course.DefaultRoomName ?? "—")</span>
+                </div>
+                <div class="gx-kv">
+                    <span class="k">Niveau</span>
+                    <span class="v">@CourseFilters.LabelFor(Course.Level)</span>
+                </div>
+                <div class="gx-kv">
+                    <span class="k">Intensité</span>
+                    <span class="v">@CourseFilters.LabelFor(Course.Intensity)</span>
+                </div>
+                <div class="gx-kv">
+                    <span class="k">Tarif</span>
+                    <span class="v">@CourseFilters.PriceLabel(Course.Price)</span>
+                </div>
+            </div>
+        </GxCard>
+
+        @* Solo tenant: the manager runs every course, so the card names them
+           instead of listing a roster that does not exist. *@
+        <GxCard Padded="false">
+            <CardHead Title="@(IsSolo ? "Encadré par" : "Coachs habilités")"/>
+            <div style="padding:6px 18px 12px">
+                @if (IsSolo)
+                {
+                    <div class="gx-listrow">
+                        <GxAvatar Name="@ManagerName" Size="md"/>
+                        <div class="main">
+                            <div class="t">@ManagerName</div>
+                            <div class="s">@ManagerRole</div>
+                        </div>
+                        <GxChip Tone="GxTone.Success">Vous</GxChip>
+                    </div>
+                }
+                else if (Course.Coaches.Count == 0)
+                {
+                    <div style="padding:10px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun coach habilité pour l'instant.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var coach in Course.Coaches)
+                    {
+                        <div class="gx-listrow">
+                            <GxAvatar Name="@coach.FullName" Size="md"/>
+                            <div class="main">
+                                <div class="t">@coach.FullName</div>
+                                <div class="s">@(coach.RoleLabel ?? "Coach")</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+</div>
+
+@code {
+    private const string PendingHint = "avec le planning";
+
+    [Parameter, EditorRequired] public CourseTemplateDetailsPageDto Course { get; set; } = default!;
+
+    /// <summary>A solo coach has no roster: the card names them instead.</summary>
+    [Parameter] public bool IsSolo { get; set; }
+
+    [Parameter] public string ManagerName { get; set; } = "Vous";
+    [Parameter] public string ManagerRole { get; set; } = "Coach";
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnDuplicate { get; set; }
+    [Parameter] public EventCallback OnPlanning { get; set; }
+
+    private IReadOnlyList<Crumb.Part> Crumbs =>
+    [
+        new("Accueil", "/"),
+        new("Cours", "/cours"),
+        new(Course.Name)
+    ];
+
+    private string Summary =>
+        $"{Course.DisciplineName} · {CourseFilters.DurationLabel(Course.DurationMinutes)} · intensité {CourseFilters.LabelFor(Course.Intensity).ToLowerInvariant()}";
+}

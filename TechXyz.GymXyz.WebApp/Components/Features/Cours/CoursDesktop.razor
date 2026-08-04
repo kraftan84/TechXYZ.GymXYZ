@@ -1,0 +1,181 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Cours
+
+@* Desktop course catalogue: page head, filter chips, table. Presentation only —
+   every piece of state and every action comes from Cours.razor.
+
+   The hand-off describes cards here; the prototype draws a table, and the
+   prototype wins. The "Trier : popularité" chip is inert in the prototype and
+   needs attendance data (lot 6), so it is not rendered. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Cours" Subtitle="@Subtitle">
+    <FluentSearch Placeholder="Nom, discipline…"
+                  aria-label="Rechercher un cours"
+                  Immediate="true"
+                  ImmediateDelay="250"
+                  style="width:230px"
+                  Value="@Search"
+                  ValueChanged="OnSearchChanged"/>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Nouveau cours
+    </FluentButton>
+</PageHead>
+
+<div class="gx-filters">
+    @foreach (var filter in CourseFilters.All)
+    {
+        var isOn = Format == filter.Format;
+        <button type="button"
+                class="gx-fchip @(isOn ? "on" : null)"
+                aria-pressed="@isOn"
+                @onclick="() => OnFormatChanged.InvokeAsync(filter.Format)">
+            @filter.Label · @GxFormats.Count(CountFor(filter.Format))
+        </button>
+    }
+</div>
+
+<GxCard Padded="false">
+    @if (Page.Items.Count == 0)
+    {
+        <EmptyState Icon="@GxIconPaths.Dumbbell"
+                    Title="Aucun cours pour l'instant"
+                    Text="@EmptyText"/>
+    }
+    else
+    {
+        <div class="gx-tbl-scroll" style="padding:6px 10px 2px">
+            <table class="gx-tbl">
+                <thead>
+                <tr>
+                    <th>Cours</th>
+                    <th>Durée</th>
+                    <th>Capacité</th>
+                    <th>@(IsSolo ? "Coach" : "Coachs")</th>
+                    <th>Remplissage moyen</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var course in Page.Items)
+                {
+                    <tr tabindex="0"
+                        aria-label="@($"Ouvrir la fiche de {course.Name}")"
+                        @onclick="() => OnOpen.InvokeAsync(course)"
+                        @onkeydown="args => OnRowKeyDown(args, course)">
+                        <td>
+                            <div class="u">
+                                <span class="gx-disc-ic t-@CourseFilters.ToneClass(course.Intensity)">
+                                    <GxIcon Name="@(course.IconKey ?? GxIconPaths.Dumbbell)" Size="20"/>
+                                </span>
+                                <div>
+                                    <div class="nm">@course.Name</div>
+                                    <div class="em">
+                                        @course.DisciplineName · @CourseFilters.LabelFor(course.Intensity)
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color:var(--text-body)">
+                            @CourseFilters.DurationLabel(course.DurationMinutes)
+                        </td>
+                        <td style="color:var(--text-body)">
+                            @CourseFilters.CapacityLabel(course.Capacity)
+                        </td>
+                        <td>
+                            <div class="gx-avstack">
+                                @if (IsSolo)
+                                {
+                                    <GxAvatar Name="@ManagerName" Size="sm"/>
+                                }
+                                else
+                                {
+                                    @foreach (var coach in course.Coaches)
+                                    {
+                                        <GxAvatar Name="@coach.FullName" Size="sm"/>
+                                    }
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (course.FillRate is { } fill)
+                            {
+                                <div style="display:flex;align-items:center;gap:9px">
+                                    <GxBar Percent="fill"
+                                           Tone="@(fill >= 95 ? GxTone.Warning : GxTone.Brand)"
+                                           Width="96px"
+                                           AriaLabel="@($"Remplissage moyen : {fill} %")"/>
+                                    <b style="color:var(--text-strong);font-size:var(--text-xs);font-variant-numeric:tabular-nums">
+                                        @fill&nbsp;%
+                                    </b>
+                                </div>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-subtle)" title="@PendingHint">—</span>
+                            }
+                        </td>
+                        <td style="text-align:right;color:var(--text-subtle)">
+                            <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</GxCard>
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Cours")
+    ];
+
+    private const string PendingHint = "Disponible avec le planning.";
+
+    [Parameter, EditorRequired] public CourseTemplatesPageDto Page { get; set; } = CourseTemplatesPageDto.Empty;
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public CourseFormat? Format { get; set; }
+
+    /// <summary>A solo coach runs every course: the column shows them, not a stack.</summary>
+    [Parameter] public bool IsSolo { get; set; }
+
+    [Parameter] public string ManagerName { get; set; } = "Vous";
+
+    [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<CourseFormat?> OnFormatChanged { get; set; }
+    [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    /// <summary>
+    /// The participle agrees with the count too: the prototype only ever shows
+    /// eight, so it writes the plural form and never has to.
+    /// </summary>
+    private string Subtitle
+    {
+        get
+        {
+            var templates = GxFormats.Plural(Page.TotalCount, "modèle de cours", "modèles de cours");
+            var reused = Math.Abs(Page.TotalCount) < 2 ? "réutilisé" : "réutilisés";
+
+            return $"{templates} · {reused} dans le planning";
+        }
+    }
+
+    private string EmptyText => string.IsNullOrWhiteSpace(Search) && Format is null
+        ? "Aucun modèle au catalogue. Créez le premier pour commencer."
+        : "Aucun cours ne correspond à cette recherche.";
+
+    private int CountFor(CourseFormat? format) => format switch
+    {
+        CourseFormat.Collective => Page.CollectiveCount,
+        CourseFormat.Private => Page.PrivateCount,
+        _ => Page.TotalCount
+    };
+
+    private Task OnRowKeyDown(KeyboardEventArgs args, CourseTemplateListItemDto course)
+        => args.Key is "Enter" or " " ? OnOpen.InvokeAsync(course) : Task.CompletedTask;
+}

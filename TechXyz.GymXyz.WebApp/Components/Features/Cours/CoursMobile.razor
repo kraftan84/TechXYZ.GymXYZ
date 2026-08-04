@@ -1,0 +1,76 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Cours
+
+@* Mobile course catalogue: large title, action button, one tile per course. The
+   prototype gives this screen no search and no filter chips — the catalogue is
+   short enough to scroll, so neither is invented here.
+
+   The tile tint comes from the intensity, as on desktop: the mobile prototype
+   derives it from the icon instead, which mistints Pilates Core and Power Cycle. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet" style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+            <div class="hi">Cours</div>
+            <div class="sub">@Subtitle</div>
+        </div>
+        <div style="flex:none;padding-top:4px">
+            <button type="button" class="gx-m-iconbtn" aria-label="Nouveau cours" @onclick="OnCreate">
+                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+            </button>
+        </div>
+    </div>
+
+    @if (Page.Items.Count == 0)
+    {
+        <div class="gx-m-empty">
+            <div class="ic">
+                <GxIcon Name="@GxIconPaths.Dumbbell" Size="28"/>
+            </div>
+            <h3>Aucun cours pour l'instant</h3>
+            <p>Créez le premier modèle pour commencer.</p>
+        </div>
+    }
+    else
+    {
+        <div class="gx-m-card" style="margin-top:14px">
+            @foreach (var course in Page.Items)
+            {
+                <button type="button" class="gx-m-tile" @onclick="() => OnOpen.InvokeAsync(course)">
+                    <span class="gx-m-ic t-@CourseFilters.ToneClass(course.Intensity)">
+                        <GxIcon Name="@(course.IconKey ?? GxIconPaths.Dumbbell)" Size="21"/>
+                    </span>
+                    <div class="main">
+                        <div class="nm">@course.Name</div>
+                        <div class="meta">
+                            @course.DisciplineName
+                            <span class="sep">·</span>
+                            @CourseFilters.DurationLabel(course.DurationMinutes)
+                            <span class="sep">·</span>
+                            @CourseFilters.CapacityLabel(course.Capacity)
+                        </div>
+                    </div>
+                    <div style="flex:none;display:flex;align-items:center;gap:8px">
+                        <GxChip Tone="@(course.FillRate >= 90 ? GxTone.Danger : GxTone.Neutral)">
+                            @(course.FillRate is { } fill ? $"{fill} %" : "—")
+                        </GxChip>
+                        <span class="chev"><GxIcon Name="@GxIconPaths.ChevronRight" Size="18"/></span>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CourseTemplatesPageDto Page { get; set; } = CourseTemplatesPageDto.Empty;
+
+    [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    /// <summary>
+    /// The prototype writes "8 modèles de cours". Sessions per week join the
+    /// tile's meta line at lot 5; the capacity takes that slot meanwhile rather
+    /// than a dash mid-sentence.
+    /// </summary>
+    private string Subtitle => GxFormats.Plural(Page.TotalCount, "modèle de cours", "modèles de cours");
+}

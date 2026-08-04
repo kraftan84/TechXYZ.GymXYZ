@@ -119,24 +119,32 @@ public static class DbInitializer
             }
         };
 
-        mainLocation.AddRoom(new Room("Studio A"));
-        mainLocation.AddRoom(new Room("Studio B"));
-        mainLocation.AddRoom(new Room("Studio C"));
+        var rooms = new List<Room> { new("Studio A"), new("Studio B"), new("Studio C") }
+            .ToDictionary(room => room.Name);
+
+        foreach (var room in rooms.Values)
+        {
+            mainLocation.AddRoom(room);
+        }
 
         gym.AddLocation(mainLocation);
 
         var disciplines = CreateDisciplines();
         dbContext.Disciplines.AddRange(disciplines.Values);
 
+        var coaches = new Dictionary<string, Coach>();
         foreach (var coach in CreateDemoCoaches(disciplines))
         {
             gym.AddCoach(coach);
+            coaches[coach.FirstName] = coach;
         }
 
         foreach (var member in CreateDemoMembers())
         {
             gym.AddMember(member);
         }
+
+        dbContext.CourseTemplates.AddRange(CreateCourseTemplates(disciplines, rooms, coaches));
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
@@ -157,16 +165,117 @@ public static class DbInitializer
             Create("Pilates", "target", "brand"),
             Create("Yoga", "sparkles", "success"),
             Create("Mobilité", "target", "success"),
-            Create("HIIT", "trending-up", "danger"),
-            Create("Cardio", "trending-up", "warning"),
+            Create("HIIT", "trend", "danger"),
+            Create("Cardio", "trend", "warning"),
             Create("Renforcement", "dumbbell", "brand"),
             Create("Musculation", "dumbbell", "brand"),
             Create("Cross-training", "dumbbell", "warning"),
             Create("Core", "target", "brand"),
             Create("Coaching perso", "user", "neutral"),
             Create("Cycling", "target", "warning"),
-            Create("Boxe", "shield-check", "danger")
+            Create("Boxe", "shield", "danger")
         }.ToDictionary(discipline => discipline.Name);
+    }
+
+    /// <summary>
+    /// The eight course templates of the design hand-off demo set. What the
+    /// prototype writes as one label — "Cardio · HIIT", "Coaching individuel" —
+    /// resolves here to the single closest discipline of the referential.
+    /// <para>
+    /// Sessions per week, average fill, regulars and the upcoming sessions are
+    /// deliberately absent: they are counted from past occurrences, which the
+    /// planning produces at lot 5.
+    /// </para>
+    /// </summary>
+    private static IEnumerable<CourseTemplate> CreateCourseTemplates(
+        IReadOnlyDictionary<string, Discipline> disciplines,
+        IReadOnlyDictionary<string, Room> rooms,
+        IReadOnlyDictionary<string, Coach> coaches)
+    {
+        CourseTemplate Create(
+            string name,
+            string disciplineName,
+            int durationMinutes,
+            int capacity,
+            string studio,
+            CourseLevel level,
+            CourseIntensity intensity,
+            decimal? price,
+            string description,
+            string[] coachFirstNames,
+            string? iconKey = null)
+        {
+            var template = new CourseTemplate(name)
+            {
+                Discipline = disciplines[disciplineName],
+                IconKey = iconKey,
+                DurationMinutes = durationMinutes,
+                Capacity = capacity,
+                DefaultRoom = rooms[studio],
+                Level = level,
+                Intensity = intensity,
+                Price = price,
+                Description = description
+            };
+
+            for (var rank = 0; rank < coachFirstNames.Length; rank++)
+            {
+                template.AddCoach(coaches[coachFirstNames[rank]], rank);
+            }
+
+            return template;
+        }
+
+        yield return Create(
+            "HIIT Blast", "HIIT", 60, 16, "Studio A",
+            CourseLevel.AllLevels, CourseIntensity.High, price: null,
+            "Intervalles courts et intenses alternant cardio et renforcement. Format efficace en une heure, adaptable selon le niveau du groupe.",
+            ["Nora", "Théo"]);
+
+        yield return Create(
+            "Power Cycle", "Cycling", 45, 24, "Studio C",
+            CourseLevel.Intermediate, CourseIntensity.High, price: null,
+            "Séance de vélo indoor rythmée par la musique. Le cours le plus demandé de la salle — liste d'attente fréquente.",
+            ["Léa", "Nora"]);
+
+        yield return Create(
+            "Pilates Core", "Pilates", 50, 16, "Studio A",
+            CourseLevel.AllLevels, CourseIntensity.Moderate, price: null,
+            "Travail de gainage et de posture au sol. Renforce la sangle abdominale en profondeur, sans impact.",
+            ["Nora", "Inès"]);
+
+        yield return Create(
+            "Yoga Restore", "Yoga", 60, 20, "Studio B",
+            CourseLevel.AllLevels, CourseIntensity.Gentle, price: null,
+            "Séance lente axée sur la respiration et les étirements. Idéale en fin de journée pour récupérer.",
+            ["Inès", "Nora"]);
+
+        yield return Create(
+            "Strength Foundations", "Renforcement", 60, 20, "Studio A",
+            CourseLevel.Beginner, CourseIntensity.Moderate, price: null,
+            "Apprentissage des mouvements de base avec charges légères. Pose les fondations avant les formats plus exigeants.",
+            ["Nora", "Karim"]);
+
+        // The only course whose icon differs from its discipline's: the
+        // prototype draws a target here, where Boxe carries a shield.
+        yield return Create(
+            "Boxing Fundamentals", "Boxe", 60, 16, "Studio C",
+            CourseLevel.AllLevels, CourseIntensity.High, price: null,
+            "Technique de boxe anglaise, déplacements et travail au sac. Cardio complet, sans contact.",
+            ["Théo"],
+            iconKey: "target");
+
+        yield return Create(
+            "Core Express", "Renforcement", 30, 18, "Studio B",
+            CourseLevel.AllLevels, CourseIntensity.Moderate, price: null,
+            "Format court et dense sur la pause déjeuner. Tout le travail de gainage en trente minutes.",
+            ["Samir"]);
+
+        yield return Create(
+            "Coaching Perso", "Coaching perso", 60, 1, "Studio C",
+            CourseLevel.Custom, CourseIntensity.Private, price: 45m,
+            "Séance individuelle adaptée à l'objectif du membre. Réservable directement auprès du coach.",
+            ["Samir", "Karim"]);
     }
 
     /// <summary>
