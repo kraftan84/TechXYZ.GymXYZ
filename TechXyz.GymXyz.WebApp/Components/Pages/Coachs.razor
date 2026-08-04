@@ -1,128 +1,62 @@
 @page "/coachs"
-@using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
-@using TechXyz.GymXyz.Application.Models
 @using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Coachs
+@implements IDisposable
+
 @inject NavigationManager NavManager
-@inject BreadcrumbService BreadcrumbService
 @inject ISender Sender
 @inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
 
 <PageTitle>Coachs</PageTitle>
 
-<div class="coachs-page">
-    <div class="coachs-header">
-        <div class="coachs-title">
-            <h1>Coachs</h1>
-            <p>Consultez les profils et disponibilites de vos coachs.</p>
-        </div>
-        <FluentButton Appearance="Appearance.Accent" @onclick="OpenCreateDrawer">
-            Nouveau coach
-        </FluentButton>
-    </div>
-
-    <div class="coach-grid">
-        @foreach (var coach in coaches)
-        {
-            <div class="coach-card"
-                 role="button"
-                 tabindex="0"
-                 @onclick="() => OpenDetailsDrawer(coach)"
-                 @onkeydown="(args) => OnCoachCardKeyDown(args, coach)">
-                <img class="coach-avatar" src="images/avatar-placeholder.svg" alt="@($"Photo de {coach.FirstName} {coach.LastName}")" />
-                <div class="coach-name">@coach.FirstName @coach.LastName</div>
-                <div class="coach-meta">@coach.Email</div>
-                <div class="coach-actions">
-                    <span @onclick:stopPropagation="true">
-                        <FluentButton Appearance="Appearance.Outline"
-                                      Size="ButtonSize.Small"
-                                      @onclick="() => GoToCoach(coach)">
-                            Details
-                        </FluentButton>
-                    </span>
-                    <span @onclick:stopPropagation="true">
-                        <FluentButton Appearance="Appearance.Outline"
-                                      Size="ButtonSize.Small"
-                                      @onclick="() => OpenEditDrawer(coach)">
-                            Editer
-                        </FluentButton>
-                    </span>
-                </div>
-            </div>
-        }
-    </div>
-</div>
-
-@if (isDrawerOpen)
+@* One page, one set of state, two presentations. The queries and the actions
+   below are shared; only the markup differs. *@
+@if (Responsive.IsMobile)
 {
-    <DrawerShell DrawerClass="coach-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
-        <ChildContent>
-            <div class="drawer-content">
-                @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
-                {
-                    <div class="drawer-profile">
-                        <img class="drawer-avatar"
-                             src="images/avatar-placeholder.svg"
-                             alt="@($"Photo de {selectedCoach.FirstName} {selectedCoach.LastName}")" />
-                        <div>
-                            <div class="drawer-name">@selectedCoach.FirstName @selectedCoach.LastName</div>
-                            <div class="drawer-subtitle">@selectedCoach.FirstName @selectedCoach.LastName</div>
-                        </div>
-                    </div>
-                    <div class="drawer-section">
-                        <div class="drawer-field">
-                            <span class="drawer-label">Email</span>
-                            <span class="drawer-value">@selectedCoach.Email</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Telephone</span>
-                            <span class="drawer-value">@selectedCoach.Phone</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Adresse</span>
-                            <span class="drawer-value">@FormatAddress(selectedCoach.Address)</span>
-                        </div>
-                    </div>
-                }
-                else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
-                {
-                    <PersonEditForm Model="editModel" />
-                }
-            </div>
-        </ChildContent>
-        <FooterContent>
-            @if (drawerMode == DrawerMode.Details && selectedCoach is not null)
-            {
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenCoachPage">
-                        Voir la fiche
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteCoachAsync">
-                        Supprimer
-                    </FluentButton>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.Create || drawerMode == DrawerMode.Edit)
-            {
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveCoachAsync">
-                        @(drawerMode == DrawerMode.Create ? "Creer le coach" : "Enregistrer")
-                    </FluentButton>
-                </div>
-            }
-        </FooterContent>
-    </DrawerShell>
+    <CoachsMobile Page="_page"
+                  OnOpen="OpenCoach"
+                  OnCreate="OpenCreateDrawer"/>
+}
+else
+{
+    <div class="gx-screen">
+        <CoachsDesktop Page="_page"
+                       Search="@_search"
+                       Status="_status"
+                       OnSearchChanged="ApplySearchAsync"
+                       OnStatusChanged="ApplyStatusAsync"
+                       OnOpen="OpenCoach"
+                       OnCreate="OpenCreateDrawer"/>
+    </div>
+}
+
+@if (_isDrawerOpen)
+{
+    <CoachDrawer Model="_editModel"
+                 Disciplines="_disciplines"
+                 IsNew="true"
+                 IsSaving="_isSaving"
+                 OnSave="CreateCoachAsync"
+                 OnCancel="CloseDrawer"/>
 }
 
 @code {
     // A solo coach has no Coachs section: hiding the link is not enough, the
     // route has to refuse too.
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    private CoachesPageDto _page = CoachesPageDto.Empty;
+    private IReadOnlyList<DisciplineDto> _disciplines = [];
+
+    private string? _search;
+    private CoachStatus? _status;
+
+    private bool _isDrawerOpen;
+    private bool _isSaving;
+    private CoachEditModel _editModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -133,243 +67,94 @@
             return;
         }
 
-        BreadcrumbService.SetItems(
-        [
-            new BreadcrumbItem { IsHome = true, Href = "/" },
-            new BreadcrumbItem { Text = "Coachs" }
-        ]);
-
-        await RefreshCoachesAsync();
+        Responsive.Changed += OnResponsiveChanged;
+        await RefreshAsync();
     }
 
-    private List<CoachDto> coaches = [];
-    private CoachDto? selectedCoach;
-    private CoachEditModel editModel = new();
-    private DrawerMode drawerMode = DrawerMode.None;
-    private string drawerTitle = string.Empty;
-
-    private bool isDrawerOpen => drawerMode != DrawerMode.None;
-
-    private async Task RefreshCoachesAsync()
+    private async Task RefreshAsync()
     {
-        var loaded = false;
         await UserFeedback.ExecuteAsync(async () =>
         {
-            coaches = await Sender.Send(new GetCoachesQuery());
-            loaded = true;
+            _page = await Sender.Send(new GetCoachesQuery
+            {
+                Search = _search,
+                Status = _status
+            });
         }, "charger la liste des coachs");
-
-        if (!loaded)
-        {
-            return;
-        }
-
-        if (selectedCoach is null)
-        {
-            return;
-        }
-
-        selectedCoach = coaches.FirstOrDefault(coach => coach.Id == selectedCoach.Id);
-        if (selectedCoach is null)
-        {
-            CloseDrawer();
-        }
     }
 
-    private void OpenDetailsDrawer(CoachDto coach)
+    private async Task ApplySearchAsync(string? search)
     {
-        selectedCoach = coach;
-        drawerMode = DrawerMode.Details;
-        drawerTitle = "Details du coach";
+        _search = string.IsNullOrWhiteSpace(search) ? null : search;
+        await RefreshAsync();
     }
 
-    private void OpenCreateDrawer()
+    private async Task ApplyStatusAsync(CoachStatus? status)
     {
-        editModel = new CoachEditModel();
-        drawerMode = DrawerMode.Create;
-        drawerTitle = "Nouveau coach";
+        _status = status;
+        await RefreshAsync();
     }
 
-    private void OpenEditDrawer(CoachDto coach)
-    {
-        selectedCoach = coach;
-        OpenEditDrawer();
-    }
+    private void OpenCoach(CoachListItemDto coach)
+        => NavManager.NavigateTo($"/coachs/{coach.Id}");
 
-    private void OpenEditDrawer()
+    private async Task OpenCreateDrawer()
     {
-        if (selectedCoach is null)
+        _editModel = CoachEditModel.ForCreate();
+        _isDrawerOpen = true;
+
+        // Loaded on demand: the picker is the only thing that needs them.
+        if (_disciplines.Count == 0)
         {
-            return;
-        }
-
-        editModel = new CoachEditModel
-        {
-            FirstName = selectedCoach.FirstName,
-            LastName = selectedCoach.LastName,
-            Email = selectedCoach.Email ?? string.Empty,
-            Phone = selectedCoach.Phone ?? string.Empty,
-            Street = selectedCoach.Address?.Street ?? string.Empty,
-            ZipCode = selectedCoach.Address?.ZipCode ?? string.Empty,
-            City = selectedCoach.Address?.City ?? string.Empty,
-            Country = selectedCoach.Address?.Country ?? string.Empty
-        };
-
-        drawerMode = DrawerMode.Edit;
-        drawerTitle = "Modifier le coach";
-    }
-
-    private void OnCoachCardKeyDown(KeyboardEventArgs args, CoachDto coach)
-    {
-        if (args.Key == "Enter" || args.Key == " ")
-        {
-            OpenDetailsDrawer(coach);
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                _disciplines = await Sender.Send(new GetDisciplinesQuery());
+            }, "charger les disciplines");
         }
     }
 
     private void CloseDrawer()
     {
-        drawerMode = DrawerMode.None;
-        selectedCoach = null;
-        drawerTitle = string.Empty;
+        _isDrawerOpen = false;
+        _isSaving = false;
     }
 
-    private void CancelEdit()
+    private async Task CreateCoachAsync()
     {
-        if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
+        if (_isSaving)
         {
-            drawerMode = DrawerMode.Details;
-            drawerTitle = "Details du coach";
             return;
         }
 
-        CloseDrawer();
-    }
-
-    private async Task SaveCoachAsync()
-    {
-        if (drawerMode == DrawerMode.Create)
-        {
-            var created = await UserFeedback.ExecuteAsync(async () =>
-            {
-                await Sender.Send(new CreateCoachCommand(
-                    editModel.FirstName,
-                    editModel.LastName,
-                    editModel.Email,
-                    editModel.Phone,
-                    editModel.Street,
-                    editModel.ZipCode,
-                    editModel.City,
-                    editModel.Country));
-
-                await RefreshCoachesAsync();
-                CloseDrawer();
-            }, "creer le coach", "Coach cree.");
-
-            if (!created)
-            {
-                return;
-            }
-        }
-
-        if (drawerMode == DrawerMode.Edit && selectedCoach is not null)
-        {
-            await UserFeedback.ExecuteAsync(async () =>
-            {
-                var updated = await Sender.Send(new UpdateCoachCommand(
-                    selectedCoach.Id,
-                    editModel.FirstName,
-                    editModel.LastName,
-                    editModel.Email,
-                    editModel.Phone,
-                    editModel.Street,
-                    editModel.ZipCode,
-                    editModel.City,
-                    editModel.Country));
-
-                if (!updated)
-                {
-                    throw new ValidationException("Coach introuvable.");
-                }
-
-                await RefreshCoachesAsync();
-                selectedCoach = coaches.FirstOrDefault(coach => coach.Id == selectedCoach.Id);
-                if (selectedCoach is null)
-                {
-                    CloseDrawer();
-                    return;
-                }
-
-                drawerMode = DrawerMode.Details;
-                drawerTitle = "Details du coach";
-            }, "mettre a jour le coach", "Coach mis a jour.");
-        }
-    }
-
-    private async Task DeleteCoachAsync()
-    {
-        if (selectedCoach is null)
-        {
-            return;
-        }
+        _isSaving = true;
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            var deleted = await Sender.Send(new DeleteCoachCommand(selectedCoach.Id));
-            if (!deleted)
-            {
-                throw new ValidationException("Coach introuvable.");
-            }
+            var createdId = await Sender.Send(new CreateCoachCommand(
+                _editModel.FirstName,
+                _editModel.LastName,
+                _editModel.Email,
+                _editModel.Phone,
+                _editModel.Street,
+                _editModel.ZipCode,
+                _editModel.City,
+                _editModel.Country,
+                _editModel.RoleLabel,
+                _editModel.Bio,
+                _editModel.JoinedOnOnly,
+                _editModel.AwayUntilOnly,
+                _editModel.Availability,
+                _editModel.DisciplineIds,
+                _editModel.Certifications));
 
-            await RefreshCoachesAsync();
-        }, "supprimer le coach", "Coach supprime.");
+            CloseDrawer();
+            NavManager.NavigateTo($"/coachs/{createdId}");
+        }, "créer le coach", "Coach créé.");
+
+        _isSaving = false;
     }
 
-    private void OpenCoachPage()
-    {
-        if (selectedCoach is null)
-        {
-            return;
-        }
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
 
-        NavManager.NavigateTo($"/coachs/{selectedCoach.Id}");
-    }
-
-    private void GoToCoach(CoachDto coach)
-    {
-        NavManager.NavigateTo($"/coachs/{coach.Id}");
-    }
-
-    private static string FormatAddress(AddressDto? address)
-    {
-        if (address is null)
-        {
-            return "-";
-        }
-
-        var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
-            .Where(value => !string.IsNullOrWhiteSpace(value));
-
-        return string.Join(", ", parts);
-    }
-
-    private enum DrawerMode
-    {
-        None,
-        Details,
-        Create,
-        Edit
-    }
-
-    private sealed class CoachEditModel : IPersonEditModel
-    {
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string? Email { get; set; } = string.Empty;
-        public string? Phone { get; set; } = string.Empty;
-        public string Street { get; set; } = string.Empty;
-        public string ZipCode { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-    }
+    public void Dispose() => Responsive.Changed -= OnResponsiveChanged;
 }

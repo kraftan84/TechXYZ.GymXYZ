@@ -12,7 +12,14 @@ public sealed class CreateCoachCommand : IRequest<int>
         string? street,
         string? zipCode,
         string? city,
-        string? country)
+        string? country,
+        string? roleLabel = null,
+        string? bio = null,
+        DateOnly? joinedOn = null,
+        DateOnly? awayUntil = null,
+        IReadOnlyList<bool>? availability = null,
+        IReadOnlyList<int>? disciplineIds = null,
+        IReadOnlyList<string>? certifications = null)
     {
         FirstName = firstName;
         LastName = lastName;
@@ -22,6 +29,13 @@ public sealed class CreateCoachCommand : IRequest<int>
         ZipCode = zipCode;
         City = city;
         Country = country;
+        RoleLabel = roleLabel;
+        Bio = bio;
+        JoinedOn = joinedOn;
+        AwayUntil = awayUntil;
+        Availability = availability;
+        DisciplineIds = disciplineIds;
+        Certifications = certifications;
     }
 
     public string FirstName { get; }
@@ -32,4 +46,20 @@ public sealed class CreateCoachCommand : IRequest<int>
     public string? ZipCode { get; }
     public string? City { get; }
     public string? Country { get; }
+    public string? RoleLabel { get; }
+    public string? Bio { get; }
+
+    /// <summary>Defaults to today when the caller does not supply it.</summary>
+    public DateOnly? JoinedOn { get; }
+
+    /// <summary>Last day of a leave; null means the coach is around.</summary>
+    public DateOnly? AwayUntil { get; }
+
+    /// <summary>Seven flags, Monday to Sunday. Null means "every day".</summary>
+    public IReadOnlyList<bool>? Availability { get; }
+
+    /// <summary>Disciplines in display order; the first one carries the brand pill.</summary>
+    public IReadOnlyList<int>? DisciplineIds { get; }
+
+    public IReadOnlyList<string>? Certifications { get; }
 }

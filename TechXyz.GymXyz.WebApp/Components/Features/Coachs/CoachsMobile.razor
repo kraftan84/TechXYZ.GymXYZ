@@ -1,0 +1,73 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Coachs
+
+@* Mobile coaches list: large title, action button, one tile per coach. The
+   prototype gives this screen no search and no filter chips — a team is short
+   enough to scroll, so neither is invented here. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet" style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+            <div class="hi">Coachs</div>
+            <div class="sub">@Subtitle</div>
+        </div>
+        <div style="flex:none;padding-top:4px">
+            <button type="button" class="gx-m-iconbtn" aria-label="Inviter un coach" @onclick="OnCreate">
+                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+            </button>
+        </div>
+    </div>
+
+    @if (Page.Items.Count == 0)
+    {
+        <div class="gx-m-empty">
+            <div class="ic">
+                <GxIcon Name="@GxIconPaths.User" Size="28"/>
+            </div>
+            <h3>Aucun coach pour l'instant</h3>
+            <p>Invitez le premier pour commencer.</p>
+        </div>
+    }
+    else
+    {
+        <div class="gx-m-card" style="margin-top:14px">
+            @foreach (var coach in Page.Items)
+            {
+                <button type="button" class="gx-m-tile" @onclick="() => OnOpen.InvokeAsync(coach)">
+                    <GxAvatar Name="@coach.FullName" Size="lg"/>
+                    <div class="main">
+                        <div class="nm">@coach.FullName</div>
+                        <div class="meta">@MetaFor(coach)</div>
+                    </div>
+                    <div style="flex:none;display:flex;align-items:center;gap:8px">
+                        <GxChip Tone="@CoachFilters.ToneFor(coach.Status)">
+                            @CoachFilters.LabelFor(coach.Status)
+                        </GxChip>
+                        <span class="chev"><GxIcon Name="@GxIconPaths.ChevronRight" Size="18"/></span>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CoachesPageDto Page { get; set; } = CoachesPageDto.Empty;
+
+    [Parameter] public EventCallback<CoachListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle => $"{GxFormats.Plural(Page.TotalCount, "coach", "coachs")} · planning partagé";
+
+    /// <summary>
+    /// The role, then the leave when there is one. Sessions and fill rate join
+    /// this line at lot 5 (Planning).
+    /// </summary>
+    private string MetaFor(CoachListItemDto coach)
+    {
+        var role = coach.RoleLabel ?? "Coach";
+
+        return coach.Status == CoachStatus.Away && coach.AwayUntil is { } until
+            ? $"{role} · jusqu'au {GxFormats.DayAndMonth(until)}"
+            : role;
+    }
+}

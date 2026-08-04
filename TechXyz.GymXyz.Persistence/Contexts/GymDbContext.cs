@@ -34,6 +34,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<CollectiveLesson> CollectiveLessons => Set<CollectiveLesson>();
     public DbSet<LessonTheme> LessonThemes => Set<LessonTheme>();
     public DbSet<Coach> Coaches =>  Set<Coach>();
+    public DbSet<Discipline> Disciplines => Set<Discipline>();
+    public DbSet<CoachDiscipline> CoachDisciplines => Set<CoachDiscipline>();
+    public DbSet<CoachCertification> CoachCertifications => Set<CoachCertification>();
     public DbSet<Member> Members =>  Set<Member>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Address> Addresses =>  Set<Address>();
@@ -84,6 +87,24 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 x.HasMany(cl => cl.Participants)
                     .WithMany(m => m.CollectiveLessons);
             });
+
+        modelBuilder.Entity<CoachDiscipline>(x =>
+        {
+            x.HasOne(cd => cd.Coach)
+                .WithMany(coach => coach.Disciplines)
+                .HasForeignKey(cd => cd.CoachId);
+
+            x.HasOne(cd => cd.Discipline)
+                .WithMany(discipline => discipline.Coaches)
+                .HasForeignKey(cd => cd.DisciplineId);
+
+            x.HasIndex(cd => new { cd.CoachId, cd.DisciplineId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CoachCertification>()
+            .HasOne(certification => certification.Coach)
+            .WithMany(coach => coach.Certifications)
+            .HasForeignKey(certification => certification.CoachId);
 
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Slug)

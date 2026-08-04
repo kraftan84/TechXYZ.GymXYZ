@@ -1,0 +1,148 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Coachs
+
+@* Mobile coach record: full-screen hero, stats band, then stacked sections. The
+   header with the back arrow is rendered by the page. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-fiche-hero">
+        <GxAvatar Name="@Coach.FullName" Size="xl"/>
+        <div>
+            <div class="nm">@Coach.FullName</div>
+            <div class="rl">@(Coach.RoleLabel ?? "Coach")</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <GxChip Tone="@CoachFilters.ToneFor(Coach.Status)"
+                    Icon="@(Coach.Status == CoachStatus.Available ? GxIconPaths.Check : null)">
+                @StatusLabel
+            </GxChip>
+        </div>
+        @if (Coach.Disciplines.Count > 0)
+        {
+            <div class="gx-m-tags" style="justify-content:center;margin-top:2px">
+                @foreach (var discipline in Coach.Disciplines)
+                {
+                    <span class="gx-m-tag brand">@discipline.Name</span>
+                }
+            </div>
+        }
+        <div class="gx-m-fiche-actions">
+            <a class="gx-m-circbtn" href="@(Coach.Phone is null ? null : $"tel:{Coach.Phone}")"
+               aria-disabled="@(Coach.Phone is null)">
+                <span class="b"><GxIcon Name="@GxIconPaths.Phone" Size="20"/></span>
+                <span class="cl">Appeler</span>
+            </a>
+            <a class="gx-m-circbtn" href="@(Coach.Email is null ? null : $"mailto:{Coach.Email}")"
+               aria-disabled="@(Coach.Email is null)">
+                <span class="b"><GxIcon Name="@GxIconPaths.Mail" Size="20"/></span>
+                <span class="cl">E-mail</span>
+            </a>
+            <button type="button" class="gx-m-circbtn" @onclick="OnEdit">
+                <span class="b"><GxIcon Name="@GxIconPaths.Settings" Size="20"/></span>
+                <span class="cl">Éditer</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="gx-m-card">
+        <div class="gx-m-fstats">
+            <div class="it">
+                <div class="v">@(Coach.Stats.ClassesPerWeek?.ToString() ?? "—")</div>
+                <div class="l">Cours / sem.</div>
+            </div>
+            <div class="it">
+                <div class="v">@(Coach.Stats.FillRate is { } fill ? $"{fill} %" : "—")</div>
+                <div class="l">Remplissage</div>
+            </div>
+            <div class="it">
+                <div class="v">@(Coach.Stats.FollowedMembers?.ToString() ?? "—")</div>
+                <div class="l">Membres</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Disponibilités</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-avail">
+            @for (var day = 0; day < CoachFilters.DayNames.Count; day++)
+            {
+                <div class="d @(Coach.Availability.Days[day] ? "on" : null)">@CoachFilters.DayNames[day]</div>
+            }
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">À propos</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-prose">
+            @(string.IsNullOrWhiteSpace(Coach.Bio) ? "Aucune présentation pour l'instant." : Coach.Bio)
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Cours de la semaine</span></div>
+    <div class="gx-m-card">
+        @if (Coach.WeekSessions.Count == 0)
+        {
+            <div class="gx-m-kv">
+                <span class="v" style="font-weight:400;color:var(--text-muted)">
+                    Le planning arrive avec les cours.
+                </span>
+            </div>
+        }
+        else
+        {
+            @foreach (var session in Coach.WeekSessions)
+            {
+                var percent = session.Capacity == 0
+                    ? 0
+                    : (int)Math.Round(session.Occupancy * 100d / session.Capacity);
+
+                <div class="gx-m-class" style="cursor:default">
+                    <div class="time" style="width:38px">@session.DayLabel</div>
+                    <div class="main">
+                        <div class="nm">@session.CourseName</div>
+                        <div class="meta">@session.Time · @session.Occupancy/@session.Capacity</div>
+                    </div>
+                    <div class="occ">
+                        <div class="n">@percent&nbsp;%</div>
+                        <GxBar Percent="percent" Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)"/>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Certifications</span></div>
+    <div class="gx-m-card">
+        @if (Coach.Certifications.Count == 0)
+        {
+            <div class="gx-m-kv">
+                <span class="v" style="font-weight:400;color:var(--text-muted)">
+                    Aucune certification enregistrée.
+                </span>
+            </div>
+        }
+        else
+        {
+            @foreach (var certification in Coach.Certifications)
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <span class="gx-m-ic t-success" style="width:34px;height:34px">
+                        <GxIcon Name="@GxIconPaths.Shield" Size="17"/>
+                    </span>
+                    <div class="main">
+                        <div class="nm" style="font-weight:600">@certification</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CoachDetailsPageDto Coach { get; set; } = default!;
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    private string StatusLabel => Coach.Status == CoachStatus.Away && Coach.AwayUntil is { } until
+        ? $"En congé · jusqu'au {GxFormats.DayAndMonth(until)}"
+        : CoachFilters.LabelFor(Coach.Status);
+}

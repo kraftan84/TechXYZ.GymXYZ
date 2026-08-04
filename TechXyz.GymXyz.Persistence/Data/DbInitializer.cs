@@ -125,17 +125,13 @@ public static class DbInitializer
 
         gym.AddLocation(mainLocation);
 
-        gym.AddCoach(new Coach("Nora", "Lemoine")
+        var disciplines = CreateDisciplines();
+        dbContext.Disciplines.AddRange(disciplines.Values);
+
+        foreach (var coach in CreateDemoCoaches(disciplines))
         {
-            Email = "nora.lemoine@gymxyz.fr",
-            Phone = "06 41 22 18 07"
-        });
-        gym.AddCoach(new Coach("Samir", "El Amrani")
-        {
-            Email = "samir.elamrani@gymxyz.fr",
-            Phone = "06 55 70 33 12"
-        });
-        gym.AddCoach(new Coach("Léa", "Fontaine"));
+            gym.AddCoach(coach);
+        }
 
         foreach (var member in CreateDemoMembers())
         {
@@ -144,6 +140,140 @@ public static class DbInitializer
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// The disciplines the demo team teaches. No screen manages this
+    /// referential yet, so it is seeded; the icon and tone keys are read by the
+    /// course catalogue at lot 3.
+    /// </summary>
+    private static Dictionary<string, Discipline> CreateDisciplines()
+    {
+        Discipline Create(string name, string iconKey, string tone) =>
+            new(name) { IconKey = iconKey, Tone = tone };
+
+        return new List<Discipline>
+        {
+            Create("Pilates", "target", "brand"),
+            Create("Yoga", "sparkles", "success"),
+            Create("Mobilité", "target", "success"),
+            Create("HIIT", "trending-up", "danger"),
+            Create("Cardio", "trending-up", "warning"),
+            Create("Renforcement", "dumbbell", "brand"),
+            Create("Musculation", "dumbbell", "brand"),
+            Create("Cross-training", "dumbbell", "warning"),
+            Create("Core", "target", "brand"),
+            Create("Coaching perso", "user", "neutral"),
+            Create("Cycling", "target", "warning"),
+            Create("Boxe", "shield-check", "danger")
+        }.ToDictionary(discipline => discipline.Name);
+    }
+
+    /// <summary>
+    /// The six coaches of the design hand-off demo set, with the disciplines,
+    /// certifications and weekly availability the prototype shows. Joining dates
+    /// are relative to today so the demo never goes stale.
+    /// <para>
+    /// Léa reads "Disponible" here where the prototype says "Cours pleins":
+    /// that standing is computed from the fill rate of her sessions, which the
+    /// planning produces at lot 5.
+    /// </para>
+    /// </summary>
+    private static IEnumerable<Coach> CreateDemoCoaches(IReadOnlyDictionary<string, Discipline> disciplines)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        Coach Create(
+            string firstName,
+            string lastName,
+            string roleLabel,
+            string email,
+            string phone,
+            int joinedMonthsAgo,
+            string bio,
+            string[] disciplineNames,
+            string[] certifications,
+            bool[] availability,
+            DateOnly? awayUntil = null)
+        {
+            var coach = new Coach(firstName, lastName)
+            {
+                RoleLabel = roleLabel,
+                Email = email,
+                Phone = phone,
+                JoinedOn = today.AddMonths(-joinedMonthsAgo),
+                Bio = bio,
+                AwayUntil = awayUntil,
+                AvailableOnMonday = availability[0],
+                AvailableOnTuesday = availability[1],
+                AvailableOnWednesday = availability[2],
+                AvailableOnThursday = availability[3],
+                AvailableOnFriday = availability[4],
+                AvailableOnSaturday = availability[5],
+                AvailableOnSunday = availability[6]
+            };
+
+            for (var rank = 0; rank < disciplineNames.Length; rank++)
+            {
+                coach.AddDiscipline(disciplines[disciplineNames[rank]], rank);
+            }
+
+            for (var rank = 0; rank < certifications.Length; rank++)
+            {
+                coach.AddCertification(certifications[rank], rank);
+            }
+
+            return coach;
+        }
+
+        yield return Create(
+            "Nora", "Lemoine", "Coach senior · co-fondatrice",
+            "nora.lemoine@gymxyz.fr", "06 41 22 18 07", joinedMonthsAgo: 53,
+            "Pilier de la salle depuis l'ouverture. Nora alterne les cours doux du matin et les formats toniques du soir. Elle suit aussi les nouveaux membres sur leurs premières séances.",
+            ["Pilates", "Yoga", "Mobilité", "HIIT"],
+            ["BPJEPS AF — Cours collectifs", "Pilates Mat · niveau 2", "Yoga Alliance 200h"],
+            [true, true, true, true, true, true, false]);
+
+        yield return Create(
+            "Samir", "El Amrani", "Coach renforcement",
+            "samir.elamrani@gymxyz.fr", "06 55 70 33 12", joinedMonthsAgo: 45,
+            "Spécialiste du renforcement et du suivi individuel. Samir gère la majorité des coachings privés et les formats express du midi.",
+            ["Renforcement", "Coaching perso", "Core"],
+            ["BPJEPS AGFF — Haltérophilie & musculation", "Préparation physique · FFHM"],
+            [true, true, true, true, true, false, false]);
+
+        yield return Create(
+            "Théo", "Garnier", "Coach boxe & cardio",
+            "theo.garnier@gymxyz.fr", "06 12 90 44 51", joinedMonthsAgo: 39,
+            "Ancien compétiteur amateur, Théo anime les cours de boxe technique et les circuits cardio du soir. Très suivi par les habitués.",
+            ["Boxe", "Cardio", "HIIT"],
+            ["BPJEPS — Boxe anglaise", "PSC1 · premiers secours"],
+            [false, false, false, false, false, true, true],
+            awayUntil: today.AddDays(11));
+
+        yield return Create(
+            "Léa", "Fontaine", "Coach cycling",
+            "lea.fontaine@gymxyz.fr", "06 88 21 67 02", joinedMonthsAgo: 32,
+            "Ses séances de cycling affichent presque toujours complet. Léa entretient une liste d'attente fidèle et propose des sessions supplémentaires le week-end.",
+            ["Cycling", "Cardio"],
+            ["Indoor Cycling · Schwinn", "BPJEPS AF — Cours collectifs"],
+            [true, true, true, false, true, true, true]);
+
+        yield return Create(
+            "Karim", "Bouaziz", "Coach musculation",
+            "karim.bouaziz@gymxyz.fr", "06 73 50 29 88", joinedMonthsAgo: 28,
+            "Encadre la salle de musculation et les circuits cross-training. Karim accompagne les débutants sur la technique des mouvements de base.",
+            ["Musculation", "Cross-training"],
+            ["BPJEPS AGFF", "Haltérophilie · initiateur"],
+            [true, false, true, true, true, true, false]);
+
+        yield return Create(
+            "Inès", "Ravel", "Coach yoga & mobilité",
+            "ines.ravel@gymxyz.fr", "06 30 14 76 95", joinedMonthsAgo: 25,
+            "Arrivée récemment, Inès a relancé les créneaux yoga du matin et les ateliers mobilité du week-end, déjà très appréciés.",
+            ["Yoga", "Mobilité", "Pilates"],
+            ["Yoga Alliance 300h", "Mobilité fonctionnelle · FRC"],
+            [true, true, false, true, true, true, true]);
     }
 
     /// <summary>
