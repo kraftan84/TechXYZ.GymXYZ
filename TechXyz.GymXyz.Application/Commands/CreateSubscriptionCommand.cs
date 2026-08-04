@@ -4,11 +4,13 @@ namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class CreateSubscriptionCommand : IRequest<int>
 {
-    public CreateSubscriptionCommand(int memberId, DateOnly startDate, DateOnly endDate, int numberOfLessons)
+    public CreateSubscriptionCommand(int memberId, DateOnly? startDate, DateOnly? endDate, int numberOfLessons)
     {
+        var effectiveStartDate = startDate ?? DateOnly.FromDateTime(DateTime.Today);
+
         MemberId = memberId;
-        StartDate = startDate;
-        EndDate = endDate;
+        StartDate = effectiveStartDate;
+        EndDate = endDate ?? effectiveStartDate.AddYears(1);
         NumberOfLessons = numberOfLessons;
     }
 

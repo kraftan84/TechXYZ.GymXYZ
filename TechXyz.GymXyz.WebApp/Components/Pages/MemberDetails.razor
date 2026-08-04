@@ -430,12 +430,7 @@ else
 
     private void OpenSubscriptionCreateDrawer()
     {
-        subscriptionEditModel = new SubscriptionEditModel
-        {
-            StartDatePart = DateTime.Today,
-            EndDatePart = DateTime.Today.AddMonths(1),
-            LessonsTotal = 10
-        };
+        subscriptionEditModel = CreateDefaultSubscriptionEditModel();
         selectedSubscription = null;
         drawerMode = DrawerMode.SubscriptionCreate;
     }
@@ -467,10 +462,14 @@ else
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
+                var defaultStartDate = GetDefaultSubscriptionStartDate();
+                var startDate = ToDateOnly(subscriptionEditModel.StartDatePart, defaultStartDate);
+                var endDate = ToDateOnly(subscriptionEditModel.EndDatePart, GetDefaultSubscriptionEndDate(startDate));
+
                 await Sender.Send(new CreateSubscriptionCommand(
                     memberDetails.Id,
-                    ToDateOnly(subscriptionEditModel.StartDatePart, DateOnly.FromDateTime(DateTime.Today)),
-                    ToDateOnly(subscriptionEditModel.EndDatePart, DateOnly.FromDateTime(DateTime.Today.AddMonths(1))),
+                    startDate,
+                    endDate,
                     subscriptionEditModel.LessonsTotal));
 
                 await RefreshMemberAsync();
@@ -603,6 +602,29 @@ else
     private static DateOnly ToDateOnly(DateTime? value, DateOnly fallback)
     {
         return value.HasValue ? DateOnly.FromDateTime(value.Value) : fallback;
+    }
+
+    private static DateOnly GetDefaultSubscriptionStartDate()
+    {
+        return DateOnly.FromDateTime(DateTime.Today);
+    }
+
+    private static DateOnly GetDefaultSubscriptionEndDate(DateOnly startDate)
+    {
+        return startDate.AddYears(1);
+    }
+
+    private static SubscriptionEditModel CreateDefaultSubscriptionEditModel()
+    {
+        var startDate = GetDefaultSubscriptionStartDate();
+        var endDate = GetDefaultSubscriptionEndDate(startDate);
+
+        return new SubscriptionEditModel
+        {
+            StartDatePart = startDate.ToDateTime(TimeOnly.MinValue),
+            EndDatePart = endDate.ToDateTime(TimeOnly.MinValue),
+            LessonsTotal = 10
+        };
     }
 
     private enum DrawerMode
