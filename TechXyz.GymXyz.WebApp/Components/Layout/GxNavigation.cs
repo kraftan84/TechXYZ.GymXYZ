@@ -25,7 +25,7 @@ public static class GxNavigation
     /// <summary>Hidden for a solo coach: the section does not exist for them.</summary>
     public static readonly GxNavItem Coachs = new("coachs", "Coachs", GxIconPaths.User, "/coachs", HiddenWhenSolo: true);
 
-    public static readonly GxNavItem Cours = new("cours", "Cours", GxIconPaths.Dumbbell, "/lessons");
+    public static readonly GxNavItem Cours = new("cours", "Cours", GxIconPaths.Dumbbell, "/cours");
     public static readonly GxNavItem Abonnements = new("abos", "Abonnements", GxIconPaths.Card, "/abonnements");
     public static readonly GxNavItem Lieux = new("salles", "Lieux", GxIconPaths.Pin, "/rooms");
     public static readonly GxNavItem Reglages = new("reglages", "Réglages", GxIconPaths.Settings, "/reglages");

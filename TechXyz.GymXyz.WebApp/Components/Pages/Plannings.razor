@@ -237,9 +237,9 @@
             @if (drawerMode == DrawerMode.Details && selectedLesson is not null)
             {
                 <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLessonPage">
-                        Voir la fiche
-                    </FluentButton>
+                    @* "Voir la fiche" pointed at the lesson page retired with the
+                       course catalogue. The occurrence gets its own record when
+                       the planning is rebuilt. *@
                     <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
                         Editer
                     </FluentButton>
@@ -478,16 +478,6 @@
 
         lessons.Remove(selectedLesson);
         CloseDrawer();
-    }
-
-    private void OpenLessonPage()
-    {
-        if (selectedLesson is null)
-        {
-            return;
-        }
-
-        NavManager.NavigateTo($"/lessons/{selectedLesson.Id}");
     }
 
     private void CancelEdit()

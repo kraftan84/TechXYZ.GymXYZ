@@ -66,6 +66,34 @@ public static class QueryableProjectionExtensions
     }
 
     /// <summary>
+    /// Rows of the course catalogue. Coaches come out in display order — that is
+    /// the order their avatars stack in.
+    /// </summary>
+    public static IQueryable<CourseTemplateListItemDto> SelectCourseTemplateListItemDto(
+        this IQueryable<CourseTemplate> query)
+    {
+        return query.Select(template => new CourseTemplateListItemDto(
+            template.Id,
+            template.Name,
+            template.Discipline!.Name,
+            template.Discipline.IconKey,
+            template.IconKey,
+            template.DurationMinutes,
+            template.Capacity,
+            template.Level,
+            template.Intensity,
+            template.Coaches!
+                .Where(link => link.IsActive && link.Coach!.IsActive)
+                .OrderBy(link => link.Rank)
+                .Select(link => new CourseTemplateCoachDto(
+                    link.Coach!.Id,
+                    link.Coach.FirstName,
+                    link.Coach.LastName,
+                    link.Coach.RoleLabel))
+                .ToList()));
+    }
+
+    /// <summary>
     /// Rows of the members table. <c>CurrentSubscriptionEndsOn</c> is the latest
     /// end date among the subscriptions covering <paramref name="today"/> —
     /// the single value the standing rule reads.

@@ -1,0 +1,148 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Cours
+
+@* Mobile course record: full-screen hero, stats band, then stacked sections. The
+   header with the back arrow is rendered by the page.
+
+   Two departures from the mobile prototype, both aligning it with desktop: the
+   capacity says "1 (privé)" instead of "1 places", and the coaches card carries
+   the solo-tenant branch the mobile mock-up simply does not have. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-fiche-hero">
+        <span class="gx-m-ic lg t-@CourseFilters.ToneClass(Course.Intensity)">
+            <GxIcon Name="@(Course.IconKey ?? GxIconPaths.Dumbbell)" Size="26"/>
+        </span>
+        <div>
+            <div class="nm">@Course.Name</div>
+            <div class="rl">@Course.DisciplineName · @CourseFilters.DurationLabel(Course.DurationMinutes)</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <GxChip>@CourseFilters.LabelFor(Course.Level)</GxChip>
+            <GxChip Tone="@CourseFilters.ToneFor(Course.Intensity)">
+                Intensité @CourseFilters.LabelFor(Course.Intensity)
+            </GxChip>
+            <GxChip Tone="@CourseFilters.PriceTone(Course.Price)">
+                @CourseFilters.PriceLabel(Course.Price)
+            </GxChip>
+        </div>
+    </div>
+
+    <div class="gx-m-card">
+        <div class="gx-m-fstats">
+            <div class="it">
+                <div class="v">@(Course.Stats.SessionsPerWeek?.ToString() ?? "—")</div>
+                <div class="l">Séances / sem.</div>
+            </div>
+            <div class="it">
+                <div class="v">@(Course.Stats.FillRate is { } fill ? $"{fill} %" : "—")</div>
+                <div class="l">Remplissage</div>
+            </div>
+            <div class="it">
+                <div class="v">@(Course.Stats.Regulars?.ToString() ?? "—")</div>
+                <div class="l">Habitués</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Description</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-prose">
+            @(string.IsNullOrWhiteSpace(Course.Description)
+                ? "Aucune description pour l'instant."
+                : Course.Description)
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Détails</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-kv">
+            <span class="k">Durée</span>
+            <span class="v">@CourseFilters.DurationLabel(Course.DurationMinutes)</span>
+        </div>
+        <div class="gx-m-kv">
+            <span class="k">Capacité</span>
+            <span class="v">@CourseFilters.CapacityDetailLabel(Course.Capacity)</span>
+        </div>
+        <div class="gx-m-kv">
+            <span class="k">Studio</span>
+            <span class="v">@(Course.DefaultRoomName ?? "—")</span>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">@(IsSolo ? "Encadré par" : "Coachs habilités")</span></div>
+    <div class="gx-m-card">
+        @if (IsSolo)
+        {
+            <div class="gx-m-row" style="cursor:default">
+                <GxAvatar Name="@ManagerName" Size="md"/>
+                <div class="main">
+                    <div class="nm">@ManagerName</div>
+                    <div class="meta">@ManagerRole</div>
+                </div>
+                <GxChip Tone="GxTone.Success">Vous</GxChip>
+            </div>
+        }
+        else if (Course.Coaches.Count == 0)
+        {
+            <div class="gx-m-kv">
+                <span class="v" style="font-weight:400;color:var(--text-muted)">
+                    Aucun coach habilité pour l'instant.
+                </span>
+            </div>
+        }
+        else
+        {
+            @foreach (var coach in Course.Coaches)
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <GxAvatar Name="@coach.FullName" Size="md"/>
+                    <div class="main">
+                        <div class="nm">@coach.FullName</div>
+                        <div class="meta">@(coach.RoleLabel ?? "Coach")</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Prochaines séances</span></div>
+    <div class="gx-m-card">
+        @if (Course.NextSessions.Count == 0)
+        {
+            <div class="gx-m-kv">
+                <span class="v" style="font-weight:400;color:var(--text-muted)">
+                    Le planning arrive avec les séances datées.
+                </span>
+            </div>
+        }
+        else
+        {
+            @foreach (var session in Course.NextSessions)
+            {
+                var percent = session.Capacity == 0
+                    ? 0
+                    : (int)Math.Round(session.Occupancy * 100d / session.Capacity);
+
+                <div class="gx-m-class" style="cursor:default">
+                    <div class="time" style="width:64px">@session.DayLabel @session.Time</div>
+                    <div class="main">
+                        <div class="nm">@session.RoomName</div>
+                        <div class="meta">@session.Occupancy/@session.Capacity places</div>
+                    </div>
+                    <div class="occ">
+                        <div class="n">@percent&nbsp;%</div>
+                        <GxBar Percent="percent" Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)"/>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CourseTemplateDetailsPageDto Course { get; set; } = default!;
+
+    [Parameter] public bool IsSolo { get; set; }
+    [Parameter] public string ManagerName { get; set; } = "Vous";
+    [Parameter] public string ManagerRole { get; set; } = "Coach";
+}

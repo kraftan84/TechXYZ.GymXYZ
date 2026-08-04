@@ -1,0 +1,201 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Cours
+@using TechXyz.GymXyz.Application.Common
+
+@* Create / edit a course template. Same drawer on both surfaces: below 520px it
+   simply takes the full width. *@
+
+<GxDrawer Title="@(IsNew ? "Nouveau cours" : "Modifier le cours")"
+          Subtitle="@Subtitle"
+          Icon="@(IsNew ? GxIconPaths.Dumbbell : GxIconPaths.Settings)"
+          OnClose="OnCancel">
+    <ChildContent>
+        <div class="gx-seclab">Le cours</div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Nom" Placeholder="Power Cycle" Required="true"
+                             @bind-Value="Model.Name" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Discipline"
+                          TOption="DisciplineDto"
+                          Items="@Disciplines"
+                          OptionValue="@(discipline => discipline.Id.ToString())"
+                          OptionText="@(discipline => discipline.Name)"
+                          OptionSelected="@(discipline => discipline.Id == Model.DisciplineId)"
+                          SelectedOptionChanged="OnDisciplineChanged"
+                          style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextArea Label="Description"
+                            Placeholder="Séance de vélo indoor rythmée par la musique."
+                            Rows="3"
+                            @bind-Value="Model.Description" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab">Paramètres par défaut</div>
+        <div class="gx-form-row">
+            <FluentNumberField Label="Durée (minutes)"
+                               Min="@CourseTemplateRules.MinimumDurationMinutes.ToString()"
+                               Max="@CourseTemplateRules.MaximumDurationMinutes.ToString()"
+                               @bind-Value="Model.DurationMinutes" style="width:100%"/>
+            <FluentNumberField Label="Capacité"
+                               Min="@CourseTemplateRules.MinimumCapacity.ToString()"
+                               Max="@CourseTemplateRules.MaximumCapacity.ToString()"
+                               @bind-Value="Model.Capacity" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">
+                Une capacité de 1 place fait du cours un coaching privé.
+            </div>
+        </div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Studio par défaut"
+                          TOption="RoomOption"
+                          Items="@RoomOptions"
+                          OptionValue="@(room => room.Value)"
+                          OptionText="@(room => room.Label)"
+                          OptionSelected="@(room => room.Value == (Model.DefaultRoomId?.ToString() ?? string.Empty))"
+                          SelectedOptionChanged="OnRoomChanged"
+                          style="width:100%"/>
+        </div>
+        <div class="gx-form-row">
+            <FluentSelect Label="Niveau"
+                          TOption="CourseLevel"
+                          Items="@Levels"
+                          OptionValue="@(level => level.ToString())"
+                          OptionText="@(level => CourseFilters.LabelFor(level))"
+                          OptionSelected="@(level => level == Model.Level)"
+                          SelectedOptionChanged="OnLevelChanged"
+                          style="width:100%"/>
+            <FluentSelect Label="Intensité"
+                          TOption="CourseIntensity"
+                          Items="@Intensities"
+                          OptionValue="@(intensity => intensity.ToString())"
+                          OptionText="@(intensity => CourseFilters.LabelFor(intensity))"
+                          OptionSelected="@(intensity => intensity == Model.Intensity)"
+                          SelectedOptionChanged="OnIntensityChanged"
+                          style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentNumberField Label="Tarif par séance (€)" Placeholder="45" Min="0" Step="0.01"
+                               @bind-Value="Model.Price" style="width:100%"/>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                Laissez vide si le cours est inclus dans l'abonnement.
+            </div>
+        </div>
+
+        <div class="gx-seclab" id="@CoachesLabelId">@(IsSolo ? "Encadré par" : "Coachs habilités")</div>
+        <div class="gx-form-field">
+            @if (IsSolo)
+            {
+                <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                    Vous encadrez tous les cours.
+                </div>
+            }
+            else if (Coaches.Count == 0)
+            {
+                <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                    Aucun coach dans l'équipe.
+                </div>
+            }
+            else
+            {
+                <div role="group" aria-labelledby="@CoachesLabelId"
+                     style="display:flex;flex-wrap:wrap;gap:10px 16px">
+                    @foreach (var coach in Coaches)
+                    {
+                        var id = coach.Id;
+                        <FluentCheckbox Value="@Model.CoachIds.Contains(id)"
+                                        ValueChanged="value => ToggleCoach(id, value)">
+                            @coach.FullName
+                        </FluentCheckbox>
+                    }
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:8px">
+                    L'ordre de sélection est celui des avatars du catalogue.
+                </div>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (!IsNew && OnDelete.HasDelegate)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="OnDelete">
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
+                Archiver
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                @(IsNew ? "Créer le cours" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    /// <summary>An empty studio choice, so the field can be cleared.</summary>
+    public sealed record RoomOption(string Value, string Label);
+
+    private static readonly CourseLevel[] Levels = Enum.GetValues<CourseLevel>();
+    private static readonly CourseIntensity[] Intensities = Enum.GetValues<CourseIntensity>();
+
+    private readonly string CoachesLabelId = $"gx-coachs-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired] public CourseEditModel Model { get; set; } = new();
+    [Parameter] public IReadOnlyList<DisciplineDto> Disciplines { get; set; } = [];
+    [Parameter] public IReadOnlyList<RoomDto> Rooms { get; set; } = [];
+    [Parameter] public IReadOnlyList<CoachListItemDto> Coaches { get; set; } = [];
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public bool IsSolo { get; set; }
+
+    /// <summary>"Power Cycle · Cycling" when editing.</summary>
+    [Parameter] public string? EditingSubtitle { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private string Subtitle => IsNew
+        ? "Ajouter un modèle au catalogue"
+        : EditingSubtitle ?? string.Empty;
+
+    private IReadOnlyList<RoomOption> RoomOptions =>
+        [new(string.Empty, "Aucun"), .. Rooms.Select(room => new RoomOption(room.Id.ToString(), room.Name))];
+
+    private void OnDisciplineChanged(DisciplineDto? discipline)
+    {
+        if (discipline is not null)
+        {
+            Model.DisciplineId = discipline.Id;
+        }
+    }
+
+    private void OnRoomChanged(RoomOption? room)
+        => Model.DefaultRoomId = int.TryParse(room?.Value, out var id) ? id : null;
+
+    private void OnLevelChanged(CourseLevel level) => Model.Level = level;
+
+    private void OnIntensityChanged(CourseIntensity intensity) => Model.Intensity = intensity;
+
+    /// <summary>
+    /// Appending on tick keeps the pick order, which is the display order — the
+    /// avatars stack in the order the coaches were chosen.
+    /// </summary>
+    private void ToggleCoach(int coachId, bool selected)
+    {
+        if (selected)
+        {
+            if (!Model.CoachIds.Contains(coachId))
+            {
+                Model.CoachIds.Add(coachId);
+            }
+        }
+        else
+        {
+            Model.CoachIds.Remove(coachId);
+        }
+    }
+}

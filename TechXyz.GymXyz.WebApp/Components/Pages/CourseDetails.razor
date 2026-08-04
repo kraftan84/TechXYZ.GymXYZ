@@ -1,0 +1,236 @@
+@page "/cours/{CourseId:int}"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Cours
+@implements IDisposable
+
+@inject NavigationManager NavManager
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader
+
+<PageTitle>@(_course?.Name ?? "Cours")</PageTitle>
+
+@if (_isLoading)
+{
+    <EmptyState Icon="@GxIconPaths.Dumbbell" Title="Chargement de la fiche…"/>
+}
+else if (_course is null)
+{
+    <EmptyState Icon="@GxIconPaths.Dumbbell"
+                Title="Cours introuvable"
+                Text="Ce modèle n'existe plus ou a été archivé.">
+        <FluentButton Appearance="Appearance.Outline" @onclick="GoBackToList">
+            Retour aux cours
+        </FluentButton>
+    </EmptyState>
+}
+else if (Responsive.IsMobile)
+{
+    <CourseDetailsMobile Course="_course"
+                         IsSolo="@IsSolo"
+                         ManagerName="@User.DisplayName"
+                         ManagerRole="@ManagerRole"/>
+}
+else
+{
+    <div class="gx-screen">
+        <CourseDetailsDesktop Course="_course"
+                              IsSolo="@IsSolo"
+                              ManagerName="@User.DisplayName"
+                              ManagerRole="@ManagerRole"
+                              OnEdit="OpenEditDrawer"
+                              OnDuplicate="DuplicateCourseAsync"
+                              OnPlanning="GoToPlanning"/>
+    </div>
+}
+
+@if (_course is not null && _isDrawerOpen)
+{
+    <CourseDrawer Model="_editModel"
+                  Disciplines="_disciplines"
+                  Rooms="_rooms"
+                  Coaches="_coaches"
+                  IsNew="false"
+                  IsSolo="@IsSolo"
+                  IsSaving="_isSaving"
+                  EditingSubtitle="@($"{_course.Name} · {_course.DisciplineName}")"
+                  OnSave="SaveCourseAsync"
+                  OnCancel="CloseDrawer"
+                  OnDelete="DeleteCourseAsync"/>
+}
+
+@code {
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+    [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+
+    [Parameter] public int CourseId { get; set; }
+
+    private CourseTemplateDetailsPageDto? _course;
+    private IReadOnlyList<DisciplineDto> _disciplines = [];
+    private IReadOnlyList<RoomDto> _rooms = [];
+    private IReadOnlyList<CoachListItemDto> _coaches = [];
+
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _isDrawerOpen;
+    private CourseEditModel _editModel = new();
+
+    private bool IsSolo => Brand?.IsSolo == true;
+
+    private string ManagerRole => string.IsNullOrWhiteSpace(User.RoleLabel) ? "Coach" : User.RoleLabel;
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
+
+    protected override async Task OnParametersSetAsync() => await RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        _isLoading = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _course = await Sender.Send(new GetCourseTemplateDetailsPageQuery(CourseId));
+        }, "charger la fiche du cours");
+
+        _isLoading = false;
+
+        // The mobile shell shows the course name and a back arrow on a record.
+        if (_course is not null)
+        {
+            MobileHeader.UseSubHeader(_course.Name, GoBackToList);
+        }
+        else
+        {
+            MobileHeader.UseRootHeader();
+        }
+    }
+
+    private void GoBackToList() => NavManager.NavigateTo("/cours");
+
+    private void GoToPlanning() => NavManager.NavigateTo(GxNavigation.Planning.Href);
+
+    private async Task OpenEditDrawer()
+    {
+        if (_course is null)
+        {
+            return;
+        }
+
+        _editModel = CourseEditModel.From(_course);
+
+        // Loaded before the drawer opens, not after: a picker rendered against
+        // an empty list latches its first option and never picks the value up.
+        if (_disciplines.Count == 0)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                _disciplines = await Sender.Send(new GetDisciplinesQuery());
+                _rooms = await Sender.Send(new GetRoomsQuery());
+                _coaches = (await Sender.Send(new GetCoachesQuery())).Items;
+            }, "charger les référentiels");
+        }
+
+        _isDrawerOpen = true;
+    }
+
+    private void CloseDrawer()
+    {
+        _isDrawerOpen = false;
+        _isSaving = false;
+    }
+
+    private async Task SaveCourseAsync()
+    {
+        if (_course is null || _isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var updated = await Sender.Send(new UpdateCourseTemplateCommand(
+                _course.Id,
+                _editModel.Name,
+                _editModel.DisciplineId,
+                _editModel.DurationMinutes,
+                _editModel.Capacity,
+                _editModel.Level,
+                _editModel.Intensity,
+                _editModel.DefaultRoomId,
+                _editModel.Price,
+                _editModel.Description,
+                _editModel.IconKey,
+                _editModel.CoachIds));
+
+            if (!updated)
+            {
+                throw new ValidationException("Cours introuvable.");
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "mettre à jour le cours", "Cours mis à jour.");
+
+        _isSaving = false;
+    }
+
+    private async Task DuplicateCourseAsync()
+    {
+        if (_course is null || _isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var copyId = await Sender.Send(new DuplicateCourseTemplateCommand(_course.Id));
+            if (copyId is not { } id)
+            {
+                throw new ValidationException("Cours introuvable.");
+            }
+
+            NavManager.NavigateTo($"/cours/{id}");
+        }, "dupliquer le cours", "Cours dupliqué.");
+
+        _isSaving = false;
+    }
+
+    private async Task DeleteCourseAsync()
+    {
+        if (_course is null)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var archived = await Sender.Send(new DeleteCourseTemplateCommand(_course.Id));
+            if (!archived)
+            {
+                throw new ValidationException("Cours introuvable.");
+            }
+
+            CloseDrawer();
+            GoBackToList();
+        }, "archiver le cours", "Cours archivé.");
+    }
+
+    private void OnShellChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
+        MobileHeader.UseRootHeader();
+    }
+}
