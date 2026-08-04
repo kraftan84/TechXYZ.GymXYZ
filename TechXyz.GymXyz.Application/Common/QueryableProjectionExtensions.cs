@@ -44,6 +44,28 @@ public static class QueryableProjectionExtensions
     }
 
     /// <summary>
+    /// Cards of the coaches grid. Disciplines come out in display order — the
+    /// first pill is the one tinted in the brand colour.
+    /// </summary>
+    public static IQueryable<CoachListItemDto> SelectCoachListItemDto(this IQueryable<Coach> query)
+    {
+        return query.Select(coach => new CoachListItemDto(
+            coach.Id,
+            coach.FirstName,
+            coach.LastName,
+            coach.Email,
+            coach.Phone,
+            coach.RoleLabel,
+            coach.JoinedOn,
+            coach.AwayUntil,
+            coach.Disciplines!
+                .Where(link => link.IsActive && link.Discipline!.IsActive)
+                .OrderBy(link => link.Rank)
+                .Select(link => link.Discipline!.Name)
+                .ToList()));
+    }
+
+    /// <summary>
     /// Rows of the members table. <c>CurrentSubscriptionEndsOn</c> is the latest
     /// end date among the subscriptions covering <paramref name="today"/> —
     /// the single value the standing rule reads.

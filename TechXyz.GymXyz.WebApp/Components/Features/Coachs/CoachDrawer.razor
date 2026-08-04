@@ -1,0 +1,181 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Coachs
+
+@* Create / edit a coach. Same drawer on both surfaces: below 520px it simply
+   takes the full width. *@
+
+<GxDrawer Title="@(IsNew ? "Inviter un coach" : "Modifier la fiche")"
+          Subtitle="@Subtitle"
+          Icon="@(IsNew ? GxIconPaths.User : GxIconPaths.Settings)"
+          OnClose="OnCancel">
+    <ChildContent>
+        <div class="gx-seclab">Identité</div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Prénom" Placeholder="Nora" Required="true"
+                             @bind-Value="Model.FirstName" style="width:100%"/>
+            <FluentTextField Label="Nom" Placeholder="Lemoine" Required="true"
+                             @bind-Value="Model.LastName" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Rôle" Placeholder="Coach senior · co-fondatrice"
+                             @bind-Value="Model.RoleLabel" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Adresse e-mail" Placeholder="nora.lemoine@gymxyz.fr"
+                             TextFieldType="TextFieldType.Email"
+                             @bind-Value="Model.Email" style="width:100%"/>
+        </div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Téléphone" Placeholder="06 41 22 18 07"
+                             @bind-Value="Model.Phone" style="width:100%"/>
+            <FluentDatePicker Label="Coach depuis" @bind-Value="Model.JoinedOn" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab" id="@AvailabilityLabelId">Disponibilité</div>
+        <div class="gx-form-field">
+            <div role="group" aria-labelledby="@AvailabilityLabelId"
+                 style="display:flex;flex-wrap:wrap;gap:10px 16px">
+                @for (var day = 0; day < Model.Availability.Length; day++)
+                {
+                    var index = day;
+                    <FluentCheckbox Value="@Model.Availability[index]"
+                                    ValueChanged="value => Model.Availability[index] = value">
+                        @CoachFilters.DayNames[index]
+                    </FluentCheckbox>
+                }
+            </div>
+        </div>
+        <div class="gx-form-field">
+            <FluentDatePicker Label="En congé jusqu'au" Placeholder="jj/mm/aaaa"
+                              @bind-Value="Model.AwayUntil" style="width:100%"/>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                Laissez vide si le coach est présent.
+            </div>
+        </div>
+
+        <div class="gx-seclab" id="@DisciplinesLabelId">Disciplines</div>
+        <div class="gx-form-field">
+            @if (Disciplines.Count == 0)
+            {
+                <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                    Aucune discipline enregistrée.
+                </div>
+            }
+            else
+            {
+                <div role="group" aria-labelledby="@DisciplinesLabelId"
+                     style="display:flex;flex-wrap:wrap;gap:10px 16px">
+                    @foreach (var discipline in Disciplines)
+                    {
+                        var id = discipline.Id;
+                        <FluentCheckbox Value="@Model.DisciplineIds.Contains(id)"
+                                        ValueChanged="value => ToggleDiscipline(id, value)">
+                            @discipline.Name
+                        </FluentCheckbox>
+                    }
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:8px">
+                    La première discipline cochée est celle mise en avant sur la fiche.
+                </div>
+            }
+        </div>
+
+        <div class="gx-seclab">Certifications</div>
+        @for (var i = 0; i < Model.Certifications.Count; i++)
+        {
+            var index = i;
+            <div class="gx-form-field" style="display:flex;align-items:center;gap:8px">
+                <FluentTextField Placeholder="BPJEPS AF — Cours collectifs"
+                                 aria-label="@($"Certification {index + 1}")"
+                                 Value="@Model.Certifications[index]"
+                                 ValueChanged="value => Model.Certifications[index] = value ?? string.Empty"
+                                 style="flex:1"/>
+                <FluentButton Appearance="Appearance.Stealth"
+                              Title="Retirer cette certification"
+                              aria-label="@($"Retirer la certification {index + 1}")"
+                              @onclick="() => Model.Certifications.RemoveAt(index)">
+                    <GxIcon Name="@GxIconPaths.Trash" Size="18"/>
+                </FluentButton>
+            </div>
+        }
+        <div class="gx-form-field">
+            <FluentButton Appearance="Appearance.Outline" @onclick="() => Model.Certifications.Add(string.Empty)">
+                <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+                Ajouter une certification
+            </FluentButton>
+        </div>
+
+        <div class="gx-seclab">Adresse</div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Rue" @bind-Value="Model.Street" style="width:100%"/>
+        </div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Code postal" @bind-Value="Model.ZipCode" style="width:100%"/>
+            <FluentTextField Label="Ville" @bind-Value="Model.City" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Pays" @bind-Value="Model.Country" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab">Présentation</div>
+        <FluentTextArea Placeholder="Alterne les cours doux du matin et les formats toniques du soir."
+                        aria-label="Présentation"
+                        Rows="4"
+                        @bind-Value="Model.Bio" style="width:100%"/>
+    </ChildContent>
+    <Footer>
+        @if (!IsNew && OnDelete.HasDelegate)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="OnDelete">
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
+                Supprimer
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                @(IsNew ? "Créer le coach" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    private readonly string AvailabilityLabelId = $"gx-avail-{Guid.NewGuid():N}";
+    private readonly string DisciplinesLabelId = $"gx-disc-{Guid.NewGuid():N}";
+
+    [Parameter, EditorRequired] public CoachEditModel Model { get; set; } = new();
+    [Parameter] public IReadOnlyList<DisciplineDto> Disciplines { get; set; } = [];
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+
+    /// <summary>"Nora Lemoine · coach depuis janv. 2022" when editing.</summary>
+    [Parameter] public string? EditingSubtitle { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private string Subtitle => IsNew
+        ? "Ajouter un coach à l'équipe"
+        : EditingSubtitle ?? string.Empty;
+
+    /// <summary>
+    /// Appending on tick keeps the pick order, which is the display order — the
+    /// first discipline is the one shown in the brand colour.
+    /// </summary>
+    private void ToggleDiscipline(int disciplineId, bool selected)
+    {
+        if (selected)
+        {
+            if (!Model.DisciplineIds.Contains(disciplineId))
+            {
+                Model.DisciplineIds.Add(disciplineId);
+            }
+        }
+        else
+        {
+            Model.DisciplineIds.Remove(disciplineId);
+        }
+    }
+}

@@ -1,0 +1,204 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Coachs
+
+@* Desktop coach record: identity head, then two columns — figures, sessions and
+   bio on the left, availability and disciplines on the right. *@
+
+<Crumb Parts="@Crumbs"/>
+
+<div class="gx-fiche-head">
+    <GxAvatar Name="@Coach.FullName" Size="xl"/>
+    <div class="info">
+        <div class="name-row">
+            <span class="name">@Coach.FullName</span>
+            <GxChip Tone="@CoachFilters.ToneFor(Coach.Status)"
+                    Icon="@(Coach.Status == CoachStatus.Available ? GxIconPaths.Check : null)">
+                @CoachFilters.LabelFor(Coach.Status)
+            </GxChip>
+        </div>
+        <div class="contact">@Contact</div>
+    </div>
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnAvailability">
+        <GxIcon Slot="start" Name="@GxIconPaths.Calendar" Size="18"/>
+        Disponibilités
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
+        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
+        Éditer
+    </FluentButton>
+</div>
+
+<div class="gx-grid2" style="grid-template-columns:1.3fr 1fr;align-items:start">
+    <div class="gx-col">
+        <div class="gx-grid3">
+            <Kpi Label="Cours / sem."
+                 Value="@(Coach.Stats.ClassesPerWeek?.ToString() ?? "—")"
+                 Sub="@PendingHint"/>
+            <Kpi Label="Remplissage"
+                 Value="@(Coach.Stats.FillRate is { } fill ? $"{fill} %" : "—")"
+                 Sub="@PendingHint"/>
+            <Kpi Label="Membres suivis"
+                 Value="@(Coach.Stats.FollowedMembers?.ToString() ?? "—")"
+                 Sub="@PendingHint"/>
+        </div>
+
+        <GxCard Padded="false">
+            <CardHead Title="Cours animés cette semaine">
+                <span style="font-size:var(--text-xs);color:var(--text-muted)">
+                    @GxFormats.Plural(Coach.WeekSessions.Count, "séance", "séances")
+                </span>
+            </CardHead>
+            <div style="padding:4px 18px 10px">
+                @if (Coach.WeekSessions.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune séance programmée. Le planning arrive avec les cours.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var session in Coach.WeekSessions)
+                    {
+                        var percent = session.Capacity == 0
+                            ? 0
+                            : (int)Math.Round(session.Occupancy * 100d / session.Capacity);
+
+                        <div class="gx-listrow">
+                            <span style="width:58px;flex:none;font-size:var(--text-2xs);font-weight:var(--weight-bold);color:var(--color-brand);text-transform:uppercase;letter-spacing:.03em">
+                                @session.DayLabel · @session.Time
+                            </span>
+                            <div class="main">
+                                <div class="t">@session.CourseName</div>
+                            </div>
+                            <GxBar Percent="percent"
+                                   Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)"
+                                   Width="72px"
+                                   AriaLabel="@($"Occupation : {session.Occupancy} sur {session.Capacity}")"/>
+                            <span style="width:44px;flex:none;text-align:right;font-size:var(--text-2xs);color:var(--text-muted);font-variant-numeric:tabular-nums">
+                                @session.Occupancy/@session.Capacity
+                            </span>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="À propos"/>
+            <div style="padding:14px 18px 16px;font-size:var(--text-sm);color:var(--text-body);line-height:1.55">
+                @(string.IsNullOrWhiteSpace(Coach.Bio) ? "Aucune présentation pour l'instant." : Coach.Bio)
+            </div>
+        </GxCard>
+    </div>
+
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Disponibilité">
+                @if (Coach.Status == CoachStatus.Away && Coach.AwayUntil is { } until)
+                {
+                    <GxChip>Jusqu'au @GxFormats.DayAndMonth(until)</GxChip>
+                }
+                else
+                {
+                    <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Cette semaine</GxChip>
+                }
+            </CardHead>
+            <div style="padding:16px 18px">
+                <div class="gx-avail">
+                    @for (var day = 0; day < CoachFilters.DayInitials.Count; day++)
+                    {
+                        <div class="d @(Coach.Availability.Days[day] ? "on" : null)"
+                             title="@CoachFilters.DayNames[day]">
+                            @CoachFilters.DayInitials[day]
+                        </div>
+                    }
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:10px;display:flex;align-items:center;gap:6px">
+                    <GxIcon Name="@GxIconPaths.Clock" Size="14"/>
+                    @GxFormats.Plural(Coach.Availability.AvailableDayCount, "jour disponible", "jours disponibles") · créneaux 07 h – 21 h
+                </div>
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Disciplines"/>
+            <div style="padding:14px 18px 4px">
+                @if (Coach.Disciplines.Count == 0)
+                {
+                    <div style="padding:4px 0 10px;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune discipline renseignée.
+                    </div>
+                }
+                else
+                {
+                    <div class="gx-tags" style="margin-top:0">
+                        @for (var i = 0; i < Coach.Disciplines.Count; i++)
+                        {
+                            <span class="gx-tag @(i == 0 ? "brand" : null)">@Coach.Disciplines[i].Name</span>
+                        }
+                    </div>
+                }
+            </div>
+            <div style="padding:12px 18px 16px">
+                <div class="gx-seclab" style="margin:0 0 8px">Certifications</div>
+                @if (Coach.Certifications.Count == 0)
+                {
+                    <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune certification enregistrée.
+                    </div>
+                }
+                else
+                {
+                    <div style="display:flex;flex-direction:column;gap:9px">
+                        @foreach (var certification in Coach.Certifications)
+                        {
+                            <div style="display:flex;align-items:center;gap:9px;font-size:var(--text-sm);color:var(--text-body)">
+                                <span style="color:var(--color-success);flex:none;display:inline-flex">
+                                    <GxIcon Name="@GxIconPaths.Check" Size="16"/>
+                                </span>
+                                @certification
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </GxCard>
+    </div>
+</div>
+
+@code {
+    private const string PendingHint = "avec le planning";
+
+    [Parameter, EditorRequired] public CoachDetailsPageDto Coach { get; set; } = default!;
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnAvailability { get; set; }
+
+    private IReadOnlyList<Crumb.Part> Crumbs =>
+    [
+        new("Accueil", "/"),
+        new("Coachs", "/coachs"),
+        new(Coach.FullName)
+    ];
+
+    private string Contact
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(Coach.RoleLabel))
+            {
+                parts.Add(Coach.RoleLabel);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Coach.Email))
+            {
+                parts.Add(Coach.Email);
+            }
+
+            parts.Add($"coach depuis {GxFormats.Month(Coach.JoinedOn)}");
+
+            return string.Join(" · ", parts);
+        }
+    }
+}

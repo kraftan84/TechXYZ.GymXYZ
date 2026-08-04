@@ -30,6 +30,9 @@ public static class GxFormats
     /// <summary>Short date: "09/06/2026".</summary>
     public static string ShortDate(DateOnly date) => date.ToString("dd/MM/yyyy", Culture);
 
+    /// <summary>Day and month, no year: "15 juin".</summary>
+    public static string DayAndMonth(DateOnly date) => date.ToString("d MMMM", Culture);
+
     /// <summary>Membership month: "mars 2024".</summary>
     public static string Month(DateOnly date) => date.ToString("MMM yyyy", Culture);
 

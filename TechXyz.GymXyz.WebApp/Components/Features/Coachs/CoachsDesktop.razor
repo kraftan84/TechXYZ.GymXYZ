@@ -1,0 +1,131 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Coachs
+
+@* Desktop coaches list: page head, filter chips, card grid. Presentation only —
+   every piece of state and every action comes from Coachs.razor. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Coachs" Subtitle="@Subtitle">
+    <FluentSearch Placeholder="Nom, discipline…"
+                  aria-label="Rechercher un coach"
+                  Immediate="true"
+                  ImmediateDelay="250"
+                  style="width:230px"
+                  Value="@Search"
+                  ValueChanged="OnSearchChanged"/>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Inviter un coach
+    </FluentButton>
+</PageHead>
+
+<div class="gx-filters">
+    @foreach (var filter in CoachFilters.All)
+    {
+        var isOn = Status == filter.Status;
+        <button type="button"
+                class="gx-fchip @(isOn ? "on" : null)"
+                aria-pressed="@isOn"
+                @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
+            @filter.Label · @GxFormats.Count(CountFor(filter.Status))
+        </button>
+    }
+</div>
+
+@if (Page.Items.Count == 0)
+{
+    <GxCard Padded="false">
+        <EmptyState Icon="@GxIconPaths.User"
+                    Title="Aucun coach pour l'instant"
+                    Text="@EmptyText"/>
+    </GxCard>
+}
+else
+{
+    <div class="gx-coachgrid">
+        @foreach (var coach in Page.Items)
+        {
+            <button type="button" class="gx-coach-card"
+                    aria-label="@($"Ouvrir la fiche de {coach.FullName}")"
+                    @onclick="() => OnOpen.InvokeAsync(coach)">
+                <div class="top">
+                    <GxAvatar Name="@coach.FullName" Size="lg"/>
+                    <div style="flex:1;min-width:0">
+                        <div class="nm">@coach.FullName</div>
+                        <div class="rl">@(coach.RoleLabel ?? "Coach")</div>
+                    </div>
+                    <span style="flex:none">
+                        <GxChip Tone="@CoachFilters.ToneFor(coach.Status)">
+                            @StatusLabel(coach)
+                        </GxChip>
+                    </span>
+                </div>
+
+                @if (coach.Disciplines.Count > 0)
+                {
+                    <div class="gx-tags">
+                        @for (var i = 0; i < coach.Disciplines.Count; i++)
+                        {
+                            <span class="gx-tag @(i == 0 ? "brand" : null)">@coach.Disciplines[i]</span>
+                        }
+                    </div>
+                }
+
+                <div class="stats">
+                    <div class="st">
+                        <div class="v">@(coach.ClassesPerWeek?.ToString() ?? "—")</div>
+                        <div class="l">cours / sem.</div>
+                    </div>
+                    <div class="st">
+                        <div class="v">@(coach.FillRate is { } fill ? $"{fill} %" : "—")</div>
+                        <div class="l">remplissage</div>
+                    </div>
+                </div>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Coachs")
+    ];
+
+    [Parameter, EditorRequired] public CoachesPageDto Page { get; set; } = CoachesPageDto.Empty;
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public CoachStatus? Status { get; set; }
+
+    [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<CoachStatus?> OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<CoachListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle
+    {
+        get
+        {
+            var coaches = GxFormats.Plural(Page.TotalCount, "coach", "coachs");
+
+            return $"{coaches} · {GxFormats.Count(Page.AvailableCount)} disponibles cette semaine";
+        }
+    }
+
+    private string EmptyText => string.IsNullOrWhiteSpace(Search) && Status is null
+        ? "Aucun coach dans l'équipe pour l'instant. Invitez le premier pour commencer."
+        : "Aucun coach ne correspond à cette recherche.";
+
+    private int CountFor(CoachStatus? status) => status switch
+    {
+        CoachStatus.Available => Page.AvailableCount,
+        CoachStatus.Away => Page.AwayCount,
+        _ => Page.TotalCount
+    };
+
+    /// <summary>"En congé · jusqu'au 15 juin", the way the prototype writes it.</summary>
+    private string StatusLabel(CoachListItemDto coach)
+        => coach.Status == CoachStatus.Away && coach.AwayUntil is { } until
+            ? $"En congé · jusqu'au {GxFormats.DayAndMonth(until)}"
+            : CoachFilters.LabelFor(coach.Status);
+}

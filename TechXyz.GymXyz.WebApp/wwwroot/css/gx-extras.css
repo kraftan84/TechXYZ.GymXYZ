@@ -53,6 +53,11 @@
 .gx-m-circbtn { border: 0; padding: 0; background: none; font-family: inherit; text-decoration: none; }
 .gx-m-circbtn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
 
+/* ---------- Coach card ----------
+   The prototype draws the card as a div with an onClick; here it is a real
+   button so the keyboard can reach it. Behaviour, not decoration. */
+button.gx-coach-card { width: 100%; text-align: left; color: inherit; }
+
 /* ---------- Drawer form layout ----------
    The prototype writes these two as inline styles on its Field / FieldRow
    helpers; here they are named so the markup stays readable. Layout only. */
