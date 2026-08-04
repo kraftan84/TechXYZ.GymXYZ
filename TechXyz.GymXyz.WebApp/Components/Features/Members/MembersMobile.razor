@@ -1,0 +1,131 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Members
+
+@* Mobile members list: large title, inline search, filter tags, rows. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet" style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+            <div class="hi">Membres</div>
+            <div class="sub">@Subtitle</div>
+        </div>
+        <div style="flex:none;padding-top:4px">
+            <button type="button" class="gx-m-iconbtn" aria-label="Ajouter un membre" @onclick="OnCreate">
+                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+            </button>
+        </div>
+    </div>
+
+    <FluentSearch Placeholder="Rechercher un membre…"
+                  aria-label="Rechercher un membre"
+                  Immediate="true"
+                  ImmediateDelay="250"
+                  style="width:100%;margin-top:12px"
+                  Value="@Search"
+                  ValueChanged="OnSearchChanged"/>
+
+    <div class="gx-m-tags" style="padding:12px 0 2px">
+        @foreach (var filter in MemberFilters.All)
+        {
+            var isOn = Status == filter.Status;
+            <button type="button"
+                    class="gx-m-tag @(isOn ? "brand" : null)"
+                    aria-pressed="@isOn"
+                    style="cursor:pointer"
+                    @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
+                @filter.MobileLabel · @CountFor(filter.Status)
+            </button>
+        }
+    </div>
+
+    @if (Page.Items.Count == 0)
+    {
+        <div class="gx-m-empty">
+            <div class="ic">
+                <GxIcon Name="@GxIconPaths.Users" Size="28"/>
+            </div>
+            <h3>Aucun membre pour l'instant</h3>
+            <p>@EmptyText</p>
+        </div>
+    }
+    else
+    {
+        <div class="gx-m-card" style="margin-top:12px">
+            @foreach (var member in Page.Items)
+            {
+                <button type="button" class="gx-m-row" @onclick="() => OnOpen.InvokeAsync(member)">
+                    <GxAvatar Name="@member.FullName" Size="md"/>
+                    <div class="main">
+                        <div class="nm"><span class="truncate">@member.FullName</span></div>
+                        <div class="meta">@MetaFor(member)</div>
+                    </div>
+                    <div class="trail">
+                        <GxChip Tone="@MemberFilters.ToneFor(member.Status)">
+                            @MemberFilters.LabelFor(member.Status)
+                        </GxChip>
+                    </div>
+                    <span class="chev"><GxIcon Name="@GxIconPaths.ChevronRight" Size="18"/></span>
+                </button>
+            }
+        </div>
+
+        @if (PageCount > 1)
+        {
+            <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+                <FluentButton Appearance="Appearance.Outline" Disabled="@(CurrentPage <= 1)"
+                              @onclick="() => OnPageChanged.InvokeAsync(CurrentPage - 1)">
+                    Précédent
+                </FluentButton>
+                <span style="flex:1;text-align:center;font-size:var(--text-xs);color:var(--text-muted)">
+                    @CurrentPage / @PageCount
+                </span>
+                <FluentButton Appearance="Appearance.Outline" Disabled="@(CurrentPage >= PageCount)"
+                              @onclick="() => OnPageChanged.InvokeAsync(CurrentPage + 1)">
+                    Suivant
+                </FluentButton>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MembersPageDto Page { get; set; } = MembersPageDto.Empty;
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public MemberStatus? Status { get; set; }
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageCount { get; set; } = 1;
+    [Parameter] public DateOnly Today { get; set; }
+    [Parameter] public string? City { get; set; }
+
+    [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<MemberStatus?> OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    [Parameter] public EventCallback<MemberListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle => string.IsNullOrWhiteSpace(City)
+        ? $"{Page.TotalCount} membres"
+        : $"{Page.TotalCount} membres · {City}";
+
+    private string EmptyText => string.IsNullOrWhiteSpace(Search) && Status is null
+        ? "Aucun dossier pour l'instant. Créez le premier pour commencer."
+        : "Aucun membre ne correspond à cette recherche.";
+
+    private int CountFor(MemberStatus? status) => status switch
+    {
+        MemberStatus.Active => Page.ActiveCount,
+        MemberStatus.ExpiringSoon => Page.ExpiringSoonCount,
+        MemberStatus.Inactive => Page.InactiveCount,
+        _ => Page.TotalCount
+    };
+
+    /// <summary>"Illimité mensuel · vu il y a 2 j" once the plan and the check-in
+    /// exist; the record's join date until then.</summary>
+    private string MetaFor(MemberListItemDto member)
+    {
+        var plan = member.PlanLabel ?? $"Membre depuis {GxFormats.Month(member.JoinedOn)}";
+
+        return member.LastVisitOn is { } visit
+            ? $"{plan} · vu {GxFormats.SinceLabel(visit, Today)}"
+            : plan;
+    }
+}

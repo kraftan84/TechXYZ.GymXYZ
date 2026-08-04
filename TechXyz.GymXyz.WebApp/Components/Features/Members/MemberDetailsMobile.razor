@@ -1,0 +1,139 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Members
+
+@* Mobile member record: full-screen hero, quick actions, then stacked sections.
+   The header with the back arrow is rendered by the page. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-fiche-hero">
+        <GxAvatar Name="@Member.FullName" Size="xl"/>
+        <div>
+            <div class="nm">@Member.FullName</div>
+            <div class="rl">Membre depuis @GxFormats.Month(Member.JoinedOn)</div>
+        </div>
+        <div style="display:flex;gap:8px">
+            <GxChip Tone="@MemberFilters.ToneFor(Member.Status)">@MemberFilters.LabelFor(Member.Status)</GxChip>
+            @if (Member.Stats.AttendanceRate is { } rate)
+            {
+                <GxChip>Assiduité @rate&nbsp;%</GxChip>
+            }
+        </div>
+        <div class="gx-m-fiche-actions">
+            <a class="gx-m-circbtn" href="@(Member.Phone is null ? null : $"tel:{Member.Phone}")"
+               aria-disabled="@(Member.Phone is null)">
+                <span class="b"><GxIcon Name="@GxIconPaths.Phone" Size="20"/></span>
+                <span class="cl">Appeler</span>
+            </a>
+            <a class="gx-m-circbtn" href="@(Member.Email is null ? null : $"mailto:{Member.Email}")"
+               aria-disabled="@(Member.Email is null)">
+                <span class="b"><GxIcon Name="@GxIconPaths.Mail" Size="20"/></span>
+                <span class="cl">E-mail</span>
+            </a>
+            <button type="button" class="gx-m-circbtn" @onclick="OnHistory">
+                <span class="b"><GxIcon Name="@GxIconPaths.Card" Size="20"/></span>
+                <span class="cl">Abonnement</span>
+            </button>
+            <button type="button" class="gx-m-circbtn" @onclick="OnEdit">
+                <span class="b"><GxIcon Name="@GxIconPaths.Settings" Size="20"/></span>
+                <span class="cl">Éditer</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="gx-m-card">
+        <div class="gx-m-kv">
+            <span class="k">Téléphone</span>
+            <span class="v">@(Member.Phone ?? "—")</span>
+        </div>
+        <div class="gx-m-kv">
+            <span class="k">E-mail</span>
+            <span class="v" style="font-weight:600;font-size:var(--text-xs)">@(Member.Email ?? "—")</span>
+        </div>
+        <div class="gx-m-kv">
+            <span class="k">Abonnement</span>
+            <span class="v">
+                @if (Member.CurrentSubscription is { } subscription)
+                {
+                    <GxChip Tone="GxTone.Brand">Jusqu'au @GxFormats.ShortDate(subscription.EndDate)</GxChip>
+                }
+                else
+                {
+                    <GxChip Tone="GxTone.Danger">Aucun</GxChip>
+                }
+            </span>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Prochains cours</span></div>
+    <div class="gx-m-card">
+        @if (Member.UpcomingLessons.Count == 0)
+        {
+            <div class="gx-m-kv"><span class="v" style="font-weight:400;color:var(--text-muted)">Aucun cours à venir.</span></div>
+        }
+        else
+        {
+            @foreach (var lesson in Member.UpcomingLessons)
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <div class="main">
+                        <div class="nm">@lesson.Name</div>
+                        <div class="meta">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                    </div>
+                    <div class="trail"><GxChip Tone="GxTone.Brand">Inscrit·e</GxChip></div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Derniers passages</span></div>
+    <div class="gx-m-card">
+        @if (Member.PastLessons.Count == 0)
+        {
+            <div class="gx-m-kv"><span class="v" style="font-weight:400;color:var(--text-muted)">Le pointage arrive avec les présences.</span></div>
+        }
+        else
+        {
+            @foreach (var lesson in Member.PastLessons.Take(5))
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <div class="main">
+                        <div class="nm">@lesson.Name</div>
+                        <div class="meta">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                    </div>
+                    <div class="trail"><GxChip Tone="GxTone.Neutral">Passé</GxChip></div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Paiements</span></div>
+    <div class="gx-m-card">
+        @if (Member.Payments.Count == 0)
+        {
+            <div class="gx-m-kv"><span class="v" style="font-weight:400;color:var(--text-muted)">Aucun encaissement enregistré.</span></div>
+        }
+        else
+        {
+            @foreach (var payment in Member.Payments)
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <div class="main">
+                        <div class="nm">@payment.Label</div>
+                        <div class="meta">@GxFormats.Date(payment.Date)</div>
+                    </div>
+                    <div class="trail">
+                        <span class="amt">@GxFormats.Amount(payment.Amount)</span>
+                        <GxChip Tone="GxTone.Success">@payment.Status</GxChip>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MemberDetailsPageDto Member { get; set; } = default!;
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnHistory { get; set; }
+}

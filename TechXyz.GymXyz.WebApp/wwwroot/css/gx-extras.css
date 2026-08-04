@@ -44,6 +44,17 @@
 }
 .gx-avatar.sm { width: 30px; height: 30px; font-size: var(--text-2xs); }
 .gx-avatar.md { width: 40px; height: 40px; font-size: var(--text-sm); }
+.gx-avatar.lg { width: 56px; height: 56px; font-size: var(--text-xl); }
+.gx-avatar.xl { width: 72px; height: 72px; font-size: var(--text-2xl); }
+
+/* ---------- Drawer form layout ----------
+   The prototype writes these two as inline styles on its Field / FieldRow
+   helpers; here they are named so the markup stays readable. Layout only. */
+.gx-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.gx-form-field { margin-bottom: 14px; }
+@media (max-width: 560px) {
+  .gx-form-row { grid-template-columns: 1fr; }
+}
 
 /* ---------- Login (design-system LoginScreen) ---------- */
 .gx-login {

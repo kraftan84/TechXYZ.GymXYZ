@@ -12,7 +12,10 @@ public sealed class CreateMemberCommand : IRequest<int>
         string? street,
         string? zipCode,
         string? city,
-        string? country)
+        string? country,
+        DateOnly? joinedOn = null,
+        DateOnly? birthDate = null,
+        string? notes = null)
     {
         FirstName = firstName;
         LastName = lastName;
@@ -22,6 +25,9 @@ public sealed class CreateMemberCommand : IRequest<int>
         ZipCode = zipCode;
         City = city;
         Country = country;
+        JoinedOn = joinedOn;
+        BirthDate = birthDate;
+        Notes = notes;
     }
 
     public string FirstName { get; }
@@ -32,4 +38,10 @@ public sealed class CreateMemberCommand : IRequest<int>
     public string? ZipCode { get; }
     public string? City { get; }
     public string? Country { get; }
+
+    /// <summary>Defaults to today when the caller does not supply it.</summary>
+    public DateOnly? JoinedOn { get; }
+
+    public DateOnly? BirthDate { get; }
+    public string? Notes { get; }
 }

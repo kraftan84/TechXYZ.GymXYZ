@@ -33,5 +33,18 @@ public sealed class CreateMemberCommandValidator : AbstractValidator<CreateMembe
 
         RuleFor(command => command.Country)
             .MaximumLength(100);
+
+        RuleFor(command => command.Notes)
+            .MaximumLength(2000);
+
+        RuleFor(command => command.BirthDate)
+            .LessThan(_ => DateOnly.FromDateTime(DateTime.Today))
+            .When(command => command.BirthDate.HasValue)
+            .WithMessage("La date de naissance doit être dans le passé.");
+
+        RuleFor(command => command.JoinedOn)
+            .LessThanOrEqualTo(_ => DateOnly.FromDateTime(DateTime.Today))
+            .When(command => command.JoinedOn.HasValue)
+            .WithMessage("La date d'inscription ne peut pas être dans le futur.");
     }
 }

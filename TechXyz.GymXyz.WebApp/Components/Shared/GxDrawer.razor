@@ -1,0 +1,66 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Shared
+
+@* Right-hand drawer of the prototype: 520px, scrim, icon + title + subtitle
+   header, scrollable body, action footer. Closes on the scrim, on the cross and
+   on Escape. *@
+
+<div class="gx-scrim" @onclick="OnClose" aria-hidden="true"></div>
+<aside class="gx-drawer" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
+       tabindex="-1" @onkeydown="OnKeyDown" @ref="_drawer">
+    <div class="gx-drawer-h">
+        <div class="ic">
+            <GxIcon Name="@(Icon ?? GxIconPaths.Sparkles)" Size="20"/>
+        </div>
+        <div class="tt">
+            <div class="t" id="@_titleId">@Title</div>
+            @if (!string.IsNullOrWhiteSpace(Subtitle))
+            {
+                <div class="s">@Subtitle</div>
+            }
+        </div>
+        <FluentButton Appearance="Appearance.Stealth" Title="Fermer" aria-label="Fermer"
+                      @onclick="OnClose">
+            <GxIcon Name="@GxIconPaths.Close" Size="20"/>
+        </FluentButton>
+    </div>
+
+    <div class="gx-drawer-b">
+        @ChildContent
+    </div>
+
+    @if (Footer is not null)
+    {
+        <div class="gx-drawer-f">
+            @Footer
+        </div>
+    }
+</aside>
+
+@code {
+    private readonly string _titleId = $"gx-drawer-{Guid.NewGuid():N}";
+    private ElementReference _drawer;
+
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Move the focus inside the dialog so the keyboard stays in it.
+            await _drawer.FocusAsync();
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

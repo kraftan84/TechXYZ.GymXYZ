@@ -13,7 +13,10 @@ public sealed class UpdateMemberCommand : IRequest<bool>
         string? street,
         string? zipCode,
         string? city,
-        string? country)
+        string? country,
+        DateOnly? joinedOn = null,
+        DateOnly? birthDate = null,
+        string? notes = null)
     {
         Id = id;
         FirstName = firstName;
@@ -24,6 +27,9 @@ public sealed class UpdateMemberCommand : IRequest<bool>
         ZipCode = zipCode;
         City = city;
         Country = country;
+        JoinedOn = joinedOn;
+        BirthDate = birthDate;
+        Notes = notes;
     }
 
     public int Id { get; }
@@ -35,4 +41,10 @@ public sealed class UpdateMemberCommand : IRequest<bool>
     public string? ZipCode { get; }
     public string? City { get; }
     public string? Country { get; }
+
+    /// <summary>Left untouched when null, so a partial edit never resets it.</summary>
+    public DateOnly? JoinedOn { get; }
+
+    public DateOnly? BirthDate { get; }
+    public string? Notes { get; }
 }

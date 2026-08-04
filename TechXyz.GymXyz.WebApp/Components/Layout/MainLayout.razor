@@ -7,6 +7,7 @@
 @using TechXyz.GymXyz.WebApp.Components.Layout.Mobile
 
 @inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader_
 @inject IJSRuntime JsRuntime
 @inject PersistentComponentState ApplicationState
 @inject IHttpContextAccessor HttpContextAccessor
@@ -22,7 +23,12 @@
     else if (Responsive.IsMobile)
     {
         <div class="gx-m-app">
-            <MobileHeader Brand="Brand">
+            @* A record or a detail screen asks for the back-arrow header; every
+               root screen keeps the brand one. *@
+            <MobileHeader Brand="Brand"
+                          Mode="@(MobileHeader_.IsSubScreen ? MobileHeaderMode.Sub : MobileHeaderMode.Brand)"
+                          Title="@MobileHeader_.Title"
+                          OnBack="@(() => MobileHeader_.Back?.Invoke())">
                 <Action>
                     <div class="gx-m-flex" style="gap:8px">
                         <button type="button" class="gx-m-iconbtn" aria-label="Notifications">
@@ -109,6 +115,7 @@
 
         _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistDeviceMode);
         Responsive.Changed += OnResponsiveChanged;
+        MobileHeader_.Changed += OnMobileHeaderChanged;
     }
 
     private Task PersistDeviceMode()
@@ -143,6 +150,8 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnMobileHeaderChanged() => InvokeAsync(StateHasChanged);
+
     private void TogglePlus() => _plusOpen = !_plusOpen;
 
     private void OpenPlus() => _plusOpen = true;
@@ -152,6 +161,7 @@
     public async ValueTask DisposeAsync()
     {
         Responsive.Changed -= OnResponsiveChanged;
+        MobileHeader_.Changed -= OnMobileHeaderChanged;
         _persistingSubscription.Dispose();
 
         if (_module is not null)

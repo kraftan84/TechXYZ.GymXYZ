@@ -37,7 +37,8 @@ public class SoftDeleteRelationalIntegrationTests
 
         var queryHandler = new GetMembersQueryHandler(dbContext);
         var members = await queryHandler.Handle(new GetMembersQuery(), CancellationToken.None);
-        members.ShouldBeEmpty();
+        members.Items.ShouldBeEmpty();
+        members.TotalCount.ShouldBe(0);
     }
 
     [Fact]
