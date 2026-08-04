@@ -1,0 +1,27 @@
+@* Initials avatar. Ported from the design-system Avatar. *@
+
+<span class="gx-avatar @SizeClass" title="@Name" aria-hidden="true">@Initials</span>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>sm · md · default.</summary>
+    [Parameter] public string? Size { get; set; }
+
+    private string? SizeClass => Size;
+
+    private string Initials
+    {
+        get
+        {
+            var parts = Name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            return parts.Length switch
+            {
+                0 => "?",
+                1 => parts[0][..1],
+                _ => string.Concat(parts[0][..1], parts[^1][..1])
+            };
+        }
+    }
+}

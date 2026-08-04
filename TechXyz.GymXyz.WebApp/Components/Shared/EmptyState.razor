@@ -1,0 +1,17 @@
+@* Empty state, used both for "nothing yet" and for sections not built yet. *@
+
+<div class="gx-empty gx-screen">
+    <div class="ic">
+        <GxIcon Name="@(Icon ?? GxIconPaths.Sparkles)" Size="30"/>
+    </div>
+    <h3>@Title</h3>
+    <p>@Text</p>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

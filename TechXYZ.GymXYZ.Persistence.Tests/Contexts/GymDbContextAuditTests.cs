@@ -9,6 +9,8 @@ namespace TechXYZ.GymXYZ.Persistence.Tests;
 
 public class GymDbContextAuditTests
 {
+    private const int TenantId = 1;
+
     [Fact]
     public async Task SaveChangesAsync_ShouldStampAuditFields_OnAddedEntity()
     {
@@ -58,12 +60,32 @@ public class GymDbContextAuditTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
 
-        return new GymDbContext(options, currentUserService);
+        return new GymDbContext(options, currentUserService, new TestTenantContext(TenantId));
     }
 
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         public string? UserName { get; set; }
+    }
+
+    private sealed class TestTenantContext : ITenantContext
+    {
+        public TestTenantContext(int tenantId) => Current = tenantId;
+
+        public int Current { get; }
+
+        public bool IsResolved => Current != 0;
+
+        public string? Slug => null;
+
+        public IDisposable UseTenant(int tenantId, string? slug = null) => new NoOpScope();
+
+        private sealed class NoOpScope : IDisposable
+        {
+            public void Dispose()
+            {
+            }
+        }
     }
 
     private static Faker Faker() => new("en");

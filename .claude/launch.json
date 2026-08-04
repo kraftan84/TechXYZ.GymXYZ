@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gymxyz-webapp",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "TechXyz.GymXyz.WebApp", "--launch-profile", "http"],
+      "port": 5173,
+      "url": "http://localhost:5173"
+    }
+  ]
+}

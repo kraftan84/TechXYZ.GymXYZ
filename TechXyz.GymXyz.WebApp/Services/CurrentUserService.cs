@@ -6,6 +6,7 @@ namespace TechXyz.GymXyz.WebApp.Services;
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _http;
+    private string? _circuitUserName;
 
     public CurrentUserService(IHttpContextAccessor http)
         => _http = http;
@@ -16,5 +17,12 @@ public class CurrentUserService : ICurrentUserService
         CurrentUserOverride.Current
         ?? User?.Identity?.Name
         ?? User?.FindFirstValue("preferred_username")
-        ?? User?.FindFirstValue(ClaimTypes.Name);
+        ?? User?.FindFirstValue(ClaimTypes.Name)
+        ?? _circuitUserName;
+
+    /// <summary>
+    /// Carries the signed-in user into a Blazor circuit, where there is no
+    /// HttpContext to read from. Set once by TenantBoundary.
+    /// </summary>
+    public void SetCircuitUser(string? userName) => _circuitUserName = userName;
 }

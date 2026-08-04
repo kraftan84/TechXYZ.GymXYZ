@@ -1,0 +1,39 @@
+@* Desktop sidebar, 256px. Every colour comes from the --gx-sb-* contract, so a
+   brand can turn it into a dark locker room without touching this file. *@
+
+<aside class="gx-sb">
+    <BrandLockup Brand="Brand" OnDark="true"/>
+
+    @foreach (var group in GxNavigation.Groups)
+    {
+        var items = GxNavigation.Visible(group.Items, Brand.IsSolo).ToList();
+        if (items.Count == 0)
+        {
+            continue;
+        }
+
+        <div class="gx-sb-group">@group.Title</div>
+
+        foreach (var item in items)
+        {
+            <NavLink class="gx-nav" href="@item.Href" ActiveClass="active"
+                     Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                <GxIcon Name="@item.Icon" Size="19"/>
+                <span>@item.Label</span>
+            </NavLink>
+        }
+    }
+
+    <div class="gx-sb-spacer"></div>
+
+    <div class="gx-sb-foot">
+        <NavLink class="gx-nav" href="@GxNavigation.Administration.Href" ActiveClass="active">
+            <GxIcon Name="@GxNavigation.Administration.Icon" Size="19"/>
+            <span>@GxNavigation.Administration.Label</span>
+        </NavLink>
+    </div>
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+}

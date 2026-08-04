@@ -1,0 +1,41 @@
+@* "Plus" sheet: the profile block plus the rest of the navigation. *@
+@inject NavigationManager Navigation
+
+<MobileSheet Title="Plus" OnClose="OnClose">
+    <div class="gx-m-profile">
+        <GxAvatar Name="@User.DisplayName" Size="md"/>
+        <div class="main">
+            <div class="nm">@User.DisplayName</div>
+            <div class="rl">@RoleLine</div>
+        </div>
+    </div>
+    <div class="gx-m-plusgrid">
+        @foreach (var item in GxNavigation.Visible(GxNavigation.MobileMore, Brand.IsSolo))
+        {
+            <button type="button" class="gx-m-plusitem" @onclick="() => GoAsync(item.Href)">
+                <span class="si">
+                    <GxIcon Name="@item.Icon" Size="20"/>
+                </span>
+                <span class="tt">
+                    <span class="t">@item.Label</span>
+                </span>
+            </button>
+        }
+    </div>
+</MobileSheet>
+
+@code {
+    [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+    [Parameter, EditorRequired] public GymUserInfo User { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string RoleLine => string.IsNullOrWhiteSpace(User.RoleLabel)
+        ? Brand.DisplayName
+        : $"{User.RoleLabel} · {Brand.DisplayName}";
+
+    private async Task GoAsync(string href)
+    {
+        Navigation.NavigateTo(href);
+        await OnClose.InvokeAsync();
+    }
+}

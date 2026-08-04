@@ -120,8 +120,19 @@
 }
 
 @code {
+    // A solo coach has no Coachs section: hiding the link is not enough, the
+    // route has to refuse too.
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        if (Brand?.IsSolo == true)
+        {
+            NavManager.NavigateTo("/");
+
+            return;
+        }
+
         BreadcrumbService.SetItems(
         [
             new BreadcrumbItem { IsHome = true, Href = "/" },

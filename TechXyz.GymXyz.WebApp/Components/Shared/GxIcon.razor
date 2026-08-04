@@ -1,0 +1,17 @@
+@* Line icon on a 24 grid, stroke inherits currentColor. *@
+
+<svg width="@Size" height="@Size" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+     stroke-linejoin="round" style="flex:none" aria-hidden="true" focusable="false"
+     class="@Class">
+    @((MarkupString)GxIconPaths.Get(Name))
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>16 for meta, 20 for buttons and fields, 24 for navigation.</summary>
+    [Parameter] public int Size { get; set; } = 18;
+
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,9 +1,11 @@
 using TechXyz.GymXyz.Domain.Common;
+using TechXyz.GymXyz.Domain.Common.Interfaces;
 
 namespace TechXyz.GymXyz.Domain.Entities;
 
-public abstract class Lesson : EntityBase<int>
+public abstract class Lesson : EntityBase<int>, ITenantScoped
 {
+    public int TenantId { get; set; }
     public string Name { get; set; }
     public string? Description { get; set; }
     public LessonType Type { get; set; }

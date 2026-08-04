@@ -1,0 +1,24 @@
+@* Occupancy gauge. *@
+
+<div class="gx-bar @ToneClass" style="@(Width is null ? null : $"width:{Width}")"
+     role="progressbar" aria-valuenow="@Clamped" aria-valuemin="0" aria-valuemax="100"
+     aria-label="@AriaLabel">
+    <i style="width:@(Clamped)%"></i>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Percent { get; set; }
+    [Parameter] public GxTone Tone { get; set; } = GxTone.Brand;
+    [Parameter] public string? Width { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+
+    private int Clamped => Math.Clamp(Percent, 0, 100);
+
+    private string? ToneClass => Tone switch
+    {
+        GxTone.Success => "ok",
+        GxTone.Warning => "warn",
+        GxTone.Danger => "bad",
+        _ => null
+    };
+}

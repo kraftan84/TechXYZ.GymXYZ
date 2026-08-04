@@ -1,0 +1,28 @@
+@* Ring gauge. Track on the sunken surface, progress on the brand accent. *@
+
+<div class="gx-ring" style="width:@(Size)px;height:@(Size)px">
+    <svg width="@Size" height="@Size" aria-hidden="true" focusable="false">
+        <circle cx="@Center" cy="@Center" r="@Radius" stroke="var(--surface-sunken)" stroke-width="6" fill="none"/>
+        <circle cx="@Center" cy="@Center" r="@Radius" stroke="var(--color-primary)" stroke-width="6" fill="none"
+                stroke-linecap="round"
+                stroke-dasharray="@Circumference.ToString(Culture)"
+                stroke-dashoffset="@Offset.ToString(Culture)"
+                transform="rotate(-90 @Center @Center)"/>
+    </svg>
+    <span class="ctr">@(Label ?? $"{Clamped}%")</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Percent { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public int Size { get; set; } = 84;
+
+    private static readonly System.Globalization.CultureInfo Culture =
+        System.Globalization.CultureInfo.InvariantCulture;
+
+    private int Clamped => Math.Clamp(Percent, 0, 100);
+    private double Center => Size / 2d;
+    private double Radius => Size / 2d - 6;
+    private double Circumference => 2 * Math.PI * Radius;
+    private double Offset => Circumference * (1 - Clamped / 100d);
+}

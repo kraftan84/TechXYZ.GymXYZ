@@ -1,0 +1,39 @@
+@* KPI tile. Numbers stay in Montserrat, tabular figures. *@
+
+<div class="gx-kpi @(Spark ? "spark" : null)">
+    <div class="lab">@Label</div>
+    <div class="val">
+        @Value
+        @if (!string.IsNullOrWhiteSpace(Unit))
+        {
+            <small>@Unit</small>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Delta))
+    {
+        <div class="delta gx-tone-@Tone.ToString().ToLowerInvariant()">
+            @if (!string.IsNullOrWhiteSpace(DeltaIcon))
+            {
+                <GxIcon Name="@DeltaIcon" Size="14"/>
+            }
+            @Delta
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Sub))
+    {
+        <div class="sub">@Sub</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Unit { get; set; }
+    [Parameter] public string? Sub { get; set; }
+    [Parameter] public string? Delta { get; set; }
+    [Parameter] public string? DeltaIcon { get; set; }
+    [Parameter] public GxTone Tone { get; set; } = GxTone.Success;
+
+    /// <summary>Highlighted tile: brand border plus the spark rule on top.</summary>
+    [Parameter] public bool Spark { get; set; }
+}

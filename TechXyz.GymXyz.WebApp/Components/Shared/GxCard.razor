@@ -1,0 +1,32 @@
+@* Surface card. Ported from the design-system Card the prototype uses. *@
+
+<div class="gx-card @(Accent ? "accent" : null) @Class">
+    @if (Accent)
+    {
+        <span class="spark" aria-hidden="true"></span>
+    }
+    @if (Title is not null)
+    {
+        <CardHead Title="@Title">@HeaderRight</CardHead>
+    }
+    @if (Padded)
+    {
+        <div class="gx-card-pad">@ChildContent</div>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? HeaderRight { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Adds the spark gradient rule on top of the card.</summary>
+    [Parameter] public bool Accent { get; set; }
+
+    [Parameter] public bool Padded { get; set; } = true;
+    [Parameter] public string? Class { get; set; }
+}

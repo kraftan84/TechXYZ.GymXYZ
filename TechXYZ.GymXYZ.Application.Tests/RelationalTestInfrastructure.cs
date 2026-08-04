@@ -7,7 +7,10 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
 internal static class RelationalTestInfrastructure
 {
-    public static async Task<SqliteDbContextScope> CreateSqliteDbContextScope()
+    public static Task<SqliteDbContextScope> CreateSqliteDbContextScope()
+        => CreateSqliteDbContextScope(new TestTenantContext(TestInfrastructure.DefaultTenantId));
+
+    public static async Task<SqliteDbContextScope> CreateSqliteDbContextScope(ITenantContext tenantContext)
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -16,7 +19,7 @@ internal static class RelationalTestInfrastructure
             .UseSqlite(connection)
             .Options;
 
-        var dbContext = new GymDbContext(options, new TestCurrentUserService());
+        var dbContext = new GymDbContext(options, new TestCurrentUserService(), tenantContext);
         await dbContext.Database.EnsureCreatedAsync();
 
         return new SqliteDbContextScope(dbContext, connection);

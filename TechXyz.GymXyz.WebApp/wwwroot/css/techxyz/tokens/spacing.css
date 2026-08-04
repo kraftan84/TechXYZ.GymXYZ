@@ -1,0 +1,46 @@
+/* ============================================================
+   TechXYZ — Spacing, sizing & layout tokens
+   4px base grid.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (4px base) --------------------------- */
+  --space-0:   0;
+  --space-1:   0.25rem;  /*  4px */
+  --space-2:   0.5rem;   /*  8px */
+  --space-3:   0.75rem;  /* 12px */
+  --space-4:   1rem;     /* 16px */
+  --space-5:   1.5rem;   /* 24px */
+  --space-6:   2rem;     /* 32px */
+  --space-7:   2.5rem;   /* 40px */
+  --space-8:   3rem;     /* 48px */
+  --space-9:   4rem;     /* 64px */
+  --space-10:  5rem;     /* 80px */
+  --space-11:  6rem;     /* 96px */
+  --space-12:  8rem;     /* 128px */
+
+  /* ---- Container widths ----------------------------------- */
+  --container-sm:  640px;
+  --container-md:  820px;
+  --container-lg:  1080px;
+  --container-xl:  1240px;
+  --gutter:        var(--space-5);
+  --section-y:     var(--space-11);
+
+  /* ---- Control sizing (44px min touch target) ------------- */
+  --control-sm: 2rem;     /* 32px */
+  --control-md: 2.75rem;  /* 44px — default */
+  --control-lg: 3.25rem;  /* 52px */
+
+  /* ---- Border widths -------------------------------------- */
+  --border-w-hair: 1px;
+  --border-w:      1.5px;
+  --border-w-bold: 2px;
+
+  /* ---- Z-index ------------------------------------------- */
+  --z-base:    1;     /* @kind other */
+  --z-sticky:  100;   /* @kind other */
+  --z-overlay: 1000;  /* @kind other */
+  --z-modal:   1100;  /* @kind other */
+  --z-toast:   1200;  /* @kind other */
+}

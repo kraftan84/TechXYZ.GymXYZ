@@ -1,0 +1,61 @@
+@* Fills the ambient tenant once per scope — HTTP request or Blazor circuit —
+   and cascades the brand and the signed-in person to the whole app.
+
+   The tenant comes from the signed-in user's claim, which is signed inside the
+   authentication cookie; the host is only used before authentication, to dress
+   the login screen in the right colours. *@
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ITenantResolver TenantResolver
+@inject TenantContext TenantContext
+@inject CurrentUserService CurrentUserService
+
+@if (_ready)
+{
+    <CascadingValue Value="_brand" IsFixed="true">
+        <CascadingValue Value="_user" IsFixed="true">
+            @ChildContent
+        </CascadingValue>
+    </CascadingValue>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private TenantBrandDto? _brand;
+    private GymUserInfo _user = GymUserInfo.Anonymous;
+    private bool _ready;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var principal = authenticationState.User;
+
+        _brand = await TenantResolver.ResolveAsync(principal);
+        TenantContext.SetTenant(_brand?.Id ?? 0, _brand?.Slug);
+
+        // No HttpContext inside a circuit: carry the user across explicitly so
+        // audit stamping keeps naming a person instead of "system".
+        CurrentUserService.SetCircuitUser(principal.Identity?.Name);
+
+        _user = BuildUserInfo(principal);
+        _ready = true;
+    }
+
+    private static GymUserInfo BuildUserInfo(ClaimsPrincipal principal)
+    {
+        if (principal.Identity?.IsAuthenticated != true)
+        {
+            return GymUserInfo.Anonymous;
+        }
+
+        var displayName = principal.FindFirstValue(ClaimTypes.GivenName)
+                          ?? principal.Identity.Name
+                          ?? GymUserInfo.Anonymous.DisplayName;
+
+        return new GymUserInfo(
+            displayName,
+            principal.FindFirstValue(GymClaimTypes.Nickname),
+            principal.FindFirstValue(GymClaimTypes.RoleLabel));
+    }
+}

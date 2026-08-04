@@ -1,0 +1,12 @@
+<div class="gx-card-h">
+    <span class="t">@Title</span>
+    @if (ChildContent is not null)
+    {
+        <span class="r">@ChildContent</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

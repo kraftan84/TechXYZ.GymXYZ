@@ -1,9 +1,11 @@
 using TechXyz.GymXyz.Domain.Common;
+using TechXyz.GymXyz.Domain.Common.Interfaces;
 
 namespace TechXyz.GymXyz.Domain.Entities;
 
-public class Subscription : EntityBase<int>
+public class Subscription : EntityBase<int>, ITenantScoped
 {
+    public int TenantId { get; set; }
     public Member Member { get; set; }
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }

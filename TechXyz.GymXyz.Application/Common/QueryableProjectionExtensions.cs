@@ -5,6 +5,24 @@ namespace TechXyz.GymXyz.Application.Common;
 
 public static class QueryableProjectionExtensions
 {
+    public static IQueryable<TenantBrandDto> SelectTenantBrandDto(this IQueryable<Tenant> query)
+    {
+        return query.Select(tenant => new TenantBrandDto(
+            tenant.Id,
+            tenant.Slug,
+            tenant.ThemeKey,
+            tenant.DisplayName,
+            tenant.Baseline,
+            tenant.MarkKind,
+            tenant.LogoPath,
+            tenant.LogoDarkPath,
+            tenant.CircleLogo,
+            tenant.WordmarkText,
+            tenant.WordmarkPrefix,
+            tenant.WordmarkAccent,
+            tenant.IsSolo));
+    }
+
     public static IQueryable<CoachDto> SelectCoachDto(this IQueryable<Coach> query)
     {
         return query.Select(coach => new CoachDto(

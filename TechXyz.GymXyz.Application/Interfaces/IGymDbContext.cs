@@ -5,6 +5,7 @@ namespace TechXyz.GymXyz.Application.Interfaces;
 
 public interface IGymDbContext
 {
+    DbSet<Tenant> Tenants { get; }
     DbSet<Gym> Gyms { get; }
     DbSet<Location> Locations { get; }
     DbSet<Room> Rooms { get; }

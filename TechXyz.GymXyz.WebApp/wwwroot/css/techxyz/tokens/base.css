@@ -1,0 +1,80 @@
+/* ============================================================
+   TechXYZ — Base layer
+   Light global defaults wired to tokens. Consumers can rely on
+   body type/color being set; components stay self-contained.
+   ============================================================ */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  font-weight: var(--weight-regular);
+  color: var(--text-body);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+}
+
+/* Headings default to Montserrat bold; opt into Orbitron with .font-display */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  text-wrap: balance;
+}
+
+p { margin: 0; text-wrap: pretty; }
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+a:hover { color: var(--text-link-hover); }
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+:where(button, input, select, textarea) { font: inherit; }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-brand);
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--azure-200);
+  color: var(--ink-900);
+}
+
+/* ---- Tiny, optional helpers (used by specimen cards) ----- */
+.font-display { font-family: var(--font-display); }
+.eyebrow {
+  font-family: var(--type-eyebrow-font);
+  font-weight: var(--type-eyebrow-weight);
+  font-size: var(--type-eyebrow-size);
+  letter-spacing: var(--type-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--color-brand);
+}
+.tagline {
+  font-family: var(--type-tagline-font);
+  font-weight: var(--type-tagline-weight);
+  letter-spacing: var(--type-tagline-tracking);
+  text-transform: uppercase;
+}
