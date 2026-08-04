@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
 
@@ -26,6 +27,9 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                 candidate.LastName,
                 candidate.Email,
                 candidate.Phone,
+                candidate.JoinedOn,
+                candidate.BirthDate,
+                candidate.Notes,
                 Address = candidate.Address == null
                     ? null
                     : new AddressDto(
@@ -42,6 +46,7 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
         }
 
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var horizon = MemberStatusRules.HorizonFrom(today);
         var now = DateTime.Now;
 
         var subscriptionsRaw = await _dbContext.Members
@@ -77,6 +82,12 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             })
             .ToList();
 
+        // The standing reads the same value as the list: the latest end date
+        // among the subscriptions covering today.
+        var currentSubscription = subscriptions
+            .Where(subscription => subscription.StartDate <= today && subscription.EndDate >= today)
+            .MaxBy(subscription => subscription.EndDate);
+
         var privateLessons = await _dbContext.PrivateLessons
             .AsNoTracking()
             .Where(lesson =>
@@ -93,7 +104,6 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                 lesson.EndDate,
                 lesson.Coach.FirstName,
                 lesson.Coach.LastName,
-                lesson.EndDate < now ? MemberLessonStatus.Completed : MemberLessonStatus.Confirmed,
                 1,
                 0))
             .ToListAsync(cancellationToken);
@@ -112,38 +122,25 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                 lesson.EndDate,
                 lesson.Coach.FirstName,
                 lesson.Coach.LastName,
-                lesson.EndDate < now ? MemberLessonStatus.Completed : MemberLessonStatus.Confirmed,
                 lesson.MaxParticipants,
                 Math.Max(0, lesson.MaxParticipants - lesson.Participants!.Count(participant => participant.IsActive))))
             .ToListAsync(cancellationToken);
 
-        var lessons = privateLessons
-            .Concat(collectiveLessons)
+        var lessons = privateLessons.Concat(collectiveLessons).ToList();
+
+        var upcomingLessons = lessons
+            .Where(lesson => lesson.StartDate >= now)
+            .OrderBy(lesson => lesson.StartDate)
+            .ToList();
+
+        var pastLessons = lessons
+            .Where(lesson => lesson.StartDate < now)
             .OrderByDescending(lesson => lesson.StartDate)
             .ToList();
 
-        var completedLessonsCount = lessons.Count(lesson => lesson.Status == MemberLessonStatus.Completed);
-        var totalLessonsCount = lessons.Count;
-        var attendanceRate = totalLessonsCount == 0
-            ? 0
-            : (int)Math.Round(completedLessonsCount * 100d / totalLessonsCount);
-        var lastVisit = lessons
-            .Where(lesson => lesson.EndDate <= now)
-            .OrderByDescending(lesson => lesson.EndDate)
-            .Select(lesson => DateOnly.FromDateTime(lesson.EndDate))
-            .FirstOrDefault();
-        var hasLastVisit = lessons.Any(lesson => lesson.EndDate <= now);
-
-        var activeSubscription = subscriptions.FirstOrDefault(subscription => subscription.Status == MemberSubscriptionStatus.Active);
-        var subscriptionRemainingPercent = activeSubscription is null
-            ? 0
-            : GetSubscriptionRemainingPercent(activeSubscription, today);
-
-        var stats = new MemberStatsDto(
-            totalLessonsCount,
-            attendanceRate,
-            hasLastVisit ? lastVisit : null,
-            subscriptionRemainingPercent);
+        // Attendance rate and last visit come from check-in (lot 6): left unset
+        // rather than approximated from the schedule.
+        var stats = new MemberStatsDto(lessons.Count, AttendanceRate: null, LastVisitOn: null);
 
         return new MemberDetailsPageDto(
             member.Id,
@@ -151,10 +148,18 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             member.LastName,
             member.Email,
             member.Phone,
+            member.JoinedOn,
+            member.BirthDate,
+            member.Notes,
             member.Address,
-            stats,
+            MemberStatusRules.Resolve(currentSubscription?.EndDate, horizon),
+            currentSubscription,
             subscriptions,
-            lessons);
+            upcomingLessons,
+            pastLessons,
+            // Payments arrive at lot 7 (Abonnements & encaissements).
+            [],
+            stats);
     }
 
     private static MemberSubscriptionStatus GetSubscriptionStatus(DateOnly startDate, DateOnly endDate, DateOnly today)
@@ -170,13 +175,5 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
         }
 
         return MemberSubscriptionStatus.Active;
-    }
-
-    private static int GetSubscriptionRemainingPercent(MemberSubscriptionDto subscription, DateOnly today)
-    {
-        var totalDays = Math.Max(1, subscription.EndDate.DayNumber - subscription.StartDate.DayNumber + 1);
-        var remainingDays = Math.Max(0, subscription.EndDate.DayNumber - today.DayNumber + 1);
-
-        return (int)Math.Round(remainingDays * 100d / totalDays);
     }
 }

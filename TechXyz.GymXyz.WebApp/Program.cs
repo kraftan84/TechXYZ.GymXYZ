@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
@@ -9,6 +10,11 @@ using TechXyz.GymXyz.Persistence.Extensions;
 using TechXyz.GymXyz.Persistence.Identity;
 using TechXyz.GymXyz.WebApp.Components;
 using TechXyz.GymXyz.WebApp.Services;
+
+// The product ships in French only: dates, numbers and the Fluent controls all
+// read the same culture, whatever locale the host happens to run under.
+CultureInfo.DefaultThreadCurrentCulture = GxFormats.Culture;
+CultureInfo.DefaultThreadCurrentUICulture = GxFormats.Culture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +41,7 @@ builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(provider => provider.GetRequiredService<TenantContext>());
 builder.Services.AddScoped<ITenantResolver, TenantResolver>();
 builder.Services.AddScoped<ResponsiveModeService>();
+builder.Services.AddScoped<MobileHeaderService>();
 
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);

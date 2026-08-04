@@ -1,0 +1,224 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Members
+
+@* Desktop member record: identity head, then two columns — subscription and
+   payments on the left, figures and sessions on the right. *@
+
+<Crumb Parts="@Crumbs"/>
+
+<div class="gx-fiche-head">
+    <GxAvatar Name="@Member.FullName" Size="xl"/>
+    <div class="info">
+        <div class="name-row">
+            <span class="name">@Member.FullName</span>
+            <GxChip Tone="@MemberFilters.ToneFor(Member.Status)"
+                    Icon="@(Member.Status == MemberStatus.Active ? GxIconPaths.Check : null)">
+                @MemberFilters.LabelFor(Member.Status)
+            </GxChip>
+        </div>
+        <div class="contact">@Contact</div>
+    </div>
+    <FluentButton Appearance="Appearance.Outline" Disabled="@(Member.Email is null)"
+                  @onclick="OnMessage">
+        <GxIcon Slot="start" Name="@GxIconPaths.Mail" Size="18"/>
+        Message
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
+        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
+        Éditer
+    </FluentButton>
+</div>
+
+<div class="gx-grid2" style="align-items:start">
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Abonnement">
+                @if (Member.CurrentSubscription is { } current)
+                {
+                    <GxChip Tone="GxTone.Success">En cours</GxChip>
+                }
+                else
+                {
+                    <GxChip Tone="GxTone.Danger">Aucun</GxChip>
+                }
+            </CardHead>
+            @if (Member.CurrentSubscription is { } subscription)
+            {
+                <div style="padding:18px;display:flex;align-items:center;gap:18px">
+                    <GxRing Percent="@RemainingPercent(subscription)"
+                            Label="@($"{RemainingDays(subscription)} j")"
+                            Size="88"/>
+                    <div style="flex:1">
+                        <div style="font-size:var(--text-sm);color:var(--text-body);margin-bottom:8px">
+                            Débuté le @GxFormats.Date(subscription.StartDate) ·
+                            <b>expire le @GxFormats.Date(subscription.EndDate)</b>
+                        </div>
+                        @if (subscription.LessonsTotal > 0)
+                        {
+                            <div style="font-size:var(--text-xs);color:var(--text-muted)">
+                                @subscription.LessonsTotal séances au carnet
+                            </div>
+                        }
+                        <div style="margin-top:12px;display:flex;gap:8px">
+                            <FluentButton Appearance="Appearance.Outline" @onclick="OnRenew">Renouveler</FluentButton>
+                            <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div style="padding:18px">
+                    <div style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:12px">
+                        Aucun abonnement en cours.
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <FluentButton Appearance="Appearance.Accent" @onclick="OnRenew">
+                            Ajouter un abonnement
+                        </FluentButton>
+                        @if (Member.Subscriptions.Count > 0)
+                        {
+                            <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
+                        }
+                    </div>
+                </div>
+            }
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Paiements"/>
+            <div style="padding:4px 18px 12px">
+                @if (Member.Payments.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun encaissement enregistré pour l'instant.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var payment in Member.Payments)
+                    {
+                        <div class="gx-listrow">
+                            <div class="main">
+                                <div class="t">@payment.Label</div>
+                                <div class="s">@GxFormats.Date(payment.Date)</div>
+                            </div>
+                            <b class="amt">@GxFormats.Amount(payment.Amount)</b>
+                            <GxChip Tone="GxTone.Success">@payment.Status</GxChip>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+
+    <div class="gx-col">
+        <div class="gx-grid3">
+            <Kpi Label="Séances" Value="@Member.Stats.TotalLessons.ToString()" Sub="depuis l'inscription"/>
+            <Kpi Label="Présence"
+                 Value="@(Member.Stats.AttendanceRate is { } rate ? $"{rate} %" : "—")"
+                 Sub="sur 90 jours"/>
+            <Kpi Label="Visite"
+                 Value="@(Member.Stats.LastVisitOn is { } visit ? GxFormats.SinceLabel(visit, Today) : "—")"
+                 Sub="dernière venue"/>
+        </div>
+
+        <GxCard Padded="false">
+            <CardHead Title="Prochains cours"/>
+            <div style="padding:4px 18px 6px">
+                @if (Member.UpcomingLessons.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun cours à venir.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var lesson in Member.UpcomingLessons)
+                    {
+                        <div class="gx-listrow">
+                            <div class="main">
+                                <div class="t">@lesson.Name</div>
+                                <div class="s">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                            </div>
+                            <GxChip Tone="GxTone.Brand">Inscrit·e</GxChip>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Présences récentes"/>
+            <div style="padding:4px 18px 6px">
+                @if (Member.PastLessons.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun passage enregistré. Le pointage arrive avec les présences.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var lesson in Member.PastLessons.Take(5))
+                    {
+                        <div class="gx-listrow">
+                            <div class="main">
+                                <div class="t">@lesson.Name</div>
+                                <div class="s">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                            </div>
+                            <GxChip Tone="GxTone.Neutral">Passé</GxChip>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MemberDetailsPageDto Member { get; set; } = default!;
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnMessage { get; set; }
+    [Parameter] public EventCallback OnRenew { get; set; }
+    [Parameter] public EventCallback OnHistory { get; set; }
+
+    private IReadOnlyList<Crumb.Part> Crumbs =>
+    [
+        new("Accueil", "/"),
+        new("Membres", "/members"),
+        new(Member.FullName)
+    ];
+
+    private string Contact
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(Member.Email))
+            {
+                parts.Add(Member.Email);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Member.Phone))
+            {
+                parts.Add(Member.Phone);
+            }
+
+            parts.Add($"membre depuis {GxFormats.Month(Member.JoinedOn)}");
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    private int RemainingDays(MemberSubscriptionDto subscription)
+        => Math.Max(0, subscription.EndDate.DayNumber - Today.DayNumber);
+
+    private int RemainingPercent(MemberSubscriptionDto subscription)
+    {
+        var total = Math.Max(1, subscription.EndDate.DayNumber - subscription.StartDate.DayNumber);
+
+        return Math.Clamp((int)Math.Round(RemainingDays(subscription) * 100d / total), 0, 100);
+    }
+}

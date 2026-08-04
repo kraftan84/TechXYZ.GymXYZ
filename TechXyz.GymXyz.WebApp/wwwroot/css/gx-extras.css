@@ -44,6 +44,23 @@
 }
 .gx-avatar.sm { width: 30px; height: 30px; font-size: var(--text-2xs); }
 .gx-avatar.md { width: 40px; height: 40px; font-size: var(--text-sm); }
+.gx-avatar.lg { width: 56px; height: 56px; font-size: var(--text-xl); }
+.gx-avatar.xl { width: 72px; height: 72px; font-size: var(--text-2xl); }
+
+/* ---------- Quick actions on a mobile record ----------
+   The prototype draws these as divs; here they are real buttons and links, so
+   the browser's own chrome has to go. Behaviour, not decoration. */
+.gx-m-circbtn { border: 0; padding: 0; background: none; font-family: inherit; text-decoration: none; }
+.gx-m-circbtn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+
+/* ---------- Drawer form layout ----------
+   The prototype writes these two as inline styles on its Field / FieldRow
+   helpers; here they are named so the markup stays readable. Layout only. */
+.gx-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.gx-form-field { margin-bottom: 14px; }
+@media (max-width: 560px) {
+  .gx-form-row { grid-template-columns: 1fr; }
+}
 
 /* ---------- Login (design-system LoginScreen) ---------- */
 .gx-login {

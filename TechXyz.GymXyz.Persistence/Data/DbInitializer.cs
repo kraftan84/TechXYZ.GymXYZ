@@ -137,20 +137,84 @@ public static class DbInitializer
         });
         gym.AddCoach(new Coach("Léa", "Fontaine"));
 
-        gym.AddMember(new Member("Laetitia", "Moriceau")
+        foreach (var member in CreateDemoMembers())
         {
-            Email = "laetitia.moriceau@gymxyz.fr"
-        });
-        gym.AddMember(new Member("Amina", "Benali")
-        {
-            Email = "amina.benali@gymxyz.fr"
-        });
-        gym.AddMember(new Member("Lucas", "Martin")
-        {
-            Email = "lucas.martin@gymxyz.fr"
-        });
+            gym.AddMember(member);
+        }
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// The six members of the design hand-off demo set, same people as on every
+    /// other screen. Dates are relative to today so the demo never goes stale;
+    /// the subscription windows are what produce the three standings shown in
+    /// the prototype (four active, one expiring, one inactive).
+    /// </summary>
+    private static IEnumerable<Member> CreateDemoMembers()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        yield return CreateMember(
+            "Laetitia", "Moriceau", "laetitia.moriceau@gymxyz.fr", "06 12 34 56 78",
+            joinedMonthsAgo: 27, today,
+            subscriptionStartsInDays: -12, subscriptionEndsInDays: 18, numberOfLessons: 0,
+            notes: "Préfère les cours du matin. Vient surtout en début de semaine.");
+
+        yield return CreateMember(
+            "Camille", "Durand", "camille.durand@gymxyz.fr", "06 22 11 90 04",
+            joinedMonthsAgo: 17, today,
+            subscriptionStartsInDays: -25, subscriptionEndsInDays: 5, numberOfLessons: 10);
+
+        yield return CreateMember(
+            "Lucas", "Martin", "lucas.martin@gymxyz.fr", "06 80 45 12 33",
+            joinedMonthsAgo: 20, today,
+            subscriptionStartsInDays: -40, subscriptionEndsInDays: 50, numberOfLessons: 10);
+
+        yield return CreateMember(
+            "Amina", "Benali", "amina.benali@gymxyz.fr", "06 14 78 22 09",
+            joinedMonthsAgo: 28, today,
+            subscriptionStartsInDays: -8, subscriptionEndsInDays: 22, numberOfLessons: 0);
+
+        yield return CreateMember(
+            "Théo", "Garnier", "theo.garnier@gymxyz.fr", "06 55 32 87 41",
+            joinedMonthsAgo: 21, today,
+            subscriptionStartsInDays: -90, subscriptionEndsInDays: -25, numberOfLessons: 10);
+
+        yield return CreateMember(
+            "Sarah", "Cohen", "sarah.cohen@gymxyz.fr", "06 71 09 55 18",
+            joinedMonthsAgo: 37, today,
+            subscriptionStartsInDays: -3, subscriptionEndsInDays: 27, numberOfLessons: 0);
+    }
+
+    private static Member CreateMember(
+        string firstName,
+        string lastName,
+        string email,
+        string phone,
+        int joinedMonthsAgo,
+        DateOnly today,
+        int subscriptionStartsInDays,
+        int subscriptionEndsInDays,
+        int numberOfLessons,
+        string? notes = null)
+    {
+        return new Member(firstName, lastName)
+        {
+            Email = email,
+            Phone = phone,
+            JoinedOn = today.AddMonths(-joinedMonthsAgo),
+            Notes = notes,
+            Subscriptions =
+            [
+                new Subscription
+                {
+                    StartDate = today.AddDays(subscriptionStartsInDays),
+                    EndDate = today.AddDays(subscriptionEndsInDays),
+                    NumberOfLessons = numberOfLessons
+                }
+            ]
+        };
     }
 }

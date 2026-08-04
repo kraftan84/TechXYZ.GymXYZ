@@ -33,6 +33,13 @@ public sealed class UpdateMemberCommandHandler : IRequestHandler<UpdateMemberCom
         member.LastName = request.LastName.Trim();
         member.Email = AddressHelper.NormalizeOptional(request.Email);
         member.Phone = AddressHelper.NormalizeOptional(request.Phone);
+        member.BirthDate = request.BirthDate;
+        member.Notes = AddressHelper.NormalizeOptional(request.Notes);
+
+        if (request.JoinedOn is { } joinedOn)
+        {
+            member.JoinedOn = joinedOn;
+        }
 
         var updatedAddress = AddressHelper.BuildOptionalAddress(request.Street, request.ZipCode, request.City, request.Country);
         member.Address = AddressHelper.Apply(member.Address, updatedAddress);

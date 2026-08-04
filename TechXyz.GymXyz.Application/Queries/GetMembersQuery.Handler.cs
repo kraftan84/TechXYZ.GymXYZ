@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
+using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
-public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, List<MemberDto>>
+public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, MembersPageDto>
 {
     private readonly IGymDbContext _dbContext;
 
@@ -15,16 +16,71 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Li
         _dbContext = dbContext;
     }
 
-    public async Task<List<MemberDto>> Handle(GetMembersQuery request, CancellationToken cancellationToken)
+    public async Task<MembersPageDto> Handle(GetMembersQuery request, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var horizon = MemberStatusRules.HorizonFrom(today);
 
-        return await _dbContext.Members
-            .AsNoTracking()
-            .Where(member => member.IsActive)
+        var searched = ApplySearch(
+            _dbContext.Members
+                .AsNoTracking()
+                .Where(member => member.IsActive),
+            request.Search);
+
+        // The chip counts follow the search, so switching standing never shows a
+        // count the list cannot produce.
+        var totalCount = await searched.CountAsync(cancellationToken);
+        var expiringSoonCount = await searched.CountAsync(
+            MemberStatusRules.Matches(MemberStatus.ExpiringSoon, today, horizon), cancellationToken);
+        var inactiveCount = await searched.CountAsync(
+            MemberStatusRules.Matches(MemberStatus.Inactive, today, horizon), cancellationToken);
+
+        var filtered = request.Status is { } status
+            ? searched.Where(MemberStatusRules.Matches(status, today, horizon))
+            : searched;
+
+        var filteredCount = request.Status is null
+            ? totalCount
+            : await filtered.CountAsync(cancellationToken);
+
+        var pageSize = Math.Clamp(request.PageSize, 1, 200);
+        var page = Math.Max(1, request.Page);
+
+        var items = await filtered
             .OrderBy(member => member.LastName)
             .ThenBy(member => member.FirstName)
-            .SelectMemberDto(today)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .SelectMemberListItemDto(today)
             .ToListAsync(cancellationToken);
+
+        return new MembersPageDto(
+            items
+                .Select(item => item with
+                {
+                    Status = MemberStatusRules.Resolve(item.CurrentSubscriptionEndsOn, horizon)
+                })
+                .ToList(),
+            totalCount,
+            totalCount - expiringSoonCount - inactiveCount,
+            expiringSoonCount,
+            inactiveCount,
+            filteredCount);
+    }
+
+    private static IQueryable<Member> ApplySearch(IQueryable<Member> query, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return query;
+        }
+
+        var term = search.Trim();
+
+        return query.Where(member =>
+            member.FirstName.Contains(term) ||
+            member.LastName.Contains(term) ||
+            (member.Email != null && member.Email.Contains(term)) ||
+            (member.Phone != null && member.Phone.Contains(term)));
     }
 }

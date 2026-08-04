@@ -20,7 +20,10 @@ public static class QueryableProjectionExtensions
             tenant.WordmarkText,
             tenant.WordmarkPrefix,
             tenant.WordmarkAccent,
-            tenant.IsSolo));
+            tenant.IsSolo)
+        {
+            City = tenant.City
+        });
     }
 
     public static IQueryable<CoachDto> SelectCoachDto(this IQueryable<Coach> query)
@@ -38,6 +41,28 @@ public static class QueryableProjectionExtensions
                     coach.Address.ZipCode,
                     coach.Address.City,
                     coach.Address.Country)));
+    }
+
+    /// <summary>
+    /// Rows of the members table. <c>CurrentSubscriptionEndsOn</c> is the latest
+    /// end date among the subscriptions covering <paramref name="today"/> —
+    /// the single value the standing rule reads.
+    /// </summary>
+    public static IQueryable<MemberListItemDto> SelectMemberListItemDto(this IQueryable<Member> query, DateOnly today)
+    {
+        return query.Select(member => new MemberListItemDto(
+            member.Id,
+            member.FirstName,
+            member.LastName,
+            member.Email,
+            member.Phone,
+            member.JoinedOn,
+            member.Subscriptions!
+                .Where(subscription =>
+                    subscription.IsActive &&
+                    subscription.StartDate <= today &&
+                    subscription.EndDate >= today)
+                .Max(subscription => (DateOnly?)subscription.EndDate)));
     }
 
     public static IQueryable<MemberDto> SelectMemberDto(this IQueryable<Member> query, DateOnly today)

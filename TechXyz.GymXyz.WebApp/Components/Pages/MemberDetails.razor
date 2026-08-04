@@ -2,656 +2,289 @@
 @using FluentValidation
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
-@using TechXyz.GymXyz.Application.Models
 @using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Members
+@implements IDisposable
+
 @inject NavigationManager NavManager
-@inject BreadcrumbService BreadcrumbService
 @inject ISender Sender
 @inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader
 
-<PageTitle>Membre</PageTitle>
+<PageTitle>@(_member?.FullName ?? "Membre")</PageTitle>
 
-@if (isLoading)
+@if (_isLoading)
 {
-    <FluentCard class="member-card">
-        <h2>Chargement du membre...</h2>
-    </FluentCard>
+    <EmptyState Icon="@GxIconPaths.Users" Title="Chargement de la fiche…"/>
 }
-else if (memberNotFound)
+else if (_member is null)
 {
-    <FluentCard class="member-card">
-        <h2>Membre introuvable</h2>
-        <FluentButton Appearance="Appearance.Outline" @onclick="GoToMembersPage">
+    <EmptyState Icon="@GxIconPaths.Users"
+                Title="Membre introuvable"
+                Text="Cette fiche n'existe plus ou a été désactivée.">
+        <FluentButton Appearance="Appearance.Outline" @onclick="GoBackToList">
             Retour aux membres
         </FluentButton>
-    </FluentCard>
+    </EmptyState>
 }
-else if (memberDetails is null)
+else if (Responsive.IsMobile)
 {
-    <FluentCard class="member-card">
-        <h2>Impossible de charger le membre</h2>
-        <FluentButton Appearance="Appearance.Outline" @onclick="GoToMembersPage">
-            Retour aux membres
-        </FluentButton>
-    </FluentCard>
+    <MemberDetailsMobile Member="_member"
+                         Today="_today"
+                         OnEdit="OpenEditDrawer"
+                         OnHistory="OpenSubscriptionsDrawer"/>
 }
 else
 {
-    <div class="member-details-page">
-        <div class="member-header">
-            <div class="member-identity">
-                <img class="member-avatar"
-                     src="images/avatar-placeholder.svg"
-                     alt="@($"Photo de {memberDetails!.FirstName} {memberDetails.LastName}")" />
-                <div>
-                    <h1>@memberDetails.FirstName @memberDetails.LastName</h1>
-                    <p>@memberDetails.Email · @memberDetails.Phone</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="member-layout">
-            <FluentCard class="member-card">
-                <div class="card-header">
-                    <h2>Informations</h2>
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenEditDrawer">
-                        Editer
-                    </FluentButton>
-                </div>
-                <div class="detail-list">
-                    <div class="detail-row">
-                        <span class="detail-label">Email</span>
-                        <span class="detail-value">@memberDetails.Email</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Telephone</span>
-                        <span class="detail-value">@memberDetails.Phone</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Adresse</span>
-                        <span class="detail-value">@FormatAddress(memberDetails.Address)</span>
-                    </div>
-                </div>
-            </FluentCard>
-
-            <FluentCard class="member-card">
-                <h2>Statistiques</h2>
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-label">Seances totales</div>
-                        <div class="kpi-content">
-                            <div class="kpi-value">@memberDetails.Stats.TotalLessons</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Taux de presence</div>
-                        <div class="kpi-content">
-                            <div class="progress-ring" style="--progress:@memberDetails.Stats.AttendanceRate;">
-                                <span>@($"{memberDetails.Stats.AttendanceRate}%")</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Derniere visite</div>
-                        <div class="kpi-content">
-                            <div class="kpi-value">@(memberDetails.Stats.LastVisit?.ToString("dd/MM/yyyy") ?? "-")</div>
-                        </div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-label">Abonnement restant</div>
-                        <div class="kpi-content">
-                            <div class="progress-ring" style="--progress:@memberDetails.Stats.SubscriptionRemainingPercent;">
-                                <span>@($"{memberDetails.Stats.SubscriptionRemainingPercent}%")</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </FluentCard>
-
-            <FluentCard class="member-card">
-                <div class="card-header">
-                    <h2>Abonnements</h2>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="OpenSubscriptionCreateDrawer">
-                        + Ajouter
-                    </FluentButton>
-                </div>
-                <div class="subscription-list">
-                    @foreach (var subscription in memberDetails.Subscriptions)
-                    {
-                        <button class="subscription-item" type="button" @onclick="() => OpenSubscriptionDetailsDrawer(subscription)">
-                            <div class="subscription-main">
-                                <div class="subscription-name">@GetSubscriptionTitle(subscription)</div>
-                                <div class="subscription-dates">
-                                    @FormatDate(subscription.StartDate) - @FormatDate(subscription.EndDate)
-                                </div>
-                                <div class="subscription-lessons">
-                                    @subscription.LessonsRemaining / @subscription.LessonsTotal seances restantes
-                                </div>
-                                <div class="progress-bar" role="progressbar"
-                                     aria-valuemin="0"
-                                     aria-valuemax="100"
-                                     aria-valuenow="@GetLessonsRemainingPercent(subscription)"
-                                     style="--progress:@GetLessonsRemainingPercent(subscription);">
-                                    <span></span>
-                                </div>
-                            </div>
-                            <span class="subscription-status @GetSubscriptionStatusClass(subscription.Status)">
-                                @GetSubscriptionStatusLabel(subscription.Status)
-                            </span>
-                        </button>
-                    }
-                </div>
-            </FluentCard>
-
-            <FluentCard class="member-card">
-                <h2>Cours et invitations</h2>
-                <div class="lesson-list">
-                    @foreach (var item in memberDetails.Lessons)
-                    {
-                        <a class="lesson-item lesson-item-link" href="@($"/lessons/{item.Id}")">
-                            <div>
-                                <div class="lesson-title">@item.Name</div>
-                                <div class="lesson-meta">@FormatLessonDate(item.StartDate, item.EndDate) · @FormatLessonType(item.Type)</div>
-                                <div class="lesson-progress-line">
-                                    <span class="lesson-places">@item.RemainingSpots / @item.Capacity places</span>
-                                    <div class="progress-bar" role="progressbar"
-                                         aria-valuemin="0"
-                                         aria-valuemax="100"
-                                         aria-valuenow="@GetLessonAvailabilityPercent(item)"
-                                         style="--progress:@GetLessonAvailabilityPercent(item);">
-                                        <span></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <span class="lesson-status @GetInviteStatusClass(item.Status)">
-                                @GetInviteStatusLabel(item.Status)
-                            </span>
-                        </a>
-                    }
-                </div>
-            </FluentCard>
-        </div>
+    <div class="gx-screen">
+        <MemberDetailsDesktop Member="_member"
+                              Today="_today"
+                              OnEdit="OpenEditDrawer"
+                              OnMessage="SendMessage"
+                              OnRenew="OpenRenewDrawer"
+                              OnHistory="OpenSubscriptionsDrawer"/>
     </div>
 }
 
-@if (isDrawerOpen && memberDetails is not null)
+@if (_member is not null && _drawer == DrawerMode.Edit)
 {
-    <DrawerShell DrawerClass="member-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
-        <ChildContent>
-            <div class="drawer-content">
-                @if (drawerMode == DrawerMode.SubscriptionDetails && selectedSubscription is not null)
-                {
-                    <div class="drawer-section">
-                        <div class="drawer-field">
-                            <span class="drawer-label">Statut</span>
-                            <span class="drawer-value">@GetSubscriptionStatusLabel(selectedSubscription.Status)</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Debut</span>
-                            <span class="drawer-value">@FormatDate(selectedSubscription.StartDate)</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Fin</span>
-                            <span class="drawer-value">@FormatDate(selectedSubscription.EndDate)</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Seances achetees</span>
-                            <span class="drawer-value">@selectedSubscription.LessonsTotal</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Seances restantes</span>
-                            <span class="drawer-value">@selectedSubscription.LessonsRemaining</span>
-                        </div>
-                        <div class="drawer-field">
-                            <span class="drawer-label">Progression</span>
-                            <div class="progress-bar" role="progressbar"
-                                 aria-valuemin="0"
-                                 aria-valuemax="100"
-                                 aria-valuenow="@GetLessonsRemainingPercent(selectedSubscription)"
-                                 style="--progress:@GetLessonsRemainingPercent(selectedSubscription);">
-                                <span></span>
-                            </div>
-                        </div>
-                    </div>
-                }
-                else if (drawerMode == DrawerMode.EditDetails)
-                {
-                    <PersonEditForm Model="editModel" />
-                }
-                else if (drawerMode == DrawerMode.SubscriptionCreate || drawerMode == DrawerMode.SubscriptionEdit)
-                {
-                    <div class="drawer-form">
-                        <FluentDatePicker Label="Date de debut" @bind-Value="subscriptionEditModel.StartDatePart" />
-                        <FluentDatePicker Label="Date de fin" @bind-Value="subscriptionEditModel.EndDatePart" />
-                        <FluentNumberField Label="Seances achetees" @bind-Value="subscriptionEditModel.LessonsTotal" />
-                    </div>
-                }
-            </div>
-        </ChildContent>
-        <FooterContent>
-            @if (drawerMode == DrawerMode.EditDetails)
-            {
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="CloseDrawer">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveMemberAsync">
-                        Enregistrer
-                    </FluentButton>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.SubscriptionDetails && selectedSubscription is not null)
-            {
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenSubscriptionEditDrawer">
-                        Editer
-                    </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteSubscriptionAsync">
-                        Supprimer
-                    </FluentButton>
-                </div>
-            }
-            else if (drawerMode == DrawerMode.SubscriptionCreate || drawerMode == DrawerMode.SubscriptionEdit)
-            {
-                <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="CancelSubscriptionEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveSubscriptionAsync">
-                        @(drawerMode == DrawerMode.SubscriptionCreate ? "Creer" : "Enregistrer")
-                    </FluentButton>
-                </div>
-            }
-        </FooterContent>
-    </DrawerShell>
+    <MemberDrawer Model="_editModel"
+                  IsNew="false"
+                  IsSaving="_isSaving"
+                  EditingSubtitle="@($"{_member.FullName} · membre depuis {GxFormats.Month(_member.JoinedOn)}")"
+                  OnSave="SaveMemberAsync"
+                  OnCancel="CloseDrawer"
+                  OnDelete="DeleteMemberAsync"/>
+}
+
+@if (_member is not null && _drawer is DrawerMode.Subscriptions or DrawerMode.Renew)
+{
+    <MemberSubscriptionsDrawer Subscriptions="_member.Subscriptions"
+                               CurrentSubscription="_member.CurrentSubscription"
+                               Subtitle="@_member.FullName"
+                               StartOnNew="@(_drawer == DrawerMode.Renew)"
+                               OnClose="CloseDrawer"
+                               OnCreate="CreateSubscriptionAsync"
+                               OnUpdate="UpdateSubscriptionAsync"
+                               OnDelete="DeleteSubscriptionAsync"/>
 }
 
 @code {
-    [Parameter]
-    public int MemberId { get; set; }
-
-    private MemberDetailsPageDto? memberDetails;
-    private MemberSubscriptionDto? selectedSubscription;
-    private DrawerMode drawerMode = DrawerMode.None;
-    private MemberEditModel editModel = new();
-    private SubscriptionEditModel subscriptionEditModel = new();
-    private bool isLoading = true;
-    private bool memberNotFound;
-    private bool isDrawerOpen => drawerMode != DrawerMode.None;
-    private string drawerTitle => drawerMode switch
+    private enum DrawerMode
     {
-        DrawerMode.EditDetails => "Editer le membre",
-        DrawerMode.SubscriptionCreate => "Nouvel abonnement",
-        DrawerMode.SubscriptionEdit => "Modifier l'abonnement",
-        DrawerMode.SubscriptionDetails when selectedSubscription is not null => GetSubscriptionTitle(selectedSubscription),
-        _ => "Details"
-    };
+        None,
+        Edit,
+        Subscriptions,
+        Renew
+    }
+
+    [Parameter] public int MemberId { get; set; }
+
+    private readonly DateOnly _today = DateOnly.FromDateTime(DateTime.Today);
+
+    private MemberDetailsPageDto? _member;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private DrawerMode _drawer = DrawerMode.None;
+    private MemberEditModel _editModel = new();
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
-        await RefreshMemberAsync();
+        await RefreshAsync();
     }
 
-    private async Task RefreshMemberAsync()
+    private async Task RefreshAsync()
     {
-        isLoading = true;
-        memberNotFound = false;
-
-        var loaded = false;
-        await UserFeedback.ExecuteAsync(async () =>
-        {
-            memberDetails = await Sender.Send(new GetMemberDetailsPageQuery(MemberId));
-            loaded = true;
-        }, "charger les details du membre");
-
-        if (!loaded)
-        {
-            isLoading = false;
-            return;
-        }
-
-        if (memberDetails is null)
-        {
-            memberNotFound = true;
-            BreadcrumbService.SetItems(
-            [
-                new BreadcrumbItem { IsHome = true, Href = "/" },
-                new BreadcrumbItem { Text = "Membres", Href = "/members" },
-                new BreadcrumbItem { Text = "Introuvable" }
-            ]);
-
-            isLoading = false;
-            return;
-        }
-
-        BreadcrumbService.SetItems(
-        [
-            new BreadcrumbItem { IsHome = true, Href = "/" },
-            new BreadcrumbItem { Text = "Membres", Href = "/members" },
-            new BreadcrumbItem { Text = $"{memberDetails.FirstName} {memberDetails.LastName}" }
-        ]);
-
-        isLoading = false;
-    }
-
-    private static string FormatAddress(AddressDto? address)
-    {
-        if (address is null)
-        {
-            return "-";
-        }
-
-        var parts = new List<string> { address.Street, address.ZipCode, address.City, address.Country }
-            .Where(value => !string.IsNullOrWhiteSpace(value));
-        return string.Join(", ", parts);
-    }
-
-    private static string FormatLessonType(LessonType type)
-    {
-        return type == LessonType.Collective ? "Collectif" : "Prive";
-    }
-
-    private static string FormatLessonDate(DateTime start, DateTime end)
-    {
-        return $"{start:dd/MM/yyyy} · {start:HH:mm} - {end:HH:mm}";
-    }
-
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("dd/MM/yyyy");
-    }
-
-    private static int GetLessonsRemainingPercent(MemberSubscriptionDto subscription)
-    {
-        if (subscription.LessonsTotal <= 0)
-        {
-            return 0;
-        }
-
-        return (int)Math.Round(subscription.LessonsRemaining * 100d / subscription.LessonsTotal);
-    }
-
-    private static string GetSubscriptionTitle(MemberSubscriptionDto subscription)
-    {
-        return $"Abonnement {subscription.LessonsTotal} seances";
-    }
-
-    private static int GetLessonAvailabilityPercent(MemberLessonDto item)
-    {
-        if (item.Capacity <= 0)
-        {
-            return 0;
-        }
-
-        return (int)Math.Round(item.RemainingSpots * 100d / item.Capacity);
-    }
-
-    private static string GetInviteStatusLabel(MemberLessonStatus status)
-    {
-        return status switch
-        {
-            MemberLessonStatus.Confirmed => "Confirme",
-            MemberLessonStatus.Pending => "En attente",
-            _ => "Termine"
-        };
-    }
-
-    private static string GetInviteStatusClass(MemberLessonStatus status)
-    {
-        return status switch
-        {
-            MemberLessonStatus.Confirmed => "status-confirmed",
-            MemberLessonStatus.Pending => "status-pending",
-            _ => "status-completed"
-        };
-    }
-
-    private static string GetSubscriptionStatusLabel(MemberSubscriptionStatus status)
-    {
-        return status switch
-        {
-            MemberSubscriptionStatus.Active => "Actif",
-            MemberSubscriptionStatus.Paused => "En pause",
-            _ => "Expire"
-        };
-    }
-
-    private static string GetSubscriptionStatusClass(MemberSubscriptionStatus status)
-    {
-        return status switch
-        {
-            MemberSubscriptionStatus.Active => "status-active",
-            MemberSubscriptionStatus.Paused => "status-paused",
-            _ => "status-expired"
-        };
-    }
-
-    private void OpenSubscriptionDetailsDrawer(MemberSubscriptionDto subscription)
-    {
-        selectedSubscription = subscription;
-        drawerMode = DrawerMode.SubscriptionDetails;
-    }
-
-    private void OpenSubscriptionCreateDrawer()
-    {
-        subscriptionEditModel = CreateDefaultSubscriptionEditModel();
-        selectedSubscription = null;
-        drawerMode = DrawerMode.SubscriptionCreate;
-    }
-
-    private void OpenSubscriptionEditDrawer()
-    {
-        if (selectedSubscription is null)
-        {
-            return;
-        }
-
-        subscriptionEditModel = new SubscriptionEditModel
-        {
-            StartDatePart = selectedSubscription.StartDate.ToDateTime(TimeOnly.MinValue),
-            EndDatePart = selectedSubscription.EndDate.ToDateTime(TimeOnly.MinValue),
-            LessonsTotal = selectedSubscription.LessonsTotal
-        };
-        drawerMode = DrawerMode.SubscriptionEdit;
-    }
-
-    private async Task SaveSubscriptionAsync()
-    {
-        if (memberDetails is null)
-        {
-            return;
-        }
-
-        if (drawerMode == DrawerMode.SubscriptionCreate)
-        {
-            await UserFeedback.ExecuteAsync(async () =>
-            {
-                var defaultStartDate = GetDefaultSubscriptionStartDate();
-                var startDate = ToDateOnly(subscriptionEditModel.StartDatePart, defaultStartDate);
-                var endDate = ToDateOnly(subscriptionEditModel.EndDatePart, GetDefaultSubscriptionEndDate(startDate));
-
-                await Sender.Send(new CreateSubscriptionCommand(
-                    memberDetails.Id,
-                    startDate,
-                    endDate,
-                    subscriptionEditModel.LessonsTotal));
-
-                await RefreshMemberAsync();
-                CloseDrawer();
-            }, "creer l'abonnement", "Abonnement cree.");
-            return;
-        }
-
-        if (drawerMode == DrawerMode.SubscriptionEdit && selectedSubscription is not null)
-        {
-            await UserFeedback.ExecuteAsync(async () =>
-            {
-                var updated = await Sender.Send(new UpdateSubscriptionCommand(
-                    selectedSubscription.Id,
-                    ToDateOnly(subscriptionEditModel.StartDatePart, selectedSubscription.StartDate),
-                    ToDateOnly(subscriptionEditModel.EndDatePart, selectedSubscription.EndDate),
-                    subscriptionEditModel.LessonsTotal));
-                if (!updated)
-                {
-                    throw new ValidationException("Abonnement introuvable.");
-                }
-
-                await RefreshMemberAsync();
-                selectedSubscription = memberDetails?.Subscriptions.FirstOrDefault(subscription => subscription.Id == selectedSubscription.Id);
-                if (selectedSubscription is null)
-                {
-                    CloseDrawer();
-                    return;
-                }
-
-                drawerMode = DrawerMode.SubscriptionDetails;
-            }, "mettre a jour l'abonnement", "Abonnement mis a jour.");
-        }
-    }
-
-    private async Task DeleteSubscriptionAsync()
-    {
-        if (selectedSubscription is null)
-        {
-            return;
-        }
+        _isLoading = true;
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            var deleted = await Sender.Send(new DeleteSubscriptionCommand(selectedSubscription.Id));
-            if (!deleted)
-            {
-                throw new ValidationException("Abonnement introuvable.");
-            }
+            _member = await Sender.Send(new GetMemberDetailsPageQuery(MemberId));
+        }, "charger la fiche du membre");
 
-            await RefreshMemberAsync();
-            CloseDrawer();
-        }, "supprimer l'abonnement", "Abonnement supprime.");
+        _isLoading = false;
+
+        // The mobile shell shows the first name and a back arrow on a record.
+        if (_member is not null)
+        {
+            MobileHeader.UseSubHeader(_member.FirstName, GoBackToList);
+        }
+        else
+        {
+            MobileHeader.UseRootHeader();
+        }
     }
 
-    private void CancelSubscriptionEdit()
-    {
-        if (drawerMode == DrawerMode.SubscriptionEdit && selectedSubscription is not null)
-        {
-            drawerMode = DrawerMode.SubscriptionDetails;
-            return;
-        }
+    private void GoBackToList() => NavManager.NavigateTo("/members");
 
-        CloseDrawer();
+    private void SendMessage()
+    {
+        if (_member?.Email is { } email)
+        {
+            NavManager.NavigateTo($"mailto:{email}", forceLoad: true);
+        }
     }
 
     private void OpenEditDrawer()
     {
-        if (memberDetails is null)
+        if (_member is null)
         {
             return;
         }
 
-        editModel = new MemberEditModel
+        _editModel = new MemberEditModel
         {
-            FirstName = memberDetails.FirstName,
-            LastName = memberDetails.LastName,
-            Email = memberDetails.Email ?? string.Empty,
-            Phone = memberDetails.Phone ?? string.Empty,
-            Street = memberDetails.Address?.Street ?? string.Empty,
-            ZipCode = memberDetails.Address?.ZipCode ?? string.Empty,
-            City = memberDetails.Address?.City ?? string.Empty,
-            Country = memberDetails.Address?.Country ?? string.Empty
+            FirstName = _member.FirstName,
+            LastName = _member.LastName,
+            Email = _member.Email,
+            Phone = _member.Phone,
+            BirthDate = _member.BirthDate?.ToDateTime(TimeOnly.MinValue),
+            JoinedOn = _member.JoinedOn.ToDateTime(TimeOnly.MinValue),
+            Notes = _member.Notes,
+            Street = _member.Address?.Street,
+            ZipCode = _member.Address?.ZipCode,
+            City = _member.Address?.City,
+            Country = _member.Address?.Country
         };
 
-        drawerMode = DrawerMode.EditDetails;
+        _drawer = DrawerMode.Edit;
+    }
+
+    private void OpenSubscriptionsDrawer() => _drawer = DrawerMode.Subscriptions;
+
+    private void OpenRenewDrawer() => _drawer = DrawerMode.Renew;
+
+    private void CloseDrawer()
+    {
+        _drawer = DrawerMode.None;
+        _isSaving = false;
     }
 
     private async Task SaveMemberAsync()
     {
-        if (memberDetails is null)
+        if (_member is null || _isSaving)
         {
             return;
         }
 
+        _isSaving = true;
+
         await UserFeedback.ExecuteAsync(async () =>
         {
             var updated = await Sender.Send(new UpdateMemberCommand(
-                memberDetails.Id,
-                editModel.FirstName,
-                editModel.LastName,
-                editModel.Email,
-                editModel.Phone,
-                editModel.Street,
-                editModel.ZipCode,
-                editModel.City,
-                editModel.Country));
+                _member.Id,
+                _editModel.FirstName,
+                _editModel.LastName,
+                _editModel.Email,
+                _editModel.Phone,
+                _editModel.Street,
+                _editModel.ZipCode,
+                _editModel.City,
+                _editModel.Country,
+                _editModel.JoinedOnOnly,
+                _editModel.BirthDateOnly,
+                _editModel.Notes));
 
             if (!updated)
             {
                 throw new ValidationException("Membre introuvable.");
             }
 
-            await RefreshMemberAsync();
             CloseDrawer();
-        }, "mettre a jour le membre", "Membre mis a jour.");
+            await RefreshAsync();
+        }, "mettre à jour le membre", "Membre mis à jour.");
+
+        _isSaving = false;
     }
 
-    private void CloseDrawer()
+    private async Task DeleteMemberAsync()
     {
-        drawerMode = DrawerMode.None;
-        selectedSubscription = null;
-    }
-
-    private void GoToMembersPage()
-    {
-        NavManager.NavigateTo("/members");
-    }
-
-    private static DateOnly ToDateOnly(DateTime? value, DateOnly fallback)
-    {
-        return value.HasValue ? DateOnly.FromDateTime(value.Value) : fallback;
-    }
-
-    private static DateOnly GetDefaultSubscriptionStartDate()
-    {
-        return DateOnly.FromDateTime(DateTime.Today);
-    }
-
-    private static DateOnly GetDefaultSubscriptionEndDate(DateOnly startDate)
-    {
-        return startDate.AddYears(1);
-    }
-
-    private static SubscriptionEditModel CreateDefaultSubscriptionEditModel()
-    {
-        var startDate = GetDefaultSubscriptionStartDate();
-        var endDate = GetDefaultSubscriptionEndDate(startDate);
-
-        return new SubscriptionEditModel
+        if (_member is null)
         {
-            StartDatePart = startDate.ToDateTime(TimeOnly.MinValue),
-            EndDatePart = endDate.ToDateTime(TimeOnly.MinValue),
-            LessonsTotal = 10
-        };
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeleteMemberCommand(_member.Id));
+            if (!deleted)
+            {
+                throw new ValidationException("Membre introuvable.");
+            }
+
+            CloseDrawer();
+            GoBackToList();
+        }, "supprimer le membre", "Membre supprimé.");
     }
 
-    private enum DrawerMode
+    private async Task CreateSubscriptionAsync(MemberSubscriptionsDrawer.SubscriptionInput input)
     {
-        None,
-        SubscriptionDetails,
-        EditDetails,
-        SubscriptionCreate,
-        SubscriptionEdit
+        if (_member is null)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new CreateSubscriptionCommand(
+                _member.Id,
+                input.StartDate,
+                input.EndDate,
+                input.LessonsTotal));
+
+            await RefreshAsync();
+        }, "créer l'abonnement", "Abonnement créé.");
     }
 
-    private sealed class MemberEditModel : IPersonEditModel
+    private async Task UpdateSubscriptionAsync(MemberSubscriptionsDrawer.SubscriptionInput input)
     {
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string? Email { get; set; } = string.Empty;
-        public string? Phone { get; set; } = string.Empty;
-        public string Street { get; set; } = string.Empty;
-        public string ZipCode { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
+        if (input.Id is not { } subscriptionId)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var updated = await Sender.Send(new UpdateSubscriptionCommand(
+                subscriptionId,
+                input.StartDate,
+                input.EndDate,
+                input.LessonsTotal));
+
+            if (!updated)
+            {
+                throw new ValidationException("Abonnement introuvable.");
+            }
+
+            await RefreshAsync();
+        }, "mettre à jour l'abonnement", "Abonnement mis à jour.");
     }
 
-    private sealed class SubscriptionEditModel
+    private async Task DeleteSubscriptionAsync(int subscriptionId)
     {
-        public DateTime? StartDatePart { get; set; }
-        public DateTime? EndDatePart { get; set; }
-        public int LessonsTotal { get; set; }
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeleteSubscriptionCommand(subscriptionId));
+            if (!deleted)
+            {
+                throw new ValidationException("Abonnement introuvable.");
+            }
+
+            await RefreshAsync();
+        }, "supprimer l'abonnement", "Abonnement supprimé.");
+    }
+
+    private void OnShellChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
+        MobileHeader.UseRootHeader();
     }
 }

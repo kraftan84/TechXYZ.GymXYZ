@@ -8,16 +8,29 @@ public sealed record MemberDetailsPageDto(
     string LastName,
     string? Email,
     string? Phone,
+    DateOnly JoinedOn,
+    DateOnly? BirthDate,
+    string? Notes,
     AddressDto? Address,
-    MemberStatsDto Stats,
+    MemberStatus Status,
+    MemberSubscriptionDto? CurrentSubscription,
     List<MemberSubscriptionDto> Subscriptions,
-    List<MemberLessonDto> Lessons);
+    List<MemberLessonDto> UpcomingLessons,
+    List<MemberLessonDto> PastLessons,
+    List<MemberPaymentDto> Payments,
+    MemberStatsDto Stats)
+{
+    public string FullName => $"{FirstName} {LastName}";
+}
 
+/// <summary>
+/// Numbers on the record. The two nullable ones are produced by attendance
+/// check-in and stay unset until lot 6 — they are shown as "—", never guessed.
+/// </summary>
 public sealed record MemberStatsDto(
     int TotalLessons,
-    int AttendanceRate,
-    DateOnly? LastVisit,
-    int SubscriptionRemainingPercent);
+    int? AttendanceRate,
+    DateOnly? LastVisitOn);
 
 public sealed record MemberSubscriptionDto(
     int Id,
@@ -34,6 +47,13 @@ public enum MemberSubscriptionStatus
     Expired
 }
 
+/// <summary>Placeholder shape for the payments card. Filled at lot 7.</summary>
+public sealed record MemberPaymentDto(
+    DateOnly Date,
+    string Label,
+    decimal Amount,
+    string Status);
+
 public sealed record MemberLessonDto(
     int Id,
     string Name,
@@ -42,13 +62,5 @@ public sealed record MemberLessonDto(
     DateTime EndDate,
     string CoachFirstName,
     string CoachLastName,
-    MemberLessonStatus Status,
     int Capacity,
     int RemainingSpots);
-
-public enum MemberLessonStatus
-{
-    Pending,
-    Confirmed,
-    Completed
-}

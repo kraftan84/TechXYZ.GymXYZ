@@ -19,4 +19,8 @@ public sealed record TenantBrandDto(
     string? WordmarkText,
     string? WordmarkPrefix,
     string? WordmarkAccent,
-    bool IsSolo);
+    bool IsSolo)
+{
+    /// <summary>Town the customer operates in — "6 membres · Lyon 3ᵉ".</summary>
+    public string? City { get; init; }
+}

@@ -25,6 +25,15 @@ public static class GxIconPaths
     public const string ChevronRight = "chevR";
     public const string ChevronLeft = "chevL";
     public const string Close = "x";
+    public const string Plus = "plus";
+    public const string Filter = "filter";
+    public const string Mail = "mail";
+    public const string Phone = "phone";
+    public const string Trash = "trash";
+    public const string History = "history";
+    public const string Clock = "clock";
+    public const string Alert = "alert";
+    public const string Euro = "euro";
 
     private static readonly Dictionary<string, string> Paths = new(StringComparer.OrdinalIgnoreCase)
     {

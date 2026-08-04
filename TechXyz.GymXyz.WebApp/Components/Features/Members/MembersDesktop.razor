@@ -1,0 +1,189 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Members
+
+@* Desktop members list: page head, filter chips, table. Presentation only —
+   every piece of state and every action comes from Members.razor. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Membres" Subtitle="@Subtitle">
+    <FluentSearch Placeholder="Nom, e-mail, téléphone…"
+                  aria-label="Rechercher un membre"
+                  Immediate="true"
+                  ImmediateDelay="250"
+                  style="width:240px"
+                  Value="@Search"
+                  ValueChanged="OnSearchChanged"/>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Nouveau membre
+    </FluentButton>
+</PageHead>
+
+<div class="gx-filters">
+    @foreach (var filter in MemberFilters.All)
+    {
+        var isOn = Status == filter.Status;
+        <button type="button"
+                class="gx-fchip @(filter.Status == MemberStatus.ExpiringSoon ? "warn" : null) @(isOn ? "on" : null)"
+                aria-pressed="@isOn"
+                @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
+            @filter.DesktopLabel · @GxFormats.Count(CountFor(filter.Status))
+        </button>
+    }
+</div>
+
+<GxCard Padded="false">
+    @if (Page.Items.Count == 0)
+    {
+        <EmptyState Icon="@GxIconPaths.Users"
+                    Title="Aucun membre pour l'instant"
+                    Text="@EmptyText"/>
+    }
+    else
+    {
+        <div class="gx-tbl-scroll" style="padding:6px 10px 2px">
+            <table class="gx-tbl">
+                <thead>
+                <tr>
+                    <th>Membre</th>
+                    <th>Abonnement</th>
+                    <th>Présence</th>
+                    <th>Dernière visite</th>
+                    <th>Statut</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var member in Page.Items)
+                {
+                    <tr tabindex="0"
+                        aria-label="@($"Ouvrir la fiche de {member.FullName}")"
+                        @onclick="() => OnOpen.InvokeAsync(member)"
+                        @onkeydown="args => OnRowKeyDown(args, member)">
+                        <td>
+                            <div class="u">
+                                <GxAvatar Name="@member.FullName" Size="md"/>
+                                <div>
+                                    <div class="nm">@member.FullName</div>
+                                    <div class="em">@(member.Email ?? "—")</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            @if (member.PlanLabel is { } plan)
+                            {
+                                <div style="font-size:var(--text-sm);color:var(--text-body)">@plan</div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+                                    <GxBar Percent="@(member.CreditsPercent ?? 0)"
+                                           Tone="@(member.CreditsPercent <= 30 ? GxTone.Warning : GxTone.Brand)"
+                                           Width="90px"
+                                           AriaLabel="@($"Crédits restants : {member.CreditsLabel}")"/>
+                                    <span style="font-size:var(--text-2xs);color:var(--text-muted)">@member.CreditsLabel</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-subtle)" title="@PendingHint">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (member.AttendanceRate is { } rate)
+                            {
+                                <b style="color:var(--text-strong)">@rate&nbsp;%</b>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-subtle)" title="@PendingHint">—</span>
+                            }
+                        </td>
+                        <td style="color:var(--text-muted)">
+                            @(member.LastVisitOn is { } visit ? GxFormats.SinceLabel(visit, Today) : "—")
+                        </td>
+                        <td>
+                            <GxChip Tone="@MemberFilters.ToneFor(member.Status)"
+                                    Icon="@(member.Status == MemberStatus.Active ? GxIconPaths.Check : null)">
+                                @MemberFilters.LabelFor(member.Status)
+                            </GxChip>
+                        </td>
+                        <td style="text-align:right;color:var(--text-subtle)">
+                            <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</GxCard>
+
+@if (PageCount > 1)
+{
+    <div class="gx-filters" style="margin-top:14px">
+        <span style="font-size:var(--text-xs);color:var(--text-muted)">
+            Page @CurrentPage sur @PageCount · @GxFormats.Plural(Page.FilteredCount, "membre", "membres")
+        </span>
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Outline" Disabled="@(CurrentPage <= 1)"
+                          @onclick="() => OnPageChanged.InvokeAsync(CurrentPage - 1)">
+                Précédent
+            </FluentButton>
+            <FluentButton Appearance="Appearance.Outline" Disabled="@(CurrentPage >= PageCount)"
+                          @onclick="() => OnPageChanged.InvokeAsync(CurrentPage + 1)">
+                Suivant
+            </FluentButton>
+        </span>
+    </div>
+}
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Membres")
+    ];
+
+    private const string PendingHint = "Disponible avec le pointage et les abonnements.";
+
+    [Parameter, EditorRequired] public MembersPageDto Page { get; set; } = MembersPageDto.Empty;
+    [Parameter] public string? Search { get; set; }
+    [Parameter] public MemberStatus? Status { get; set; }
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageCount { get; set; } = 1;
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<MemberStatus?> OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    [Parameter] public EventCallback<MemberListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle
+    {
+        get
+        {
+            var members = GxFormats.Plural(Page.TotalCount, "membre", "membres");
+
+            return Page.ExpiringSoonCount switch
+            {
+                0 => members,
+                1 => $"{members} · 1 abonnement expire cette semaine",
+                var count => $"{members} · {count} abonnements expirent cette semaine"
+            };
+        }
+    }
+
+    private string EmptyText => string.IsNullOrWhiteSpace(Search) && Status is null
+        ? "Aucun dossier pour l'instant. Créez le premier pour commencer."
+        : "Aucun membre ne correspond à cette recherche.";
+
+    private int CountFor(MemberStatus? status) => status switch
+    {
+        MemberStatus.Active => Page.ActiveCount,
+        MemberStatus.ExpiringSoon => Page.ExpiringSoonCount,
+        MemberStatus.Inactive => Page.InactiveCount,
+        _ => Page.TotalCount
+    };
+
+    private Task OnRowKeyDown(KeyboardEventArgs args, MemberListItemDto member)
+        => args.Key is "Enter" or " " ? OnOpen.InvokeAsync(member) : Task.CompletedTask;
+}

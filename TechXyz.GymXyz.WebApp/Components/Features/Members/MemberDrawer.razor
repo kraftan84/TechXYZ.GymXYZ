@@ -1,0 +1,84 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Members
+
+@* Create / edit a member. Same drawer on both surfaces: below 520px it simply
+   takes the full width. *@
+
+<GxDrawer Title="@(IsNew ? "Nouveau membre" : "Modifier la fiche")"
+          Subtitle="@Subtitle"
+          Icon="@(IsNew ? GxIconPaths.User : GxIconPaths.Settings)"
+          OnClose="OnCancel">
+    <ChildContent>
+        <div class="gx-seclab">Identité</div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Prénom" Placeholder="Camille" Required="true"
+                             @bind-Value="Model.FirstName" style="width:100%"/>
+            <FluentTextField Label="Nom" Placeholder="Durand" Required="true"
+                             @bind-Value="Model.LastName" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Adresse e-mail" Placeholder="camille.durand@email.fr"
+                             TextFieldType="TextFieldType.Email"
+                             @bind-Value="Model.Email" style="width:100%"/>
+        </div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Téléphone" Placeholder="06 12 34 56 78"
+                             @bind-Value="Model.Phone" style="width:100%"/>
+            <FluentDatePicker Label="Naissance" Placeholder="jj/mm/aaaa"
+                              @bind-Value="Model.BirthDate" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentDatePicker Label="Membre depuis" @bind-Value="Model.JoinedOn" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab">Adresse</div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Rue" @bind-Value="Model.Street" style="width:100%"/>
+        </div>
+        <div class="gx-form-row">
+            <FluentTextField Label="Code postal" @bind-Value="Model.ZipCode" style="width:100%"/>
+            <FluentTextField Label="Ville" @bind-Value="Model.City" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Pays" @bind-Value="Model.Country" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab">Note interne</div>
+        <FluentTextArea Placeholder="Préfère les cours du matin."
+                        aria-label="Note interne"
+                        Rows="3"
+                        @bind-Value="Model.Notes" style="width:100%"/>
+    </ChildContent>
+    <Footer>
+        @if (!IsNew && OnDelete.HasDelegate)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="OnDelete">
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
+                Supprimer
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                @(IsNew ? "Créer le membre" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    [Parameter, EditorRequired] public MemberEditModel Model { get; set; } = new();
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+
+    /// <summary>"Laetitia Moriceau · membre depuis mars 2024" when editing.</summary>
+    [Parameter] public string? EditingSubtitle { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private string Subtitle => IsNew
+        ? "Ajouter une personne au fichier"
+        : EditingSubtitle ?? string.Empty;
+}

@@ -27,6 +27,9 @@ public sealed class CreateMemberCommandHandler : IRequestHandler<CreateMemberCom
         {
             Email = AddressHelper.NormalizeOptional(request.Email),
             Phone = AddressHelper.NormalizeOptional(request.Phone),
+            JoinedOn = request.JoinedOn ?? DateOnly.FromDateTime(DateTime.Today),
+            BirthDate = request.BirthDate,
+            Notes = AddressHelper.NormalizeOptional(request.Notes),
             Address = AddressHelper.BuildOptionalAddress(request.Street, request.ZipCode, request.City, request.Country)
         };
 
