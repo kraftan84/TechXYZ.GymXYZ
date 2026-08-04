@@ -1,0 +1,25 @@
+@* Five tabs, ≥44px targets. The fifth opens the "Plus" sheet. *@
+
+<nav class="gx-m-tabbar" aria-label="Navigation principale">
+    @foreach (var tab in GxNavigation.MobileTabs)
+    {
+        <NavLink class="gx-m-tab" href="@tab.Href" ActiveClass="on"
+                 Match="@(tab.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+            <span class="ti">
+                <GxIcon Name="@tab.Icon" Size="24"/>
+            </span>
+            <span class="lbl">@tab.Label</span>
+        </NavLink>
+    }
+    <button type="button" class="gx-m-tab @(PlusActive ? "on" : null)" @onclick="OnPlus" aria-expanded="@PlusActive">
+        <span class="ti">
+            <GxIcon Name="@GxIconPaths.Grid" Size="24"/>
+        </span>
+        <span class="lbl">Plus</span>
+    </button>
+</nav>
+
+@code {
+    [Parameter] public bool PlusActive { get; set; }
+    [Parameter] public EventCallback OnPlus { get; set; }
+}

@@ -1,0 +1,34 @@
+@* Breadcrumb: home icon, then the trail. The last part is the current page. *@
+
+<nav class="gx-crumb" aria-label="Fil d'ariane">
+    <GxIcon Name="@GxIconPaths.Home" Size="14"/>
+    @for (var i = 0; i < Parts.Count; i++)
+    {
+        var part = Parts[i];
+        var isLast = i == Parts.Count - 1;
+
+        if (i > 0)
+        {
+            <GxIcon Name="@GxIconPaths.ChevronRight" Size="13" Class="sep"/>
+        }
+
+        if (isLast)
+        {
+            <b aria-current="page">@part.Label</b>
+        }
+        else if (part.Href is not null)
+        {
+            <a href="@part.Href">@part.Label</a>
+        }
+        else
+        {
+            <span>@part.Label</span>
+        }
+    }
+</nav>
+
+@code {
+    public sealed record Part(string Label, string? Href = null);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Part> Parts { get; set; } = [];
+}

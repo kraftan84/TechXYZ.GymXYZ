@@ -1,5 +1,6 @@
 @page "/coachs/{CoachId:int}"
 @inject BreadcrumbService BreadcrumbService
+@inject NavigationManager NavManager
 
 <PageTitle>Coach</PageTitle>
 
@@ -155,6 +156,9 @@
     [Parameter]
     public int CoachId { get; set; }
 
+    // A solo coach has no Coachs section: the route refuses too.
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
     private readonly List<Coach> coaches =
     [
         new Coach("Nora", "Lemoine")
@@ -251,6 +255,13 @@
 
     protected override void OnParametersSet()
     {
+        if (Brand?.IsSolo == true)
+        {
+            NavManager.NavigateTo("/");
+
+            return;
+        }
+
         selectedCoach = coaches.FirstOrDefault(coach => coach.Id == CoachId) ?? coaches[0];
         BreadcrumbService.SetItems(
         [

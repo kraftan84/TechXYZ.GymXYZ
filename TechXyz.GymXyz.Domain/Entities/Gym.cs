@@ -1,16 +1,19 @@
 using TechXyz.GymXyz.Domain.Common;
+using TechXyz.GymXyz.Domain.Common.Interfaces;
 
 namespace TechXyz.GymXyz.Domain.Entities;
 
-public class Gym : EntityBase<int>
+public class Gym : EntityBase<int>, ITenantScoped
 {
     public Gym(string name)
     {
         Name = name;
     }
-    
+
+    public int TenantId { get; set; }
+
     public string Name { get; set; }
-    
+
     public ICollection<Location>?  Locations { get; set; }
     
     public ICollection<Coach>? Coaches { get; set; }

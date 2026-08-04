@@ -1,0 +1,21 @@
+@* Bottom sheet with a grab handle. *@
+
+<div class="gx-m-sheet-scrim" @onclick="OnClose"></div>
+<div class="gx-m-sheet" role="dialog" aria-modal="true" aria-label="@Title">
+    <div class="grab"></div>
+    <div class="gx-m-sheet-h">
+        <span class="t">@Title</span>
+        <button type="button" class="x" aria-label="Fermer" @onclick="OnClose">
+            <GxIcon Name="@GxIconPaths.Close" Size="18"/>
+        </button>
+    </div>
+    <div class="gx-m-sheet-body">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

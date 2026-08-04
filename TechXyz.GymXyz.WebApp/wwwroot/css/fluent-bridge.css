@@ -1,0 +1,102 @@
+/* ============================================================
+   Fluent UI ← TechXYZ tokens
+   ------------------------------------------------------------
+   Fluent UI supplies the controls (inputs, selects, switches,
+   buttons, dialogs, toasts); the brand supplies the colours.
+   Every value below is a var(--*) from the themed ramp, so a
+   customer's controls repaint with the rest of the app and no
+   accent is ever written twice.
+
+   Fluent injects its own token layer at runtime through an adopted
+   stylesheet, which the cascade places after every <link>. Only
+   !important gets ahead of it — that is why it is here, and it is
+   confined to this one file.
+   ============================================================ */
+
+:root, body {
+  /* ---------- Accent: solid actions use the -600 step (white text passes AA) ---------- */
+  --accent-base-color: var(--azure-600) !important;
+
+  --accent-fill-rest: var(--azure-600) !important;
+  --accent-fill-hover: var(--azure-700) !important;
+  --accent-fill-active: var(--azure-800) !important;
+  --accent-fill-focus: var(--azure-600) !important;
+
+  --accent-foreground-rest: var(--azure-700) !important;
+  --accent-foreground-hover: var(--azure-800) !important;
+  --accent-foreground-active: var(--azure-800) !important;
+  --accent-foreground-focus: var(--azure-700) !important;
+
+  --accent-stroke-control-rest: var(--azure-600) !important;
+  --accent-stroke-control-hover: var(--azure-700) !important;
+  --accent-stroke-control-active: var(--azure-800) !important;
+  --accent-stroke-control-focus: var(--azure-600) !important;
+
+  --foreground-on-accent-rest: var(--neutral-0) !important;
+  --foreground-on-accent-hover: var(--neutral-0) !important;
+  --foreground-on-accent-active: var(--neutral-0) !important;
+  --foreground-on-accent-focus: var(--neutral-0) !important;
+
+  /* ---------- Neutrals: the cold slate ramp, re-temperatured per brand ---------- */
+  --neutral-base-color: var(--neutral-500) !important;
+  --fill-color: var(--surface-page) !important;
+
+  --neutral-foreground-rest: var(--text-body) !important;
+  --neutral-foreground-hover: var(--text-strong) !important;
+  --neutral-foreground-active: var(--text-strong) !important;
+  --neutral-foreground-focus: var(--text-strong) !important;
+  --neutral-foreground-hint: var(--text-muted) !important;
+
+  --neutral-fill-rest: var(--surface-sunken) !important;
+  --neutral-fill-hover: var(--neutral-100) !important;
+  --neutral-fill-active: var(--neutral-200) !important;
+
+  --neutral-fill-input-rest: var(--surface-card) !important;
+  --neutral-fill-input-hover: var(--surface-card) !important;
+  --neutral-fill-input-active: var(--surface-card) !important;
+  --neutral-fill-input-focus: var(--surface-card) !important;
+
+  --neutral-fill-stealth-rest: transparent !important;
+  --neutral-fill-stealth-hover: var(--surface-sunken) !important;
+  --neutral-fill-stealth-active: var(--neutral-100) !important;
+
+  --neutral-stroke-rest: var(--border-default) !important;
+  --neutral-stroke-hover: var(--neutral-300) !important;
+  --neutral-stroke-active: var(--neutral-300) !important;
+  --neutral-stroke-focus: var(--border-brand) !important;
+  --neutral-stroke-divider-rest: var(--border-subtle) !important;
+  --neutral-stroke-strong-rest: var(--neutral-400) !important;
+
+  --neutral-layer-1: var(--surface-card) !important;
+  --neutral-layer-2: var(--surface-page) !important;
+  --neutral-layer-3: var(--surface-sunken) !important;
+  --neutral-layer-4: var(--surface-sunken) !important;
+  --neutral-layer-floating: var(--surface-card) !important;
+  --neutral-layer-card-container: var(--surface-card) !important;
+
+  /* ---------- Focus: the azure ring is mandatory (RGAA) ---------- */
+  --focus-stroke-outer: var(--ring-brand) !important;
+  --focus-stroke-inner: var(--surface-card) !important;
+  --focus-stroke-width: 3 !important;
+
+  /* ---------- Shape: controls 10px, layers 14px ---------- */
+  --control-corner-radius: 10 !important;
+  --layer-corner-radius: 14 !important;
+  --stroke-width: 1 !important;
+  --design-unit: 4 !important;
+
+  /* 11 × 4px = 44px control height, the touch target the mobile shell needs. */
+  --base-height-multiplier: 11 !important;
+  --base-horizontal-spacing-multiplier: 3 !important;
+
+  /* ---------- Type: Montserrat everywhere that is read ---------- */
+  --body-font: var(--font-sans) !important;
+  --type-ramp-base-font-size: var(--text-sm) !important;
+  --type-ramp-base-line-height: var(--leading-normal) !important;
+}
+
+/* Fluent writes its own radii in px on some parts; keep them on the tokens. */
+.fluent-card,
+fluent-card {
+  border-radius: var(--radius-lg);
+}

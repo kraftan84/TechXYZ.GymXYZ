@@ -1,0 +1,250 @@
+/* ============================================================
+   GymXYZ — White-label theme tokens
+   ------------------------------------------------------------
+   ONE product, N themes. A theme = a small set of CSS custom
+   properties scoped to [data-theme]. Screens never hard-code a
+   brand colour, logo or name — everything reads a token.
+
+   Each theme works on TWO layers, so brands feel genuinely
+   different — not the same dashboard with a recoloured button:
+
+   1 · ACCENT — re-point the TechXYZ accent ramp (--azure-*).
+       The DS derives every semantic alias (--color-primary,
+       --border-brand, --ring-brand…) and every component
+       (Button, Badge, Avatar…) from it, so this reskins actions.
+   2 · ATMOSPHERE — re-point the low neutrals + ink + sidebar
+       tokens. This re-temperatures the WHOLE canvas: page
+       background, card surfaces, hairlines, heading ink, and the
+       sidebar register (light slate / dark graphite / soft blush).
+       Because surfaces and borders flow from --neutral-50…300
+       and --ink-900, one block of overrides repaints every screen
+       and every DS component automatically — zero screen edits.
+
+   SHARED (never themed): the semantic status palette
+   (success / warning / danger keep their meaning everywhere),
+   spacing, radii, type scale, Montserrat body.
+
+   To add a client:  add one [data-theme="x"] block below + a
+   row in the THEMES registry (app/data.js). Zero screen edits.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Dancing+Script:wght@600;700&display=swap');
+
+:root {
+  --font-accent: "Orbitron", "Montserrat", sans-serif;
+  --accent-letterspacing: 0.04em;
+  --accent-weight: 700;
+  --accent-transform: uppercase;
+  /* second brand colour (decorative) — defaults to the accent */
+  --brand-soft-2: var(--azure-50);
+
+  /* ----------------------------------------------------------
+     TWO-FONT IDENTITY. Each space pairs ONE display font (for
+     the wordmark, page titles, section/card titles and fiche
+     names — the elements we put forward) with Montserrat
+     (--font-sans) for everything else: body, tables, labels,
+     buttons, KPI numbers. The display font + its tuning are set
+     per [data-theme] below; these are the neutral fallbacks.
+     ---------------------------------------------------------- */
+  --font-display: var(--font-sans);
+  --display-weight: var(--weight-bold);
+  --display-ls: var(--tracking-tight);
+  --display-tr: none;
+  --display-title-scale: 1;
+  --display-head-scale: 1;
+  --wordmark-size: 20px;
+  --wordmark-lh: 1;
+
+  /* ----------------------------------------------------------
+     ATMOSPHERE — sidebar tokens. The sidebar is the brand's
+     loudest surface, so each theme can give it its own register
+     (light slate / dark graphite / soft blush) without touching
+     a single screen. Defaults = the light TechXYZ slate.
+     ---------------------------------------------------------- */
+  --gx-sb-bg:            var(--surface-card);
+  --gx-sb-border:        var(--border-subtle);
+  --gx-sb-fg:            var(--text-body);
+  --gx-sb-strong:        var(--text-strong);
+  --gx-sb-group:         var(--text-subtle);
+  --gx-sb-icon:          var(--text-muted);
+  --gx-sb-hover:         var(--surface-sunken);
+  --gx-sb-active-bg:     var(--azure-50);
+  --gx-sb-active-fg:     var(--azure-800);
+  --gx-sb-active-border: var(--azure-100);
+  --gx-sb-active-bar:    var(--color-primary);
+  --gx-sb-active-icon:   var(--color-primary);
+  --gx-sb-count-bg:      var(--surface-sunken);
+  --gx-sb-count-fg:      var(--text-muted);
+  --gx-sb-count-on-bg:   var(--color-primary);
+  --gx-sb-count-on-fg:   #fff;
+  --gx-sb-accent:        var(--color-brand);
+
+  /* glass top bar derives from whatever the themed card surface is */
+  --gx-tb-bg: color-mix(in srgb, var(--surface-card) 86%, transparent);
+}
+
+/* ============================================================
+   1 · TechXYZ — the default GymXYZ skin (azure spark, Orbitron)
+   The azure ramp is inherited from the DS :root, so we only set
+   the identity here.
+   ============================================================ */
+[data-theme="techxyz"] {
+  --font-accent: "Orbitron", "Montserrat", sans-serif;
+  --accent-letterspacing: 0.02em;
+  --accent-weight: 700;
+  --accent-transform: uppercase;
+  --brand-soft-2: var(--azure-50);
+  --wordmark-size: 20px;
+  --wordmark-lh: 1;
+  /* Display = Orbitron (runs wide & large → scale down a touch) */
+  --font-display: "Orbitron", "Montserrat", sans-serif;
+  --display-weight: 700;
+  --display-ls: 0.01em;
+  --display-tr: none;
+  --display-title-scale: 0.9;
+  --display-head-scale: 0.8;
+}
+
+/* ============================================================
+   2 · Team Trainer's — monochrome black & white, rock energy
+   Accent ramp → graphite. Status colours stay coloured so the
+   UI never loses meaning. Identity font: Oswald (athletic).
+   ============================================================ */
+[data-theme="teamtrainers"] {
+  --azure-50:  #F4F4F5;
+  --azure-100: #E7E7EA;
+  --azure-200: #D2D2D7;
+  --azure-300: #A8A8B0;
+  --azure-400: #6E6E76;
+  --azure-500: #353539;   /* "spark" → graphite */
+  --azure-600: #232327;   /* solid actions — white text passes AA */
+  --azure-700: #1B1B1E;
+  --azure-800: #131316;
+  --azure-900: #0A0A0C;
+
+  --ring-brand:   0 0 0 3px rgba(35, 35, 39, 0.30);
+  --shadow-brand: 0 8px 22px rgba(15, 15, 18, 0.26);
+  --glow-spark:   0 0 0 1px rgba(35,35,39,0.5), 0 6px 20px rgba(15,15,18,0.22);
+
+  --font-accent: "Anton", sans-serif;
+  --accent-letterspacing: 0.02em;
+  --accent-weight: 400;
+  --accent-transform: uppercase;
+  --brand-soft-2: #F4F4F5;
+  --wordmark-size: 23px;
+  --wordmark-lh: 1;
+  /* Display = Anton (heavy poster impact) */
+  --font-display: "Anton", sans-serif;
+  --display-weight: 400;
+  --display-ls: 0.01em;
+  --display-tr: none;
+  --display-title-scale: 1.02;
+  --display-head-scale: 1;
+
+  /* --- Atmosphere: crisp, cool-neutral canvas, near-black ink --- */
+  --neutral-50:  #F3F3F4;   /* page — flat zinc, no blue cast */
+  --neutral-100: #EAEAEC;   /* sunken */
+  --neutral-200: #E2E2E5;   /* hairlines */
+  --neutral-300: #D2D2D7;   /* default borders */
+  --ink-900:     #1A1A1D;   /* heading / secondary ink → near-black */
+  --neutral-800: #2A2A2E;   /* body text → graphite, not slate */
+
+  /* --- Atmosphere: dark "locker-room" sidebar rail --- */
+  --gx-sb-bg:            #1A1A1D;
+  --gx-sb-border:        #2C2C30;
+  --gx-sb-fg:            #C7C7CD;
+  --gx-sb-strong:        #FFFFFF;
+  --gx-sb-group:         #6C6C75;
+  --gx-sb-icon:          #8C8C95;
+  --gx-sb-hover:         rgba(255, 255, 255, 0.06);
+  --gx-sb-active-bg:     rgba(255, 255, 255, 0.10);
+  --gx-sb-active-fg:     #FFFFFF;
+  --gx-sb-active-border: rgba(255, 255, 255, 0.14);
+  --gx-sb-active-bar:    #FFFFFF;
+  --gx-sb-active-icon:   #FFFFFF;
+  --gx-sb-count-bg:      rgba(255, 255, 255, 0.12);
+  --gx-sb-count-fg:      #E7E7EA;
+  --gx-sb-count-on-bg:   #FFFFFF;
+  --gx-sb-count-on-fg:   #1A1A1D;
+  --gx-sb-accent:        #FFFFFF;
+}
+
+/* ============================================================
+   3 · Leyssa Coaching — soft rose, elegant script identity
+   Accent ramp → rose (from the brand flyer). Identity font:
+   Dancing Script for the wordmark; sage green as the soft 2nd.
+   ============================================================ */
+[data-theme="leyssa"] {
+  --azure-50:  #FCF1F4;
+  --azure-100: #F8DEE6;
+  --azure-200: #F1C2D0;
+  --azure-300: #E59DB2;
+  --azure-400: #D87693;
+  --azure-500: #CB5B74;   /* brand rose */
+  --azure-600: #B54C66;   /* solid actions — white text passes AA */
+  --azure-700: #9A3F56;
+  --azure-800: #7E3446;
+  --azure-900: #652B39;
+
+  --ring-brand:   0 0 0 3px rgba(203, 91, 116, 0.32);
+  --shadow-brand: 0 8px 22px rgba(203, 91, 116, 0.28);
+  --glow-spark:   0 0 0 1px rgba(203,91,116,0.45), 0 6px 20px rgba(203,91,116,0.20);
+
+  --font-accent: "Dancing Script", cursive;
+  --accent-letterspacing: 0.005em;
+  --accent-weight: 700;
+  --accent-transform: none;
+  --brand-soft-2: #EAF0E2;       /* sage wash */
+  --leyssa-sage: #7E8E64;
+  --wordmark-size: 28px;
+  --wordmark-lh: 0.9;
+  /* Display = Dancing Script (elegant script; up-scaled to stay legible) */
+  --font-display: "Dancing Script", cursive;
+  --display-weight: 700;
+  --display-ls: 0;
+  --display-tr: none;
+  --display-title-scale: 1.28;
+  --display-head-scale: 1.42;
+
+  /* --- Atmosphere: warm blush-cream canvas, plum ink --- */
+  --neutral-50:  #FBF5F4;   /* page — soft blush cream */
+  --neutral-100: #F4E9E9;   /* sunken */
+  --neutral-200: #EEDFE1;   /* warm hairlines */
+  --neutral-300: #E2CDD0;   /* default borders */
+  --neutral-0:   #FFFDFC;   /* cards — warm white, not clinical white */
+  --ink-900:     #4A2A38;   /* heading / secondary ink → deep warm plum */
+  --neutral-800: #5A3F49;   /* body text → warm taupe-plum */
+
+  /* warm, rose-tinted elevation instead of cool navy shadows */
+  --shadow-xs:  0 1px 2px rgba(120, 50, 70, 0.07);
+  --shadow-sm:  0 1px 3px rgba(120, 50, 70, 0.09), 0 1px 2px rgba(120, 50, 70, 0.06);
+  --shadow-md:  0 5px 14px rgba(120, 50, 70, 0.10), 0 2px 5px rgba(120, 50, 70, 0.06);
+  --shadow-lg:  0 14px 30px rgba(120, 50, 70, 0.14), 0 5px 12px rgba(120, 50, 70, 0.07);
+
+  /* --- Atmosphere: soft blush sidebar --- */
+  --gx-sb-bg:            #FCF1F2;
+  --gx-sb-border:        #F0DEE1;
+  --gx-sb-fg:            #6E4654;
+  --gx-sb-strong:        #4A2A38;
+  --gx-sb-group:         #B98C99;
+  --gx-sb-icon:          #B27E8C;
+  --gx-sb-hover:         rgba(203, 91, 116, 0.09);
+  --gx-sb-active-bg:     #F6DCE3;
+  --gx-sb-active-fg:     #9A3F56;
+  --gx-sb-active-border: #EFC6D1;
+  --gx-sb-active-bar:    var(--color-primary);
+  --gx-sb-active-icon:   var(--color-primary);
+  --gx-sb-count-bg:      #F2DBE0;
+  --gx-sb-count-fg:      #9A3F56;
+  --gx-sb-count-on-bg:   var(--color-primary);
+  --gx-sb-count-on-fg:   #fff;
+  --gx-sb-accent:        var(--color-brand);
+}
+
+/* Smooth the live reskin when switching themes for a demo */
+.gx-app, .gx-app * {
+  transition: background-color var(--duration-base) var(--ease-standard),
+              border-color var(--duration-base) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}

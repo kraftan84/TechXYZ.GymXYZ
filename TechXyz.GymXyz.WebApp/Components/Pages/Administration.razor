@@ -1,0 +1,12 @@
+@* Reserved for the TechXYZ super-admin. Guarded by policy, not by hiding the link. *@
+
+@page "/administration"
+@attribute [Authorize(Policy = GymPolicies.PlatformAdmin)]
+
+<PageTitle>Administration</PageTitle>
+
+<PageHead Title="Administration" Subtitle="Clients GymXYZ, apparence & marque, facturation."/>
+
+<EmptyState Icon="@GxIconPaths.Shield"
+            Title="Bientôt l'administration"
+            Text="La gestion des clients GymXYZ arrive au prochain lot."/>

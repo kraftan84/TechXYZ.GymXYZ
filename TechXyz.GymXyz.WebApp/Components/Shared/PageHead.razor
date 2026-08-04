@@ -1,0 +1,21 @@
+@* Page title in the themed display font, optional subtitle, right-hand actions. *@
+
+<div class="gx-pagehead">
+    <div>
+        <h1 class="h">@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <div class="sub">@Subtitle</div>
+        }
+    </div>
+    @if (ChildContent is not null)
+    {
+        <div class="right">@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

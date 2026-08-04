@@ -1,0 +1,30 @@
+@* Sticky header, two modes: brand (root screens) or title + back (sub screens). *@
+
+<header class="gx-m-head">
+    <div class="gx-m-head-top">
+        @if (Mode == MobileHeaderMode.Sub)
+        {
+            <button class="gx-m-back" type="button" aria-label="Retour" @onclick="OnBack">
+                <GxIcon Name="@GxIconPaths.ChevronLeft" Size="24"/>
+            </button>
+            <div class="gx-m-htitle">@Title</div>
+        }
+        else
+        {
+            <div class="lead">
+                <BrandLockup Brand="Brand" Mobile="true"/>
+            </div>
+        }
+        @Action
+    </div>
+    @ChildContent
+</header>
+
+@code {
+    [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+    [Parameter] public MobileHeaderMode Mode { get; set; } = MobileHeaderMode.Brand;
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public RenderFragment? Action { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

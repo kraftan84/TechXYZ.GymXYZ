@@ -1,0 +1,24 @@
+@* Status chip. Tones carry meaning, so they are never themed. *@
+
+<span class="gx-chip @ToneClass">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <GxIcon Name="@Icon" Size="13"/>
+    }
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public GxTone Tone { get; set; } = GxTone.Neutral;
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string ToneClass => Tone switch
+    {
+        GxTone.Brand => "brand",
+        GxTone.Success => "ok",
+        GxTone.Warning => "warn",
+        GxTone.Danger => "bad",
+        _ => "neutral"
+    };
+}

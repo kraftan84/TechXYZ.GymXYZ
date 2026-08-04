@@ -1,0 +1,106 @@
+@* Connexion. Static server rendering: SignInManager needs a real HTTP response
+   to write the authentication cookie — a circuit cannot. *@
+
+@page "/account/connexion"
+@attribute [AllowAnonymous]
+@layout EmptyLayout
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using TechXyz.GymXyz.Persistence.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Connexion</PageTitle>
+
+<div class="gx-login">
+    <div class="gx-login-brand">
+        @if (Brand is not null)
+        {
+            <BrandLockup Brand="Brand" OnDark="true"/>
+        }
+        <div>
+            <h2>Votre espace de gestion</h2>
+            <p>Planning, membres, présences et abonnements au même endroit.</p>
+        </div>
+        <div class="foot">Hébergé en France · Conforme RGPD</div>
+    </div>
+
+    <div class="gx-login-pane">
+        <EditForm Model="Input" method="post" OnValidSubmit="SignInAsync" FormName="connexion" class="gx-login-form">
+            <DataAnnotationsValidator/>
+
+            <div>
+                <h1>Connexion</h1>
+                <p class="lead">Accédez à votre tableau de bord.</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="err" role="alert">@_errorMessage</div>
+            }
+
+            <div class="field">
+                <label for="email">E-mail</label>
+                <FluentTextField id="email" @bind-Value="Input.Email" name="Input.Email"
+                                 TextFieldType="TextFieldType.Email" AutoComplete="username"
+                                 Style="width:100%" Required="true"/>
+                <ValidationMessage For="() => Input.Email"/>
+            </div>
+
+            <div class="field">
+                <label for="password">Mot de passe</label>
+                <FluentTextField id="password" @bind-Value="Input.Password" name="Input.Password"
+                                 TextFieldType="TextFieldType.Password" AutoComplete="current-password"
+                                 Style="width:100%" Required="true"/>
+                <ValidationMessage For="() => Input.Password"/>
+            </div>
+
+            <FluentCheckbox @bind-Value="Input.RememberMe" name="Input.RememberMe" Label="Rester connecté"/>
+
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width:100%">
+                Se connecter
+            </FluentButton>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    [SupplyParameterFromForm] private LoginInput Input { get; set; } = new();
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private string? _errorMessage;
+
+    private async Task SignInAsync()
+    {
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+
+        if (result.Succeeded)
+        {
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+
+            return;
+        }
+
+        _errorMessage = result.IsLockedOut
+            ? "Ce compte est temporairement bloqué. Réessayez dans quelques minutes."
+            : "E-mail ou mot de passe incorrect.";
+    }
+
+    private sealed class LoginInput
+    {
+        [Required(ErrorMessage = "Saisissez votre e-mail.")]
+        [EmailAddress(ErrorMessage = "Cette adresse e-mail n'est pas valide.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Saisissez votre mot de passe.")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; } = true;
+    }
+}

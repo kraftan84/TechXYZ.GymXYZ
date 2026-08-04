@@ -1,14 +1,23 @@
-﻿<!DOCTYPE html>
-<html lang="fr-FR">
+@inject ITenantResolver TenantResolver
+
+<!DOCTYPE html>
+@* The theme is rendered server-side: no flash of the wrong brand on load. *@
+<html lang="fr-FR" data-theme="@ThemeKey">
 
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
     <ResourcePreloader/>
-    <FluentDesignTheme Mode="DesignThemeModes.Light" StorageName=""/>
     <link rel="stylesheet" href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css"/>
-    <link rel="stylesheet" href="@Assets["app.css"]"/>
+    @* TechXYZ tokens first, then the brand layer, then the app. Order matters. *@
+    <link rel="stylesheet" href="@Assets["css/techxyz/styles.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/themes.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/app.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/mobile.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/gx-extras.css"]"/>
+    @* Loaded after the Fluent stylesheets so the brand tokens win. *@
+    <link rel="stylesheet" href="@Assets["css/fluent-bridge.css"]"/>
     <link rel="stylesheet" href="@Assets["TechXyz.GymXyz.WebApp.styles.css"]"/>
     <ImportMap/>
     <link rel="icon" type="image/png" href="favicon.png"/>
@@ -16,10 +25,35 @@
 </head>
 
 <body>
-<Routes @rendermode="InteractiveServer"/>
+<Routes @rendermode="RenderModeForPage"/>
 <ReconnectModal/>
 <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
 <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    private string ThemeKey { get; set; } = "techxyz";
+
+    /// <summary>
+    /// Account pages stay on static server rendering: signing in and out needs a
+    /// real HTTP response, which a circuit cannot produce.
+    /// </summary>
+    private IComponentRenderMode? RenderModeForPage =>
+        HttpContext?.Request.Path.StartsWithSegments("/account") == true
+            ? null
+            : RenderMode.InteractiveServer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var brand = await TenantResolver.ResolveAsync(HttpContext?.User);
+
+        if (brand is not null)
+        {
+            ThemeKey = brand.ThemeKey;
+        }
+    }
+}

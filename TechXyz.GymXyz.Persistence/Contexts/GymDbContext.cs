@@ -1,21 +1,31 @@
+using System.Reflection;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Common;
+using TechXyz.GymXyz.Domain.Common.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 using TechXyz.GymXyz.Persistence.Converters;
+using TechXyz.GymXyz.Persistence.Identity;
 
 namespace TechXyz.GymXyz.Persistence.Contexts;
 
-public class GymDbContext : DbContext, IGymDbContext
+public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>, IGymDbContext
 {
     private readonly ICurrentUserService _currentUserService;
-    
-    public GymDbContext(DbContextOptions<GymDbContext> options, ICurrentUserService currentUserService)
+    private readonly ITenantContext _tenantContext;
+
+    public GymDbContext(
+        DbContextOptions<GymDbContext> options,
+        ICurrentUserService currentUserService,
+        ITenantContext tenantContext)
         : base(options)
     {
         _currentUserService = currentUserService;
+        _tenantContext = tenantContext;
     }
-    
+
+    public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Gym> Gyms => Set<Gym>();
     public DbSet<Location> Locations =>  Set<Location>();
     public DbSet<Room> Rooms =>  Set<Room>();
@@ -27,7 +37,7 @@ public class GymDbContext : DbContext, IGymDbContext
     public DbSet<Member> Members =>  Set<Member>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Address> Addresses =>  Set<Address>();
-    
+
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
         builder.Properties<Enum>()
@@ -41,9 +51,11 @@ public class GymDbContext : DbContext, IGymDbContext
 
         base.ConfigureConventions(builder);
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder
             .Entity<Lesson>(x =>
             {
@@ -73,9 +85,56 @@ public class GymDbContext : DbContext, IGymDbContext
                     .WithMany(m => m.CollectiveLessons);
             });
 
-        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Tenant>()
+            .HasIndex(t => t.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<ApplicationUser>()
+            .HasIndex(u => u.TenantId);
+
+        ApplyTenantFilters(modelBuilder);
     }
-    
+
+    /// <summary>
+    /// Isolates customers from one another at the engine level: forgetting the
+    /// filter in a query would leak another tenant's rows, so it is not left to
+    /// each handler. Soft delete stays explicit per query, as the repository
+    /// conventions require.
+    /// </summary>
+    private void ApplyTenantFilters(ModelBuilder modelBuilder)
+    {
+        var apply = typeof(GymDbContext).GetMethod(
+            nameof(ApplyTenantFilter),
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            // A filter belongs on the root of an inheritance hierarchy only.
+            if (entityType.BaseType is not null)
+                continue;
+
+            if (!typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
+                continue;
+
+            apply.MakeGenericMethod(entityType.ClrType).Invoke(this, [modelBuilder]);
+        }
+    }
+
+    private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ITenantScoped
+    {
+        // Reading CurrentTenantId through the context instance is deliberate:
+        // EF Core rebinds it to the context executing the query, so the cached
+        // model still resolves the ambient tenant of each request.
+        modelBuilder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+    }
+
+    /// <summary>
+    /// Read through a property rather than capturing the value: the model is
+    /// built once and cached, the ambient tenant changes with every request.
+    /// </summary>
+    private int CurrentTenantId => _tenantContext.Current;
+
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new())
     {
         // Stamp audit fields for tracked entities on save.
@@ -96,7 +155,27 @@ public class GymDbContext : DbContext, IGymDbContext
                 ((AuditableEntityBase)entityEntry.Entity).CreatedOn = now;
             }
         }
+
+        StampTenant();
+
         return await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Every write carries the ambient tenant. An explicit TenantId is left
+    /// untouched so the initializer can seed several customers in one pass.
+    /// </summary>
+    private void StampTenant()
+    {
+        var tenantId = _tenantContext.Current;
+        if (tenantId == 0)
+            return;
+
+        foreach (var entry in ChangeTracker.Entries<ITenantScoped>())
+        {
+            if (entry.State == EntityState.Added && entry.Entity.TenantId == 0)
+                entry.Entity.TenantId = tenantId;
+        }
     }
 
     public override int SaveChanges()

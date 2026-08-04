@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
 using TechXyz.GymXyz.Application.Extensions;
@@ -5,6 +6,7 @@ using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Persistence.Contexts;
 using TechXyz.GymXyz.Persistence.Data;
 using TechXyz.GymXyz.Persistence.Extensions;
+using TechXyz.GymXyz.Persistence.Identity;
 using TechXyz.GymXyz.WebApp.Components;
 using TechXyz.GymXyz.WebApp.Services;
 
@@ -18,14 +20,58 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<CurrentUserService>();
+builder.Services.AddScoped<ICurrentUserService>(provider => provider.GetRequiredService<CurrentUserService>());
 builder.Services.AddSingleton<ICurrentUserOverride, CurrentUserOverride>();
 builder.Services.AddScoped<BreadcrumbService>();
 builder.Services.AddScoped<IUserFeedbackService, UserFeedbackService>();
 
+// Multi-tenant: one holder per scope, filled by TenantBoundary from the signed-in
+// user's claims (host prefix before authentication).
+var tenantOptions = builder.Configuration.GetSection(TenantOptions.SectionName).Get<TenantOptions>()
+                    ?? new TenantOptions();
+builder.Services.AddSingleton(tenantOptions);
+builder.Services.AddScoped<TenantContext>();
+builder.Services.AddScoped<ITenantContext>(provider => provider.GetRequiredService<TenantContext>());
+builder.Services.AddScoped<ITenantResolver, TenantResolver>();
+builder.Services.AddScoped<ResponsiveModeService>();
+
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+// Identity: local accounts, cookie authentication, no public registration.
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+    })
+    .AddIdentityCookies();
+
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddRoles<ApplicationRole>()
+    .AddEntityFrameworkStores<GymDbContext>()
+    .AddSignInManager()
+    .AddClaimsPrincipalFactory<GymUserClaimsPrincipalFactory>()
+    .AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/account/connexion";
+    options.LogoutPath = "/account/deconnexion";
+    options.AccessDeniedPath = "/account/acces-refuse";
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(GymPolicies.PlatformAdmin, policy => policy.RequireRole(GymRoles.PlatformAdmin));
+    options.AddPolicy(GymPolicies.GymManager, policy => policy.RequireRole(GymRoles.GymManager, GymRoles.PlatformAdmin));
+});
 
 var app = builder.Build();
 
@@ -60,7 +106,7 @@ using (var scope = app.Services.CreateScope())
 
         if (resetDatabaseOnStartup)
         {
-            DbInitializer.Initialize(serviceProvider, dbContext);
+            await DbInitializer.InitializeAsync(serviceProvider, dbContext);
         }
     }
 
@@ -69,9 +115,13 @@ using (var scope = app.Services.CreateScope())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapAccountEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

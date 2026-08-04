@@ -1,0 +1,34 @@
+@* Desktop topbar, 64px. Search and the bell are present but inert at this lot —
+   global search is scoped for lot 3, notifications have no screen yet. *@
+
+<header class="gx-tb">
+    <div class="gx-search" aria-hidden="true">
+        <GxIcon Name="@GxIconPaths.Search" Size="17"/>
+        <span>Rechercher un membre, un cours…</span>
+    </div>
+    <div class="gx-tb-sp"></div>
+    <div class="gx-tb-ic" title="Notifications">
+        <GxIcon Name="@GxIconPaths.Bell" Size="20"/>
+        <span class="dot"></span>
+    </div>
+    <NavLink class="gx-tb-ic" href="@GxNavigation.Reglages.Href" ActiveClass="on" title="Réglages">
+        <GxIcon Name="@GxNavigation.Reglages.Icon" Size="20"/>
+    </NavLink>
+    <span class="gx-tb-div"></span>
+    <div class="gx-me">
+        <GxAvatar Name="@User.DisplayName" Size="sm"/>
+        <div>
+            <div class="nm">@User.DisplayName</div>
+            <div class="rl">@RoleLine</div>
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+    [Parameter, EditorRequired] public GymUserInfo User { get; set; } = default!;
+
+    private string RoleLine => string.IsNullOrWhiteSpace(User.RoleLabel)
+        ? Brand.DisplayName
+        : $"{User.RoleLabel} · {Brand.DisplayName}";
+}
