@@ -247,14 +247,14 @@ Formats FR : espace comme séparateur de milliers (`1 200`), virgule décimale,
 ## Écarts connus / à décider
 
 1. **Recherche globale** (topbar desktop, header mobile) : présente visuellement,
-   sans comportement défini dans la maquette. Proposition : lot 3, recherche
-   membres + cours, palette clavier `Ctrl+K`. À confirmer.
+   sans comportement défini dans la maquette. Proposition : lot 1 (Membres),
+   recherche membres + cours, palette clavier `Ctrl+K`. À confirmer.
 2. **Notifications** (cloche + point rouge) : aucun écran de liste n'existe.
    Proposition : hors périmètre jusqu'à un lot dédié ; garder la cloche inerte.
 3. **Portail membre** : le rôle `Member` est demandé mais aucun écran membre n'est
    maquetté. Voir lot 12 (à cadrer avant de coder).
 4. **Météo / repli des cours extérieurs** (fiche Lieu « Parc de la Tête d'Or ») :
-   la maquette affiche un repli automatique. Décider si le lot 9 implémente
-   vraiment un appel météo ou juste le champ « lieu de repli ».
+   la maquette affiche un repli automatique. Décider si le lot 4 (Lieux)
+   implémente vraiment un appel météo ou juste le champ « lieu de repli ».
 5. **Densité d'affichage** (compact / standard / confort) : outil de maquette.
    Si vous la voulez en produit, c'est une préférence utilisateur, à chiffrer.
