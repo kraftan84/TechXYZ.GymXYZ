@@ -85,7 +85,7 @@ public class MemberStatusRulesTests
                 .ShouldBe(
                     everyone.Items.Where(item => item.Status == status)
                         .Select(item => item.LastName).OrderBy(name => name),
-                    $"le filtre SQL « {status} » doit rendre exactement les mêmes membres que le libellé.");
+                    $"the SQL filter for {status} must return exactly the members carrying that label.");
         }
 
         // 3. The three counts partition the list, no row counted twice or lost.
