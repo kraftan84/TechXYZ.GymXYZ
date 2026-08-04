@@ -64,7 +64,7 @@ changer un modèle ne doit pas réécrire l'histoire), `Status`
 (`Scheduled` | `Live` | `Done` | `Cancelled`), `CancellationReason`,
 `AttendanceClosedAt`.
 
-> **Décision à prendre au lot 2** : récurrence. Deux options — matérialiser les
+> **Décision à prendre au lot 5 (Planning)** : récurrence. Deux options — matérialiser les
 > occurrences (une ligne par séance, plus simple à interroger et à pointer,
 > recommandé) ou stocker une règle de récurrence et générer à la volée (plus
 > souple, beaucoup plus de complexité de requête). Le prototype est compatible avec
