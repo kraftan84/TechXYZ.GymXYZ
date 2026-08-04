@@ -52,14 +52,14 @@
         @if (!IsNew && OnDelete.HasDelegate)
         {
             <FluentButton Appearance="Appearance.Outline" @onclick="OnDelete">
-                <GxIcon Name="@GxIconPaths.Trash" Size="18"/>
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
                 Supprimer
             </FluentButton>
         }
         <span style="margin-left:auto;display:flex;gap:10px">
             <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Annuler</FluentButton>
             <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
-                <GxIcon Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
                 @(IsNew ? "Créer le membre" : "Enregistrer")
             </FluentButton>
         </span>

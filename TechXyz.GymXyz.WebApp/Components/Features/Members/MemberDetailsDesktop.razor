@@ -19,11 +19,11 @@
     </div>
     <FluentButton Appearance="Appearance.Outline" Disabled="@(Member.Email is null)"
                   @onclick="OnMessage">
-        <GxIcon Name="@GxIconPaths.Mail" Size="18"/>
+        <GxIcon Slot="start" Name="@GxIconPaths.Mail" Size="18"/>
         Message
     </FluentButton>
     <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
-        <GxIcon Name="@GxIconPaths.Settings" Size="18"/>
+        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
         Éditer
     </FluentButton>
 </div>

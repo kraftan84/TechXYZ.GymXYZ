@@ -69,7 +69,7 @@
             <span style="margin-left:auto;display:flex;gap:10px">
                 <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Fermer</FluentButton>
                 <FluentButton Appearance="Appearance.Accent" @onclick="StartCreate">
-                    <GxIcon Name="@GxIconPaths.Plus" Size="18"/>
+                    <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
                     Ajouter
                 </FluentButton>
             </span>
@@ -79,7 +79,7 @@
             <span style="margin-left:auto;display:flex;gap:10px">
                 <FluentButton Appearance="Appearance.Stealth" @onclick="BackToList">Annuler</FluentButton>
                 <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
-                    <GxIcon Name="@GxIconPaths.Check" Size="18"/>
+                    <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
                     Enregistrer
                 </FluentButton>
             </span>
