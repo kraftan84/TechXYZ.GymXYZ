@@ -14,6 +14,16 @@ public static class GxFormats
     /// <summary>Narrow no-break space, the typographic rule before "€".</summary>
     private const string NarrowNoBreakSpace = " ";
 
+    /// <summary>Whole number with a space every three digits: "1 200".</summary>
+    public static string Count(int value) => value.ToString("N0", Culture);
+
+    /// <summary>
+    /// "1 membre" / "6 membres" — the plural mark follows the number, and in
+    /// French zero stays singular.
+    /// </summary>
+    public static string Plural(int value, string singular, string plural)
+        => $"{Count(value)} {(Math.Abs(value) < 2 ? singular : plural)}";
+
     /// <summary>Long date: "9 juin 2026".</summary>
     public static string Date(DateOnly date) => date.ToString("d MMMM yyyy", Culture);
 

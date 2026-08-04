@@ -32,7 +32,7 @@
                     aria-pressed="@isOn"
                     style="cursor:pointer"
                     @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
-                @filter.MobileLabel · @CountFor(filter.Status)
+                @filter.MobileLabel · @GxFormats.Count(CountFor(filter.Status))
             </button>
         }
     </div>
@@ -102,9 +102,15 @@
     [Parameter] public EventCallback<MemberListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
 
-    private string Subtitle => string.IsNullOrWhiteSpace(City)
-        ? $"{Page.TotalCount} membres"
-        : $"{Page.TotalCount} membres · {City}";
+    private string Subtitle
+    {
+        get
+        {
+            var members = GxFormats.Plural(Page.TotalCount, "membre", "membres");
+
+            return string.IsNullOrWhiteSpace(City) ? members : $"{members} · {City}";
+        }
+    }
 
     private string EmptyText => string.IsNullOrWhiteSpace(Search) && Status is null
         ? "Aucun dossier pour l'instant. Créez le premier pour commencer."

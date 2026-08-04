@@ -27,7 +27,7 @@
                 class="gx-fchip @(filter.Status == MemberStatus.ExpiringSoon ? "warn" : null) @(isOn ? "on" : null)"
                 aria-pressed="@isOn"
                 @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
-            @filter.DesktopLabel · @CountFor(filter.Status)
+            @filter.DesktopLabel · @GxFormats.Count(CountFor(filter.Status))
         </button>
     }
 </div>
@@ -120,7 +120,7 @@
 {
     <div class="gx-filters" style="margin-top:14px">
         <span style="font-size:var(--text-xs);color:var(--text-muted)">
-            Page @CurrentPage sur @PageCount · @Page.FilteredCount membres
+            Page @CurrentPage sur @PageCount · @GxFormats.Plural(Page.FilteredCount, "membre", "membres")
         </span>
         <span style="margin-left:auto;display:flex;gap:10px">
             <FluentButton Appearance="Appearance.Outline" Disabled="@(CurrentPage <= 1)"
@@ -157,12 +157,20 @@
     [Parameter] public EventCallback<MemberListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
 
-    private string Subtitle => Page.ExpiringSoonCount switch
+    private string Subtitle
     {
-        0 => $"{Page.TotalCount} membres",
-        1 => $"{Page.TotalCount} membres · 1 abonnement expire cette semaine",
-        var count => $"{Page.TotalCount} membres · {count} abonnements expirent cette semaine"
-    };
+        get
+        {
+            var members = GxFormats.Plural(Page.TotalCount, "membre", "membres");
+
+            return Page.ExpiringSoonCount switch
+            {
+                0 => members,
+                1 => $"{members} · 1 abonnement expire cette semaine",
+                var count => $"{members} · {count} abonnements expirent cette semaine"
+            };
+        }
+    }
 
     private string EmptyText => string.IsNullOrWhiteSpace(Search) && Status is null
         ? "Aucun dossier pour l'instant. Créez le premier pour commencer."
