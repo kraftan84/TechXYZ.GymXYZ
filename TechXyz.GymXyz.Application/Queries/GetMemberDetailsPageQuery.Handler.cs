@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
+using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
@@ -59,7 +60,7 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                     subscription.Id,
                     subscription.StartDate,
                     subscription.EndDate,
-                    subscription.NumberOfLessons
+                    subscription.NumberOfSessions
                 }))
             .OrderByDescending(subscription => subscription.EndDate)
             .ToListAsync(cancellationToken);
@@ -68,16 +69,16 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             .Select(subscription =>
             {
                 var status = GetSubscriptionStatus(subscription.StartDate, subscription.EndDate, today);
-                var lessonsRemaining = status == MemberSubscriptionStatus.Active
-                    ? Math.Max(0, subscription.NumberOfLessons)
+                var sessionsRemaining = status == MemberSubscriptionStatus.Active
+                    ? Math.Max(0, subscription.NumberOfSessions)
                     : 0;
 
                 return new MemberSubscriptionDto(
                     subscription.Id,
                     subscription.StartDate,
                     subscription.EndDate,
-                    subscription.NumberOfLessons,
-                    lessonsRemaining,
+                    subscription.NumberOfSessions,
+                    sessionsRemaining,
                     status);
             })
             .ToList();
@@ -88,59 +89,45 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             .Where(subscription => subscription.StartDate <= today && subscription.EndDate >= today)
             .MaxBy(subscription => subscription.EndDate);
 
-        var privateLessons = await _dbContext.PrivateLessons
+        // A seat on the waiting list is still a seat the member holds, so it is
+        // listed here — it is only occupancy that ignores it.
+        var sessions = await _dbContext.Registrations
             .AsNoTracking()
-            .Where(lesson =>
-                lesson.IsActive &&
-                lesson.Coach.IsActive &&
-                lesson.Member != null &&
-                lesson.Member.IsActive &&
-                lesson.Member.Id == request.MemberId)
-            .Select(lesson => new MemberLessonDto(
-                lesson.Id,
-                lesson.Name,
-                lesson.Type,
-                lesson.StartDate,
-                lesson.EndDate,
-                lesson.Coach.FirstName,
-                lesson.Coach.LastName,
-                1,
-                0))
+            .Where(registration =>
+                registration.IsActive &&
+                registration.MemberId == request.MemberId &&
+                registration.Session!.IsActive &&
+                registration.Session.Status != SessionStatus.Cancelled)
+            .Select(registration => new MemberSessionDto(
+                registration.Session!.Id,
+                registration.Session.CourseTemplate!.Name,
+                registration.Session.StartsAt,
+                registration.Session.EndsAt,
+                registration.Session.Coach == null ? null : registration.Session.Coach.FirstName,
+                registration.Session.Coach == null ? null : registration.Session.Coach.LastName,
+                registration.Session.Capacity,
+                Math.Max(
+                    0,
+                    registration.Session.Capacity - registration.Session.Registrations!
+                        .Count(seat => seat.IsActive && !seat.IsWaitlisted))))
             .ToListAsync(cancellationToken);
 
-        var collectiveLessons = await _dbContext.CollectiveLessons
-            .AsNoTracking()
-            .Where(lesson =>
-                lesson.IsActive &&
-                lesson.Coach.IsActive &&
-                lesson.Participants!.Any(participant => participant.IsActive && participant.Id == request.MemberId))
-            .Select(lesson => new MemberLessonDto(
-                lesson.Id,
-                lesson.Name,
-                lesson.Type,
-                lesson.StartDate,
-                lesson.EndDate,
-                lesson.Coach.FirstName,
-                lesson.Coach.LastName,
-                lesson.MaxParticipants,
-                Math.Max(0, lesson.MaxParticipants - lesson.Participants!.Count(participant => participant.IsActive))))
-            .ToListAsync(cancellationToken);
-
-        var lessons = privateLessons.Concat(collectiveLessons).ToList();
-
-        var upcomingLessons = lessons
-            .Where(lesson => lesson.StartDate >= now)
-            .OrderBy(lesson => lesson.StartDate)
+        var upcomingSessions = sessions
+            .Where(session => session.StartsAt >= now)
+            .OrderBy(session => session.StartsAt)
             .ToList();
 
-        var pastLessons = lessons
-            .Where(lesson => lesson.StartDate < now)
-            .OrderByDescending(lesson => lesson.StartDate)
+        var pastSessions = sessions
+            .Where(session => session.StartsAt < now)
+            .OrderByDescending(session => session.StartsAt)
             .ToList();
 
+        // "Séances · depuis l'inscription" counts what the member has already
+        // been to, so the seats booked for the weeks ahead stay out of it.
+        //
         // Attendance rate and last visit come from check-in (lot 6): left unset
         // rather than approximated from the schedule.
-        var stats = new MemberStatsDto(lessons.Count, AttendanceRate: null, LastVisitOn: null);
+        var stats = new MemberStatsDto(pastSessions.Count, AttendanceRate: null, LastVisitOn: null);
 
         return new MemberDetailsPageDto(
             member.Id,
@@ -155,8 +142,8 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             MemberStatusRules.Resolve(currentSubscription?.EndDate, horizon),
             currentSubscription,
             subscriptions,
-            upcomingLessons,
-            pastLessons,
+            upcomingSessions,
+            pastSessions,
             // Payments arrive at lot 7 (Abonnements & encaissements).
             [],
             stats);

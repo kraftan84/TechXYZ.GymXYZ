@@ -7,7 +7,7 @@ public sealed class UpdateSubscriptionCommandValidator : AbstractValidator<Updat
     public UpdateSubscriptionCommandValidator()
     {
         RuleFor(command => command.Id).GreaterThan(0);
-        RuleFor(command => command.NumberOfLessons).GreaterThan(0);
+        RuleFor(command => command.NumberOfSessions).GreaterThan(0);
         RuleFor(command => command.EndDate)
             .GreaterThanOrEqualTo(command => command.StartDate);
     }

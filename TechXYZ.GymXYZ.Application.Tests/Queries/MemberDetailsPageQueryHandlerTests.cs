@@ -27,37 +27,37 @@ public class MemberDetailsPageQueryHandlerTests
         };
 
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
-        var privateLesson = new PrivateLesson
+        var pastSession = new Session
         {
-            Name = "Private",
-            Type = LessonType.Private,
+            CourseTemplate = new CourseTemplate("Private") { Discipline = new Discipline("Coaching") },
             Coach = coach,
             Location = new Location("Location A"),
-            Member = member,
-            StartDate = DateTime.Today.AddDays(-2).AddHours(10),
-            EndDate = DateTime.Today.AddDays(-2).AddHours(11)
+            Capacity = 1,
+            StartsAt = DateTime.Today.AddDays(-2).AddHours(10),
+            EndsAt = DateTime.Today.AddDays(-2).AddHours(11)
         };
-        var collectiveLesson = new CollectiveLesson
+        var upcomingSession = new Session
         {
-            Name = "Collective",
-            Type = LessonType.Collective,
+            CourseTemplate = new CourseTemplate("Collective") { Discipline = new Discipline("Renforcement") },
             Coach = coach,
-            Locations = [new Location("Location B")],
-            Participants = [member],
-            MaxParticipants = 20,
-            StartDate = DateTime.Today.AddDays(2).AddHours(18),
-            EndDate = DateTime.Today.AddDays(2).AddHours(19)
+            Location = new Location("Location B"),
+            Capacity = 20,
+            StartsAt = DateTime.Today.AddDays(2).AddHours(18),
+            EndsAt = DateTime.Today.AddDays(2).AddHours(19)
         };
         var subscription = new Subscription
         {
             Member = member,
             StartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-10)),
             EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(20)),
-            NumberOfLessons = 12
+            NumberOfSessions = 12
         };
 
-        member.PrivateLessons = [privateLesson];
-        member.CollectiveLessons = [collectiveLesson];
+        member.Registrations =
+        [
+            new Registration { Session = pastSession, RegisteredAt = DateTime.Today.AddDays(-9) },
+            new Registration { Session = upcomingSession, RegisteredAt = DateTime.Today.AddDays(-1) }
+        ];
         member.Subscriptions = [subscription];
 
         dbContext.Members.Add(member);
@@ -69,13 +69,20 @@ public class MemberDetailsPageQueryHandlerTests
         result.ShouldNotBeNull();
         result!.Id.ShouldBe(member.Id);
         result.Subscriptions.Count.ShouldBe(1);
-        result.Stats.TotalLessons.ShouldBe(2);
+        // "depuis l'inscription" counts what the member has been to, not the
+        // seats already booked for the weeks ahead.
+        result.Stats.TotalSessions.ShouldBe(1);
 
         // Sessions are split by the record's two cards.
-        result.UpcomingLessons.Count.ShouldBe(1);
-        result.UpcomingLessons[0].Name.ShouldBe("Collective");
-        result.PastLessons.Count.ShouldBe(1);
-        result.PastLessons[0].Name.ShouldBe("Private");
+        result.UpcomingSessions.Count.ShouldBe(1);
+        result.UpcomingSessions[0].Name.ShouldBe("Collective");
+        result.PastSessions.Count.ShouldBe(1);
+        result.PastSessions[0].Name.ShouldBe("Private");
+
+        // A capacity of one is what makes a session private — there is no type.
+        result.PastSessions[0].IsPrivate.ShouldBeTrue();
+        result.UpcomingSessions[0].IsPrivate.ShouldBeFalse();
+        result.UpcomingSessions[0].RemainingSpots.ShouldBe(19);
 
         // Attendance is produced by check-in (lot 6) — never approximated here.
         result.Stats.AttendanceRate.ShouldBeNull();
@@ -103,7 +110,7 @@ public class MemberDetailsPageQueryHandlerTests
                 {
                     StartDate = today.AddDays(-20),
                     EndDate = today.AddDays(3),
-                    NumberOfLessons = 10
+                    NumberOfSessions = 10
                 }
             ]
         };

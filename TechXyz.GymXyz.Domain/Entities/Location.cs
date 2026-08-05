@@ -8,8 +8,7 @@ namespace TechXyz.GymXyz.Domain.Entities;
 /// own home. Called <c>Room</c> until lot 4, which none of the last two is.
 /// <para>
 /// Occupancy, sessions per week, the day's schedule and the weekly heatmap are
-/// all counted from sessions, so none of them is stored here — they arrive with
-/// the planning at lot 5.
+/// all counted from the sessions booked here, so none of them is stored.
 /// </para>
 /// </summary>
 public class Location : EntityBase<int>, ITenantScoped

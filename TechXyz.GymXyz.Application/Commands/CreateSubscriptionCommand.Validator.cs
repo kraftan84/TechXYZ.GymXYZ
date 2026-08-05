@@ -7,7 +7,7 @@ public sealed class CreateSubscriptionCommandValidator : AbstractValidator<Creat
     public CreateSubscriptionCommandValidator()
     {
         RuleFor(command => command.MemberId).GreaterThan(0);
-        RuleFor(command => command.NumberOfLessons).GreaterThan(0);
+        RuleFor(command => command.NumberOfSessions).GreaterThan(0);
         RuleFor(command => command.EndDate)
             .GreaterThanOrEqualTo(command => command.StartDate);
     }

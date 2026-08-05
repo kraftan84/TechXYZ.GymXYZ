@@ -30,10 +30,8 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Site> Sites =>  Set<Site>();
     public DbSet<Location> Locations =>  Set<Location>();
     public DbSet<LocationEquipment> LocationEquipment => Set<LocationEquipment>();
-    public DbSet<Lesson> Lessons => Set<Lesson>();
-    public DbSet<PrivateLesson> PrivateLessons => Set<PrivateLesson>();
-    public DbSet<CollectiveLesson> CollectiveLessons => Set<CollectiveLesson>();
-    public DbSet<LessonTheme> LessonThemes => Set<LessonTheme>();
+    public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<Registration> Registrations => Set<Registration>();
     public DbSet<Coach> Coaches =>  Set<Coach>();
     public DbSet<Discipline> Disciplines => Set<Discipline>();
     public DbSet<CoachDiscipline> CoachDisciplines => Set<CoachDiscipline>();
@@ -62,34 +60,49 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder
-            .Entity<Lesson>(x =>
-            {
-                x.UseTpcMappingStrategy();
+        modelBuilder.Entity<Session>(x =>
+        {
+            x.HasOne(session => session.CourseTemplate)
+                .WithMany()
+                .HasForeignKey(session => session.CourseTemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-                x.HasOne(l => l.Coach)
-                    .WithMany();
-            })
-            .Entity<PrivateLesson>(x =>
-            {
-                x.HasOne(pl => pl.Coach)
-                    .WithMany(c => c.PrivateLessons);
-                x.HasOne(pl => pl.Location)
-                    .WithMany();
+            // Optional: an open-access slot runs without anybody animating it.
+            x.HasOne(session => session.Coach)
+                .WithMany(coach => coach.Sessions)
+                .HasForeignKey(session => session.CoachId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
-                x.HasOne(pl => pl.Member)
-                    .WithMany(m => m.PrivateLessons);
-            })
-            .Entity<CollectiveLesson>(x =>
-            {
-                x.HasOne(pl => pl.Coach)
-                    .WithMany(c => c.CollectiveLessons);
-                x.HasMany(cl => cl.Locations)
-                    .WithMany();
+            x.HasOne(session => session.Location)
+                .WithMany()
+                .HasForeignKey(session => session.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-                x.HasMany(cl => cl.Participants)
-                    .WithMany(m => m.CollectiveLessons);
-            });
+            // The planning always reads a week of one venue, of one coach, or of
+            // a whole series at once — those three are the indexes.
+            x.HasIndex(session => session.StartsAt);
+            x.HasIndex(session => new { session.LocationId, session.StartsAt });
+            x.HasIndex(session => new { session.CoachId, session.StartsAt });
+            x.HasIndex(session => session.SeriesId);
+        });
+
+        modelBuilder.Entity<Registration>(x =>
+        {
+            x.HasOne(registration => registration.Session)
+                .WithMany(session => session.Registrations)
+                .HasForeignKey(registration => registration.SessionId);
+
+            x.HasOne(registration => registration.Member)
+                .WithMany(member => member.Registrations)
+                .HasForeignKey(registration => registration.MemberId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // One seat per member per session, waiting list included: signing up
+            // twice is the same seat, not two.
+            x.HasIndex(registration => new { registration.SessionId, registration.MemberId })
+                .IsUnique();
+        });
 
         modelBuilder.Entity<CoachDiscipline>(x =>
         {

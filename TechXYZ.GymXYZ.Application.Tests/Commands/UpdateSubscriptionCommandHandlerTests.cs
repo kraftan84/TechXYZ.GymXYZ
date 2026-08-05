@@ -16,7 +16,7 @@ public class UpdateSubscriptionCommandHandlerTests
             Member = member,
             StartDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(-1)),
             EndDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(1)),
-            NumberOfLessons = 10
+            NumberOfSessions = 10
         };
 
         dbContext.Members.Add(member);
@@ -33,7 +33,7 @@ public class UpdateSubscriptionCommandHandlerTests
             CancellationToken.None);
 
         updated.ShouldBeTrue();
-        subscription.NumberOfLessons.ShouldBe(20);
+        subscription.NumberOfSessions.ShouldBe(20);
     }
 
     [Fact]

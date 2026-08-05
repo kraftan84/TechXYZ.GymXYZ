@@ -18,7 +18,7 @@ public sealed record GxNavGroup(string Title, IReadOnlyList<GxNavItem> Items);
 public static class GxNavigation
 {
     public static readonly GxNavItem Accueil = new("accueil", "Accueil", GxIconPaths.Home, "/");
-    public static readonly GxNavItem Planning = new("planning", "Planning", GxIconPaths.Calendar, "/plannings");
+    public static readonly GxNavItem Planning = new("planning", "Planning", GxIconPaths.Calendar, "/planning");
     public static readonly GxNavItem Presences = new("presences", "Présences", GxIconPaths.Check, "/presences");
     public static readonly GxNavItem Membres = new("membres", "Membres", GxIconPaths.Users, "/members");
 

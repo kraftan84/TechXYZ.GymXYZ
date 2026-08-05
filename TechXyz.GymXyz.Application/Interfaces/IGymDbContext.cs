@@ -10,10 +10,8 @@ public interface IGymDbContext
     DbSet<Site> Sites { get; }
     DbSet<Location> Locations { get; }
     DbSet<LocationEquipment> LocationEquipment { get; }
-    DbSet<Lesson> Lessons { get; }
-    DbSet<PrivateLesson> PrivateLessons { get; }
-    DbSet<CollectiveLesson> CollectiveLessons { get; }
-    DbSet<LessonTheme> LessonThemes { get; }
+    DbSet<Session> Sessions { get; }
+    DbSet<Registration> Registrations { get; }
     DbSet<Coach> Coaches { get; }
     DbSet<Discipline> Disciplines { get; }
     DbSet<CoachDiscipline> CoachDisciplines { get; }

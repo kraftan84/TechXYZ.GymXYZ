@@ -1,0 +1,14 @@
+@page "/planning"
+
+@* The pre-hand-off /plannings screen ran on three lessons hard-coded in the
+   component, which the Session entity has just replaced. It is deleted rather
+   than rewired: the hand-off week grid takes its place in the next step, and a
+   mock that contradicts the database is worse than an honest gap. *@
+
+<PageTitle>Planning</PageTitle>
+
+<PageHead Title="Planning" Subtitle="Voyez et remplissez la semaine."/>
+
+<EmptyState Icon="@GxIconPaths.Calendar"
+            Title="Bientôt la grille de la semaine"
+            Text="Le planning arrive avec l'écran de la semaine."/>

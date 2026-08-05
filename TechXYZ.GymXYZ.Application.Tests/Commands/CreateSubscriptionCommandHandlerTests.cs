@@ -28,7 +28,7 @@ public class CreateSubscriptionCommandHandlerTests
 
         var subscription = await dbContext.Subscriptions.FindAsync(subscriptionId);
         subscription.ShouldNotBeNull();
-        subscription.NumberOfLessons.ShouldBe(12);
+        subscription.NumberOfSessions.ShouldBe(12);
         subscription.StartDate.ShouldBe(expectedStartDate);
         subscription.EndDate.ShouldBe(expectedEndDate);
     }
@@ -53,7 +53,7 @@ public class CreateSubscriptionCommandHandlerTests
         subscription.ShouldNotBeNull();
         subscription.StartDate.ShouldBe(startDate);
         subscription.EndDate.ShouldBe(endDate);
-        subscription.NumberOfLessons.ShouldBe(8);
+        subscription.NumberOfSessions.ShouldBe(8);
     }
 
     [Fact]

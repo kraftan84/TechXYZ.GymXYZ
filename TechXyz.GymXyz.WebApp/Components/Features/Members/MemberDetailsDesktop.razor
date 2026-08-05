@@ -52,10 +52,10 @@
                             Débuté le @GxFormats.Date(subscription.StartDate) ·
                             <b>expire le @GxFormats.Date(subscription.EndDate)</b>
                         </div>
-                        @if (subscription.LessonsTotal > 0)
+                        @if (subscription.SessionsTotal > 0)
                         {
                             <div style="font-size:var(--text-xs);color:var(--text-muted)">
-                                @subscription.LessonsTotal séances au carnet
+                                @subscription.SessionsTotal séances au carnet
                             </div>
                         }
                         <div style="margin-top:12px;display:flex;gap:8px">
@@ -113,7 +113,7 @@
 
     <div class="gx-col">
         <div class="gx-grid3">
-            <Kpi Label="Séances" Value="@Member.Stats.TotalLessons.ToString()" Sub="depuis l'inscription"/>
+            <Kpi Label="Séances" Value="@Member.Stats.TotalSessions.ToString()" Sub="depuis l'inscription"/>
             <Kpi Label="Présence"
                  Value="@(Member.Stats.AttendanceRate is { } rate ? $"{rate} %" : "—")"
                  Sub="sur 90 jours"/>
@@ -125,7 +125,7 @@
         <GxCard Padded="false">
             <CardHead Title="Prochains cours"/>
             <div style="padding:4px 18px 6px">
-                @if (Member.UpcomingLessons.Count == 0)
+                @if (Member.UpcomingSessions.Count == 0)
                 {
                     <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
                         Aucun cours à venir.
@@ -133,12 +133,12 @@
                 }
                 else
                 {
-                    @foreach (var lesson in Member.UpcomingLessons)
+                    @foreach (var session in Member.UpcomingSessions.Take(5))
                     {
                         <div class="gx-listrow">
                             <div class="main">
-                                <div class="t">@lesson.Name</div>
-                                <div class="s">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                                <div class="t">@session.Name</div>
+                                <div class="s">@GxFormats.DayAndTime(session.StartsAt)</div>
                             </div>
                             <GxChip Tone="GxTone.Brand">Inscrit·e</GxChip>
                         </div>
@@ -150,7 +150,7 @@
         <GxCard Padded="false">
             <CardHead Title="Présences récentes"/>
             <div style="padding:4px 18px 6px">
-                @if (Member.PastLessons.Count == 0)
+                @if (Member.PastSessions.Count == 0)
                 {
                     <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
                         Aucun passage enregistré. Le pointage arrive avec les présences.
@@ -158,12 +158,12 @@
                 }
                 else
                 {
-                    @foreach (var lesson in Member.PastLessons.Take(5))
+                    @foreach (var session in Member.PastSessions.Take(5))
                     {
                         <div class="gx-listrow">
                             <div class="main">
-                                <div class="t">@lesson.Name</div>
-                                <div class="s">@GxFormats.DayAndTime(lesson.StartDate)</div>
+                                <div class="t">@session.Name</div>
+                                <div class="s">@GxFormats.DayAndTime(session.StartsAt)</div>
                             </div>
                             <GxChip Tone="GxTone.Neutral">Passé</GxChip>
                         </div>
