@@ -100,3 +100,21 @@
 fluent-card {
   border-radius: var(--radius-lg);
 }
+
+/* ------------------------------------------------------------
+   Toasts above the drawers.
+
+   Fluent hard-codes z-index 999 on its toast container, and the
+   scrim of a drawer sits on --z-overlay (1000). Every message this
+   application raises is raised with a drawer open — a refused
+   creation, a refused edit — so every one of them rendered behind
+   the veil and the user was told nothing.
+
+   The ramp already reserves --z-toast (1200) above --z-modal for
+   exactly this. Fluent's own rule carries a scoped-CSS attribute,
+   which outranks a plain class, so this is one of the overrides
+   that needs !important.
+   ------------------------------------------------------------ */
+.fluent-toast-provider {
+  z-index: var(--z-toast) !important;
+}
