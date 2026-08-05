@@ -2,9 +2,9 @@ using MediatR;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateLocationCommand : IRequest<int>
+public sealed class CreateSiteCommand : IRequest<int>
 {
-    public CreateLocationCommand(
+    public CreateSiteCommand(
         string name,
         string street,
         string zipCode,

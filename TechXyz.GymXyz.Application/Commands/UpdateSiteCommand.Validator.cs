@@ -2,10 +2,11 @@ using FluentValidation;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateLocationCommandValidator : AbstractValidator<CreateLocationCommand>
+public sealed class UpdateSiteCommandValidator : AbstractValidator<UpdateSiteCommand>
 {
-    public CreateLocationCommandValidator()
+    public UpdateSiteCommandValidator()
     {
+        RuleFor(command => command.Id).GreaterThan(0);
         RuleFor(command => command.Name).NotEmpty().MaximumLength(150);
         RuleFor(command => command.Street).NotEmpty().MaximumLength(200);
         RuleFor(command => command.ZipCode).NotEmpty().MaximumLength(20);

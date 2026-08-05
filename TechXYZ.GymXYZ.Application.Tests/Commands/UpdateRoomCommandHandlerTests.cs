@@ -12,18 +12,18 @@ public class UpdateRoomCommandHandlerTests
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldMoveRoomAndRename));
 
-        var source = new Location("Source")
+        var source = new Site("Source")
         {
             Address = new Address { Street = "S", ZipCode = "1", City = "A", Country = "FR" }
         };
-        var target = new Location("Target")
+        var target = new Site("Target")
         {
             Address = new Address { Street = "T", ZipCode = "2", City = "B", Country = "FR" }
         };
         var room = new Room("Old Name");
         source.AddRoom(room);
 
-        dbContext.Locations.AddRange(source, target);
+        dbContext.Sites.AddRange(source, target);
         await dbContext.SaveChangesAsync();
 
         var handler = new UpdateRoomCommandHandler(dbContext, new UpdateRoomCommandValidator());

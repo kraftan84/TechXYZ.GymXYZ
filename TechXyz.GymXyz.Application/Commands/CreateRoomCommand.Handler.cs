@@ -21,16 +21,16 @@ public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var location = await _dbContext.Locations
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId && candidate.IsActive, cancellationToken);
+        var site = await _dbContext.Sites
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.SiteId && candidate.IsActive, cancellationToken);
 
-        if (location is null)
+        if (site is null)
         {
-            throw new ValidationException("Location not found.");
+            throw new ValidationException("Site not found.");
         }
 
         var room = new Room(request.Name.Trim());
-        location.AddRoom(room);
+        site.AddRoom(room);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

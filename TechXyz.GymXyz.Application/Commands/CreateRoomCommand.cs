@@ -4,12 +4,12 @@ namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class CreateRoomCommand : IRequest<int>
 {
-    public CreateRoomCommand(string name, int locationId)
+    public CreateRoomCommand(string name, int siteId)
     {
         Name = name;
-        LocationId = locationId;
+        SiteId = siteId;
     }
 
     public string Name { get; }
-    public int LocationId { get; }
+    public int SiteId { get; }
 }

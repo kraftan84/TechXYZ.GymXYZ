@@ -6,24 +6,24 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, int>
+public sealed class CreateSiteCommandHandler : IRequestHandler<CreateSiteCommand, int>
 {
     private readonly IGymDbContext _dbContext;
-    private readonly IValidator<CreateLocationCommand> _validator;
+    private readonly IValidator<CreateSiteCommand> _validator;
 
-    public CreateLocationCommandHandler(IGymDbContext dbContext, IValidator<CreateLocationCommand> validator)
+    public CreateSiteCommandHandler(IGymDbContext dbContext, IValidator<CreateSiteCommand> validator)
     {
         _dbContext = dbContext;
         _validator = validator;
     }
 
-    public async Task<int> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateSiteCommand request, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var defaultGym = await _dbContext.GetRequiredDefaultGymAsync(cancellationToken);
 
-        var location = new Location(request.Name.Trim())
+        var site = new Site(request.Name.Trim())
         {
             Address = new Address
             {
@@ -34,9 +34,9 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
             }
         };
 
-        defaultGym.AddLocation(location);
+        defaultGym.AddSite(site);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return location.Id;
+        return site.Id;
     }
 }

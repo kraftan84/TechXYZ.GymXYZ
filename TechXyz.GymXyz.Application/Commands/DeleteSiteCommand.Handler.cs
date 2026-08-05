@@ -6,36 +6,36 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationCommand, bool>
+public sealed class DeleteSiteCommandHandler : IRequestHandler<DeleteSiteCommand, bool>
 {
     private readonly IGymDbContext _dbContext;
-    private readonly IValidator<DeleteLocationCommand> _validator;
+    private readonly IValidator<DeleteSiteCommand> _validator;
 
-    public DeleteLocationCommandHandler(IGymDbContext dbContext, IValidator<DeleteLocationCommand> validator)
+    public DeleteSiteCommandHandler(IGymDbContext dbContext, IValidator<DeleteSiteCommand> validator)
     {
         _dbContext = dbContext;
         _validator = validator;
     }
 
-    public async Task<bool> Handle(DeleteLocationCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteSiteCommand request, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var location = await _dbContext.Locations
+        var site = await _dbContext.Sites
             .Include(candidate => candidate.Rooms)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
 
-        if (location is null)
+        if (site is null)
         {
             return false;
         }
 
-        foreach (var room in location.Rooms?.ToList() ?? [])
+        foreach (var room in site.Rooms?.ToList() ?? [])
         {
             room.IsActive = false;
         }
 
-        location.IsActive = false;
+        site.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

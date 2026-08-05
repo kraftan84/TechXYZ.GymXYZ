@@ -2,9 +2,9 @@ using MediatR;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class UpdateLocationCommand : IRequest<bool>
+public sealed class UpdateSiteCommand : IRequest<bool>
 {
-    public UpdateLocationCommand(
+    public UpdateSiteCommand(
         int id,
         string name,
         string street,

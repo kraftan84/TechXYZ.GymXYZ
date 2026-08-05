@@ -25,30 +25,30 @@
                 <p>Gym principal</p>
             </div>
             <div class="gym-meta">
-                <span>@locations.Count emplacement(s)</span>
+                <span>@sites.Count emplacement(s)</span>
                 <span>@rooms.Count salle(s)</span>
             </div>
         </div>
     </FluentCard>
 
     <div class="rooms-layout">
-        <FluentCard class="locations-card">
-            <div class="locations-header">
+        <FluentCard class="sites-card">
+            <div class="sites-header">
                 <h2>Emplacements</h2>
-                <FluentButton Appearance="Appearance.Accent" @onclick="OpenLocationCreateDrawer">
+                <FluentButton Appearance="Appearance.Accent" @onclick="OpenSiteCreateDrawer">
                     Nouvel emplacement
                 </FluentButton>
             </div>
-            <div class="locations-list">
-                @foreach (var location in locations)
+            <div class="sites-list">
+                @foreach (var site in sites)
                 {
-                    <button class="location-item"
+                    <button class="site-item"
                             type="button"
-                            @onclick="() => OpenLocationDetailsDrawer(location)"
-                            aria-label="@($"Voir {location.Name}")">
-                        <div class="location-name">@location.Name</div>
-                        <div class="location-meta">@FormatAddress(location.Address)</div>
-                        <div class="location-meta">@($"{location.Rooms.Count} salle(s)")</div>
+                            @onclick="() => OpenSiteDetailsDrawer(site)"
+                            aria-label="@($"Voir {site.Name}")">
+                        <div class="site-name">@site.Name</div>
+                        <div class="site-meta">@FormatAddress(site.Address)</div>
+                        <div class="site-meta">@($"{site.Rooms.Count} salle(s)")</div>
                     </button>
                 }
             </div>
@@ -73,7 +73,7 @@
                             @onclick="() => OpenRoomDetailsDrawer(room)"
                             aria-label="@($"Voir {room.Name}")">
                         <span class="rooms-col">@room.Name</span>
-                        <span class="rooms-col">@room.LocationName</span>
+                        <span class="rooms-col">@room.SiteName</span>
                     </button>
                 }
             </div>
@@ -86,31 +86,31 @@
     <DrawerShell DrawerClass="room-drawer" Title="@drawerTitle" OnClose="CloseDrawer">
         <ChildContent>
             <div class="drawer-content">
-                @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
+                @if (drawerMode == DrawerMode.SiteDetails && selectedSite is not null)
                 {
                     <div class="drawer-section">
                         <div class="drawer-field">
                             <span class="drawer-label">Nom</span>
-                            <span class="drawer-value">@selectedLocation.Name</span>
+                            <span class="drawer-value">@selectedSite.Name</span>
                         </div>
                         <div class="drawer-field">
                             <span class="drawer-label">Adresse</span>
-                            <span class="drawer-value">@FormatAddress(selectedLocation.Address)</span>
+                            <span class="drawer-value">@FormatAddress(selectedSite.Address)</span>
                         </div>
                         <div class="drawer-field">
                             <span class="drawer-label">Salles</span>
-                            <span class="drawer-value">@($"{selectedLocation.Rooms.Count} salle(s)")</span>
+                            <span class="drawer-value">@($"{selectedSite.Rooms.Count} salle(s)")</span>
                         </div>
                     </div>
                 }
-                else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
+                else if (drawerMode == DrawerMode.SiteCreate || drawerMode == DrawerMode.SiteEdit)
                 {
                     <div class="drawer-form">
-                        <FluentTextField Label="Nom" @bind-Value="locationEditModel.Name" />
-                        <FluentTextField Label="Adresse" @bind-Value="locationEditModel.Street" />
-                        <FluentTextField Label="Code postal" @bind-Value="locationEditModel.ZipCode" />
-                        <FluentTextField Label="Ville" @bind-Value="locationEditModel.City" />
-                        <FluentTextField Label="Pays" @bind-Value="locationEditModel.Country" />
+                        <FluentTextField Label="Nom" @bind-Value="siteEditModel.Name" />
+                        <FluentTextField Label="Adresse" @bind-Value="siteEditModel.Street" />
+                        <FluentTextField Label="Code postal" @bind-Value="siteEditModel.ZipCode" />
+                        <FluentTextField Label="Ville" @bind-Value="siteEditModel.City" />
+                        <FluentTextField Label="Pays" @bind-Value="siteEditModel.Country" />
                     </div>
                 }
                 else if (drawerMode == DrawerMode.RoomDetails && selectedRoom is not null)
@@ -122,7 +122,7 @@
                         </div>
                         <div class="drawer-field">
                             <span class="drawer-label">Emplacement</span>
-                            <span class="drawer-value">@selectedRoom.LocationName</span>
+                            <span class="drawer-value">@selectedRoom.SiteName</span>
                         </div>
                     </div>
                 }
@@ -133,11 +133,11 @@
                         <div class="drawer-field">
                             <FluentSelect Label="Emplacement"
                                           TOption="string"
-                                          Value="@roomEditModel.LocationId.ToString()"
-                                          ValueChanged="OnRoomLocationChanged">
-                                @foreach (var location in locations)
+                                          Value="@roomEditModel.SiteId.ToString()"
+                                          ValueChanged="OnRoomSiteChanged">
+                                @foreach (var site in sites)
                                 {
-                                    <FluentOption TOption="string" Value="@location.Id.ToString()">@location.Name</FluentOption>
+                                    <FluentOption TOption="string" Value="@site.Id.ToString()">@site.Name</FluentOption>
                                 }
                             </FluentSelect>
                         </div>
@@ -146,23 +146,23 @@
             </div>
         </ChildContent>
         <FooterContent>
-            @if (drawerMode == DrawerMode.LocationDetails && selectedLocation is not null)
+            @if (drawerMode == DrawerMode.SiteDetails && selectedSite is not null)
             {
                 <div class="drawer-actions">
-                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenLocationEditDrawer">
+                    <FluentButton Appearance="Appearance.Outline" @onclick="OpenSiteEditDrawer">
                         Editer
                     </FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteLocationAsync">
+                    <FluentButton Appearance="Appearance.Accent" @onclick="DeleteSiteAsync">
                         Supprimer
                     </FluentButton>
                 </div>
             }
-            else if (drawerMode == DrawerMode.LocationCreate || drawerMode == DrawerMode.LocationEdit)
+            else if (drawerMode == DrawerMode.SiteCreate || drawerMode == DrawerMode.SiteEdit)
             {
                 <div class="drawer-actions">
                     <FluentButton Appearance="Appearance.Outline" @onclick="CancelEdit">Annuler</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveLocationAsync">
-                        @(drawerMode == DrawerMode.LocationCreate ? "Creer l'emplacement" : "Enregistrer")
+                    <FluentButton Appearance="Appearance.Accent" @onclick="SaveSiteAsync">
+                        @(drawerMode == DrawerMode.SiteCreate ? "Creer l'emplacement" : "Enregistrer")
                     </FluentButton>
                 </div>
             }
@@ -204,12 +204,12 @@
 
     private RoomsPageDto? roomsPage;
 
-    private IReadOnlyList<LocationWithRoomsDto> locations => roomsPage?.Locations ?? new List<LocationWithRoomsDto>();
-    private IReadOnlyList<RoomWithLocationDto> rooms => roomsPage?.Rooms ?? new List<RoomWithLocationDto>();
+    private IReadOnlyList<SiteWithRoomsDto> sites => roomsPage?.Sites ?? new List<SiteWithRoomsDto>();
+    private IReadOnlyList<RoomWithSiteDto> rooms => roomsPage?.Rooms ?? new List<RoomWithSiteDto>();
 
-    private LocationWithRoomsDto? selectedLocation;
-    private RoomWithLocationDto? selectedRoom;
-    private LocationEditModel locationEditModel = new();
+    private SiteWithRoomsDto? selectedSite;
+    private RoomWithSiteDto? selectedRoom;
+    private SiteEditModel siteEditModel = new();
     private RoomEditModel roomEditModel = new();
     private DrawerMode drawerMode = DrawerMode.None;
     private string drawerTitle = string.Empty;
@@ -230,10 +230,10 @@
             return;
         }
 
-        if (selectedLocation is not null)
+        if (selectedSite is not null)
         {
-            selectedLocation = locations.FirstOrDefault(location => location.Id == selectedLocation.Id);
-            if (selectedLocation is null && drawerMode is DrawerMode.LocationDetails or DrawerMode.LocationEdit)
+            selectedSite = sites.FirstOrDefault(site => site.Id == selectedSite.Id);
+            if (selectedSite is null && drawerMode is DrawerMode.SiteDetails or DrawerMode.SiteEdit)
             {
                 CloseDrawer();
                 return;
@@ -250,54 +250,54 @@
         }
     }
 
-    private void OpenLocationDetailsDrawer(LocationWithRoomsDto location)
+    private void OpenSiteDetailsDrawer(SiteWithRoomsDto site)
     {
-        selectedLocation = location;
+        selectedSite = site;
         selectedRoom = null;
-        drawerMode = DrawerMode.LocationDetails;
+        drawerMode = DrawerMode.SiteDetails;
         drawerTitle = "Details de l'emplacement";
     }
 
-    private void OpenLocationCreateDrawer()
+    private void OpenSiteCreateDrawer()
     {
-        locationEditModel = new LocationEditModel();
-        selectedLocation = null;
-        drawerMode = DrawerMode.LocationCreate;
+        siteEditModel = new SiteEditModel();
+        selectedSite = null;
+        drawerMode = DrawerMode.SiteCreate;
         drawerTitle = "Nouvel emplacement";
     }
 
-    private void OpenLocationEditDrawer()
+    private void OpenSiteEditDrawer()
     {
-        if (selectedLocation is null)
+        if (selectedSite is null)
         {
             return;
         }
 
-        locationEditModel = new LocationEditModel
+        siteEditModel = new SiteEditModel
         {
-            Name = selectedLocation.Name,
-            Street = selectedLocation.Address.Street,
-            ZipCode = selectedLocation.Address.ZipCode,
-            City = selectedLocation.Address.City,
-            Country = selectedLocation.Address.Country
+            Name = selectedSite.Name,
+            Street = selectedSite.Address.Street,
+            ZipCode = selectedSite.Address.ZipCode,
+            City = selectedSite.Address.City,
+            Country = selectedSite.Address.Country
         };
 
-        drawerMode = DrawerMode.LocationEdit;
+        drawerMode = DrawerMode.SiteEdit;
         drawerTitle = "Modifier l'emplacement";
     }
 
-    private async Task SaveLocationAsync()
+    private async Task SaveSiteAsync()
     {
-        if (drawerMode == DrawerMode.LocationCreate)
+        if (drawerMode == DrawerMode.SiteCreate)
         {
             var created = await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new CreateLocationCommand(
-                    locationEditModel.Name,
-                    locationEditModel.Street,
-                    locationEditModel.ZipCode,
-                    locationEditModel.City,
-                    locationEditModel.Country));
+                await Sender.Send(new CreateSiteCommand(
+                    siteEditModel.Name,
+                    siteEditModel.Street,
+                    siteEditModel.ZipCode,
+                    siteEditModel.City,
+                    siteEditModel.Country));
 
                 await RefreshRoomsPageAsync();
                 CloseDrawer();
@@ -309,17 +309,17 @@
             }
         }
 
-        if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+        if (drawerMode == DrawerMode.SiteEdit && selectedSite is not null)
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                var updated = await Sender.Send(new UpdateLocationCommand(
-                    selectedLocation.Id,
-                    locationEditModel.Name,
-                    locationEditModel.Street,
-                    locationEditModel.ZipCode,
-                    locationEditModel.City,
-                    locationEditModel.Country));
+                var updated = await Sender.Send(new UpdateSiteCommand(
+                    selectedSite.Id,
+                    siteEditModel.Name,
+                    siteEditModel.Street,
+                    siteEditModel.ZipCode,
+                    siteEditModel.City,
+                    siteEditModel.Country));
 
                 if (!updated)
                 {
@@ -327,29 +327,29 @@
                 }
 
                 await RefreshRoomsPageAsync();
-                selectedLocation = locations.FirstOrDefault(location => location.Id == selectedLocation.Id);
-                if (selectedLocation is null)
+                selectedSite = sites.FirstOrDefault(site => site.Id == selectedSite.Id);
+                if (selectedSite is null)
                 {
                     CloseDrawer();
                     return;
                 }
 
-                drawerMode = DrawerMode.LocationDetails;
+                drawerMode = DrawerMode.SiteDetails;
                 drawerTitle = "Details de l'emplacement";
             }, "mettre a jour l'emplacement", "Emplacement mis a jour.");
         }
     }
 
-    private async Task DeleteLocationAsync()
+    private async Task DeleteSiteAsync()
     {
-        if (selectedLocation is null)
+        if (selectedSite is null)
         {
             return;
         }
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            var deleted = await Sender.Send(new DeleteLocationCommand(selectedLocation.Id));
+            var deleted = await Sender.Send(new DeleteSiteCommand(selectedSite.Id));
             if (!deleted)
             {
                 throw new ValidationException("Emplacement introuvable.");
@@ -360,24 +360,24 @@
         }, "supprimer l'emplacement", "Emplacement supprime.");
     }
 
-    private void OpenRoomDetailsDrawer(RoomWithLocationDto room)
+    private void OpenRoomDetailsDrawer(RoomWithSiteDto room)
     {
         selectedRoom = room;
-        selectedLocation = null;
+        selectedSite = null;
         drawerMode = DrawerMode.RoomDetails;
         drawerTitle = "Details de la salle";
     }
 
     private void OpenRoomCreateDrawer()
     {
-        if (locations.Count == 0)
+        if (sites.Count == 0)
         {
             return;
         }
 
         roomEditModel = new RoomEditModel
         {
-            LocationId = locations[0].Id
+            SiteId = sites[0].Id
         };
         selectedRoom = null;
         drawerMode = DrawerMode.RoomCreate;
@@ -394,7 +394,7 @@
         roomEditModel = new RoomEditModel
         {
             Name = selectedRoom.Name,
-            LocationId = selectedRoom.LocationId
+            SiteId = selectedRoom.SiteId
         };
 
         drawerMode = DrawerMode.RoomEdit;
@@ -407,7 +407,7 @@
         {
             var created = await UserFeedback.ExecuteAsync(async () =>
             {
-                await Sender.Send(new CreateRoomCommand(roomEditModel.Name, roomEditModel.LocationId));
+                await Sender.Send(new CreateRoomCommand(roomEditModel.Name, roomEditModel.SiteId));
                 await RefreshRoomsPageAsync();
                 CloseDrawer();
             }, "creer la salle", "Salle creee.");
@@ -422,7 +422,7 @@
         {
             await UserFeedback.ExecuteAsync(async () =>
             {
-                var updated = await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.LocationId));
+                var updated = await Sender.Send(new UpdateRoomCommand(selectedRoom.Id, roomEditModel.Name, roomEditModel.SiteId));
                 if (!updated)
                 {
                     throw new ValidationException("Salle ou emplacement introuvable.");
@@ -464,9 +464,9 @@
 
     private void CancelEdit()
     {
-        if (drawerMode == DrawerMode.LocationEdit && selectedLocation is not null)
+        if (drawerMode == DrawerMode.SiteEdit && selectedSite is not null)
         {
-            drawerMode = DrawerMode.LocationDetails;
+            drawerMode = DrawerMode.SiteDetails;
             drawerTitle = "Details de l'emplacement";
             return;
         }
@@ -484,7 +484,7 @@
     private void CloseDrawer()
     {
         drawerMode = DrawerMode.None;
-        selectedLocation = null;
+        selectedSite = null;
         selectedRoom = null;
         drawerTitle = string.Empty;
     }
@@ -497,26 +497,26 @@
         return string.Join(", ", parts);
     }
 
-    private void OnRoomLocationChanged(string? value)
+    private void OnRoomSiteChanged(string? value)
     {
         if (int.TryParse(value, out var id))
         {
-            roomEditModel.LocationId = id;
+            roomEditModel.SiteId = id;
         }
     }
 
     private enum DrawerMode
     {
         None,
-        LocationDetails,
-        LocationCreate,
-        LocationEdit,
+        SiteDetails,
+        SiteCreate,
+        SiteEdit,
         RoomDetails,
         RoomCreate,
         RoomEdit
     }
 
-    private sealed class LocationEditModel
+    private sealed class SiteEditModel
     {
         public string Name { get; set; } = string.Empty;
         public string Street { get; set; } = string.Empty;
@@ -528,6 +528,6 @@
     private sealed class RoomEditModel
     {
         public string Name { get; set; } = string.Empty;
-        public int LocationId { get; set; }
+        public int SiteId { get; set; }
     }
 }

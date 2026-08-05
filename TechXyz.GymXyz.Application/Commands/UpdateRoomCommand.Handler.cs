@@ -21,26 +21,26 @@ public sealed class UpdateRoomCommandHandler : IRequestHandler<UpdateRoomCommand
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var locations = await _dbContext.Locations
-            .Include(location => location.Rooms)
-            .Where(location => location.IsActive && (location.Id == request.LocationId || location.Rooms!.Any(room => room.IsActive && room.Id == request.Id)))
+        var sites = await _dbContext.Sites
+            .Include(site => site.Rooms)
+            .Where(site => site.IsActive && (site.Id == request.SiteId || site.Rooms!.Any(room => room.IsActive && room.Id == request.Id)))
             .ToListAsync(cancellationToken);
 
-        var targetLocation = locations.FirstOrDefault(location => location.Id == request.LocationId);
-        var currentLocation = locations.FirstOrDefault(location => location.Rooms!.Any(room => room.IsActive && room.Id == request.Id));
+        var targetSite = sites.FirstOrDefault(site => site.Id == request.SiteId);
+        var currentSite = sites.FirstOrDefault(site => site.Rooms!.Any(room => room.IsActive && room.Id == request.Id));
 
-        if (targetLocation is null || currentLocation is null)
+        if (targetSite is null || currentSite is null)
         {
             return false;
         }
 
-        var room = currentLocation.Rooms!.First(candidate => candidate.IsActive && candidate.Id == request.Id);
+        var room = currentSite.Rooms!.First(candidate => candidate.IsActive && candidate.Id == request.Id);
         room.Name = request.Name.Trim();
 
-        if (currentLocation.Id != targetLocation.Id)
+        if (currentSite.Id != targetSite.Id)
         {
-            currentLocation.Rooms!.Remove(room);
-            targetLocation.AddRoom(room);
+            currentSite.Rooms!.Remove(room);
+            targetSite.AddRoom(room);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

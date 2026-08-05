@@ -27,7 +27,7 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Gym> Gyms => Set<Gym>();
-    public DbSet<Location> Locations =>  Set<Location>();
+    public DbSet<Site> Sites =>  Set<Site>();
     public DbSet<Room> Rooms =>  Set<Room>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<PrivateLesson> PrivateLessons => Set<PrivateLesson>();

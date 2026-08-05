@@ -4,15 +4,15 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
-public class DeleteLocationCommandHandlerTests
+public class DeleteSiteCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldSoftDeleteLocationAndItsRooms()
+    public async Task Handle_ShouldSoftDeleteSiteAndItsRooms()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteLocationAndItsRooms));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteSiteAndItsRooms));
 
-        var location = new Location(faker.Address.City())
+        var site = new Site(faker.Address.City())
         {
             Address = new Address
             {
@@ -24,15 +24,15 @@ public class DeleteLocationCommandHandlerTests
             Rooms = [new Room("Room A"), new Room("Room B")]
         };
 
-        dbContext.Locations.Add(location);
+        dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
-        var handler = new DeleteLocationCommandHandler(dbContext, new DeleteLocationCommandValidator());
+        var handler = new DeleteSiteCommandHandler(dbContext, new DeleteSiteCommandValidator());
 
-        var deleted = await handler.Handle(new DeleteLocationCommand(location.Id), CancellationToken.None);
+        var deleted = await handler.Handle(new DeleteSiteCommand(site.Id), CancellationToken.None);
 
         deleted.ShouldBeTrue();
-        dbContext.Locations.Single(l => l.Id == location.Id).IsActive.ShouldBeFalse();
+        dbContext.Sites.Single(l => l.Id == site.Id).IsActive.ShouldBeFalse();
         dbContext.Rooms.All(room => room.IsActive == false).ShouldBeTrue();
     }
 }

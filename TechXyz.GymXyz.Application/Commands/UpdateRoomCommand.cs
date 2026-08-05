@@ -4,14 +4,14 @@ namespace TechXyz.GymXyz.Application.Commands;
 
 public sealed class UpdateRoomCommand : IRequest<bool>
 {
-    public UpdateRoomCommand(int id, string name, int locationId)
+    public UpdateRoomCommand(int id, string name, int siteId)
     {
         Id = id;
         Name = name;
-        LocationId = locationId;
+        SiteId = siteId;
     }
 
     public int Id { get; }
     public string Name { get; }
-    public int LocationId { get; }
+    public int SiteId { get; }
 }

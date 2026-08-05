@@ -108,7 +108,7 @@ public static class DbInitializer
         var gym = new Gym("GymXYZ Lyon 3ᵉ");
         tenant.AddGym(gym);
 
-        var mainLocation = new Location("GymXYZ Lyon 3ᵉ")
+        var mainSite = new Site("GymXYZ Lyon 3ᵉ")
         {
             Address = new Address
             {
@@ -124,10 +124,10 @@ public static class DbInitializer
 
         foreach (var room in rooms.Values)
         {
-            mainLocation.AddRoom(room);
+            mainSite.AddRoom(room);
         }
 
-        gym.AddLocation(mainLocation);
+        gym.AddSite(mainSite);
 
         var disciplines = CreateDisciplines();
         dbContext.Disciplines.AddRange(disciplines.Values);

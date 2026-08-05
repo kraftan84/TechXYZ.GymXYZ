@@ -2,9 +2,9 @@ using MediatR;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteLocationCommand : IRequest<bool>
+public sealed class DeleteSiteCommand : IRequest<bool>
 {
-    public DeleteLocationCommand(int id)
+    public DeleteSiteCommand(int id)
     {
         Id = id;
     }

@@ -14,16 +14,16 @@ public class Gym : EntityBase<int>, ITenantScoped
 
     public string Name { get; set; }
 
-    public ICollection<Location>?  Locations { get; set; }
+    public ICollection<Site>?  Sites { get; set; }
     
     public ICollection<Coach>? Coaches { get; set; }
     
     public ICollection<Member>? Members { get; set; }
 
-    public void AddLocation(Location location)
+    public void AddSite(Site site)
     {
-        Locations ??= new List<Location>();
-        Locations.Add(location);
+        Sites ??= new List<Site>();
+        Sites.Add(site);
     }
 
     public void AddCoach(Coach coach)

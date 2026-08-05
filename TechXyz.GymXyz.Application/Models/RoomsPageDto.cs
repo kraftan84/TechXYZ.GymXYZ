@@ -3,10 +3,10 @@ namespace TechXyz.GymXyz.Application.Models;
 public sealed record RoomsPageDto(
     int GymId,
     string GymName,
-    List<LocationWithRoomsDto> Locations,
-    List<RoomWithLocationDto> Rooms);
+    List<SiteWithRoomsDto> Sites,
+    List<RoomWithSiteDto> Rooms);
 
-public sealed record LocationWithRoomsDto(
+public sealed record SiteWithRoomsDto(
     int Id,
     string Name,
     AddressDto Address,
@@ -16,8 +16,8 @@ public sealed record RoomDto(
     int Id,
     string Name);
 
-public sealed record RoomWithLocationDto(
+public sealed record RoomWithSiteDto(
     int Id,
     string Name,
-    int LocationId,
-    string LocationName);
+    int SiteId,
+    string SiteName);

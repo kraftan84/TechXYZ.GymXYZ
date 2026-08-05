@@ -5,21 +5,21 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
-public class CreateLocationCommandHandlerTests
+public class CreateSiteCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldCreateLocationInDefaultGym()
+    public async Task Handle_ShouldCreateSiteInDefaultGym()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateLocationInDefaultGym));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateSiteInDefaultGym));
 
         var gym = new Gym(faker.Company.CompanyName());
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
+        var handler = new CreateSiteCommandHandler(dbContext, new CreateSiteCommandValidator());
 
-        var command = new CreateLocationCommand(
+        var command = new CreateSiteCommand(
             $" {faker.Address.City()} ",
             $" {faker.Address.StreetAddress()} ",
             $" {faker.Address.ZipCode()} ",
@@ -28,10 +28,10 @@ public class CreateLocationCommandHandlerTests
 
         var createdId = await handler.Handle(command, CancellationToken.None);
 
-        var location = dbContext.Locations.Single(l => l.Id == createdId);
-        location.Name.ShouldBe(command.Name.Trim());
-        location.Address.ShouldNotBeNull();
-        location.Address.Street.ShouldBe(command.Street.Trim());
+        var site = dbContext.Sites.Single(l => l.Id == createdId);
+        site.Name.ShouldBe(command.Name.Trim());
+        site.Address.ShouldNotBeNull();
+        site.Address.Street.ShouldBe(command.Street.Trim());
     }
 
     [Fact]
@@ -42,9 +42,9 @@ public class CreateLocationCommandHandlerTests
         dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
+        var handler = new CreateSiteCommandHandler(dbContext, new CreateSiteCommandValidator());
 
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateSiteCommand(
             string.Empty,
             faker.Address.StreetAddress(),
             faker.Address.ZipCode(),

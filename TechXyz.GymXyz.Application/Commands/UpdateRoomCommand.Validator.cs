@@ -8,6 +8,6 @@ public sealed class UpdateRoomCommandValidator : AbstractValidator<UpdateRoomCom
     {
         RuleFor(command => command.Id).GreaterThan(0);
         RuleFor(command => command.Name).NotEmpty().MaximumLength(150);
-        RuleFor(command => command.LocationId).GreaterThan(0);
+        RuleFor(command => command.SiteId).GreaterThan(0);
     }
 }

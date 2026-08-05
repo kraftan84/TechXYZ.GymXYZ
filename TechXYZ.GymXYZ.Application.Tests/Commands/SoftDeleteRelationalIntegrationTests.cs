@@ -49,7 +49,7 @@ public class SoftDeleteRelationalIntegrationTests
         var dbContext = scope.DbContext;
 
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
-        var location = new Location(faker.Address.City())
+        var site = new Site(faker.Address.City())
         {
             Address = new Address
             {
@@ -60,10 +60,10 @@ public class SoftDeleteRelationalIntegrationTests
             }
         };
         var room = new Room(faker.Commerce.ProductName());
-        location.AddRoom(room);
+        site.AddRoom(room);
 
         dbContext.Coaches.Add(coach);
-        dbContext.Locations.Add(location);
+        dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
         dbContext.PrivateLessons.Add(new PrivateLesson

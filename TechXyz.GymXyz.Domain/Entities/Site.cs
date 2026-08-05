@@ -3,9 +3,14 @@ using TechXyz.GymXyz.Domain.Common.Interfaces;
 
 namespace TechXyz.GymXyz.Domain.Entities;
 
-public class Location : EntityBase<int>, ITenantScoped
+/// <summary>
+/// A postal address the gym operates from — the building, not a room inside it.
+/// Named <c>Location</c> until lot 4, where the data model gave that name to the
+/// venue a session is booked in.
+/// </summary>
+public class Site : EntityBase<int>, ITenantScoped
 {
-    public Location(string name)
+    public Site(string name)
     {
         Name = name;
     }

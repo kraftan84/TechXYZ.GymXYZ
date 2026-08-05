@@ -5,15 +5,15 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
-public class UpdateLocationCommandHandlerTests
+public class UpdateSiteCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldUpdateLocation()
+    public async Task Handle_ShouldUpdateSite()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldUpdateLocation));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldUpdateSite));
 
-        var location = new Location(faker.Address.City())
+        var site = new Site(faker.Address.City())
         {
             Address = new Address
             {
@@ -24,15 +24,15 @@ public class UpdateLocationCommandHandlerTests
             }
         };
 
-        dbContext.Locations.Add(location);
+        dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
-        var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
+        var handler = new UpdateSiteCommandHandler(dbContext, new UpdateSiteCommandValidator());
 
         var updatedName = faker.Address.City();
         var updatedStreet = faker.Address.StreetAddress();
-        var updated = await handler.Handle(new UpdateLocationCommand(
-            location.Id,
+        var updated = await handler.Handle(new UpdateSiteCommand(
+            site.Id,
             $" {updatedName} ",
             $" {updatedStreet} ",
             faker.Address.ZipCode(),
@@ -40,7 +40,7 @@ public class UpdateLocationCommandHandlerTests
             faker.Address.Country()), CancellationToken.None);
 
         updated.ShouldBeTrue();
-        dbContext.Locations.Single(l => l.Id == location.Id).Name.ShouldBe(updatedName);
+        dbContext.Sites.Single(l => l.Id == site.Id).Name.ShouldBe(updatedName);
     }
 
     [Fact]
@@ -48,9 +48,9 @@ public class UpdateLocationCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
+        var handler = new UpdateSiteCommandHandler(dbContext, new UpdateSiteCommandValidator());
 
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new UpdateLocationCommand(
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new UpdateSiteCommand(
             0,
             faker.Address.City(),
             faker.Address.StreetAddress(),

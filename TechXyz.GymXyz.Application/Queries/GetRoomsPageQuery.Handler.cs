@@ -20,10 +20,10 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
         var gym = await _dbContext.Gyms
             .AsNoTracking()
             .Where(candidate => candidate.IsActive)
-            .Include(candidate => candidate.Locations!)
-            .ThenInclude(location => location.Rooms)
-            .Include(candidate => candidate.Locations!)
-            .ThenInclude(location => location.Address)
+            .Include(candidate => candidate.Sites!)
+            .ThenInclude(site => site.Rooms)
+            .Include(candidate => candidate.Sites!)
+            .ThenInclude(site => site.Address)
             .OrderBy(gym => gym.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -32,40 +32,40 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
             return null;
         }
 
-        var mappedLocations = gym.Locations?
-            .Where(location => location.IsActive)
-            .OrderBy(location => location.Name)
-            .Select(location => new LocationWithRoomsDto(
-                location.Id,
-                location.Name,
-                location.Address == null
+        var mappedSites = gym.Sites?
+            .Where(site => site.IsActive)
+            .OrderBy(site => site.Name)
+            .Select(site => new SiteWithRoomsDto(
+                site.Id,
+                site.Name,
+                site.Address == null
                     ? new AddressDto(string.Empty, string.Empty, string.Empty, string.Empty)
                     : new AddressDto(
-                        location.Address.Street,
-                        location.Address.ZipCode,
-                        location.Address.City,
-                        location.Address.Country),
-                location.Rooms?
+                        site.Address.Street,
+                        site.Address.ZipCode,
+                        site.Address.City,
+                        site.Address.Country),
+                site.Rooms?
                     .Where(room => room.IsActive)
                     .OrderBy(room => room.Name)
                     .Select(room => new RoomDto(room.Id, room.Name))
                     .ToList() ?? []))
             .ToList() ?? [];
 
-        var mappedRooms = mappedLocations
-            .SelectMany(location => location.Rooms
-                .Select(room => new RoomWithLocationDto(
+        var mappedRooms = mappedSites
+            .SelectMany(site => site.Rooms
+                .Select(room => new RoomWithSiteDto(
                     room.Id,
                     room.Name,
-                    location.Id,
-                    location.Name)))
+                    site.Id,
+                    site.Name)))
             .OrderBy(room => room.Name)
             .ToList();
 
         var page = new RoomsPageDto(
             gym.Id,
             gym.Name,
-            mappedLocations,
+            mappedSites,
             mappedRooms);
 
         return page;

@@ -7,6 +7,6 @@ public sealed class CreateRoomCommandValidator : AbstractValidator<CreateRoomCom
     public CreateRoomCommandValidator()
     {
         RuleFor(command => command.Name).NotEmpty().MaximumLength(150);
-        RuleFor(command => command.LocationId).GreaterThan(0);
+        RuleFor(command => command.SiteId).GreaterThan(0);
     }
 }
