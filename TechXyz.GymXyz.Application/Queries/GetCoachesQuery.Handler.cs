@@ -42,13 +42,50 @@ public sealed class GetCoachesQueryHandler : IRequestHandler<GetCoachesQuery, Co
             .SelectCoachListItemDto()
             .ToListAsync(cancellationToken);
 
-        return new CoachesPageDto(
-            items
-                .Select(item => item with
+        var now = DateTime.Now;
+        var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(now);
+        var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
+
+        var facts = await SessionStatistics.LoadAsync(
+            _dbContext, trailingFrom, trailingTo > weekTo ? trailingTo : weekTo, cancellationToken);
+
+        var byCoach = facts
+            .Where(fact => fact.CoachId is not null)
+            .GroupBy(fact => fact.CoachId!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var withFigures = items
+            .Select(item =>
+            {
+                var coachFacts = byCoach.GetValueOrDefault(item.Id, []);
+
+                var fillRate = SessionStatistics.FillRate(
+                    coachFacts.Where(fact => fact.StartsAt >= trailingFrom && fact.StartsAt < trailingTo));
+
+                return item with
                 {
-                    Status = CoachStatusRules.Resolve(item.AwayUntil, today)
-                })
-                .ToList(),
+                    Status = CoachStatusRules.Resolve(item.AwayUntil, today, fillRate),
+                    ClassesPerWeek = coachFacts.Count == 0
+                        ? null
+                        : coachFacts.Count(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo),
+                    FillRate = fillRate
+                };
+            })
+            .ToList();
+
+        // The prototype's last chip, "Trier : remplissage". Sorted here rather
+        // than in SQL: the rate is counted from rows the database has already
+        // handed over.
+        if (request.SortByFillRate)
+        {
+            withFigures = withFigures
+                .OrderByDescending(item => item.FillRate ?? -1)
+                .ThenBy(item => item.LastName)
+                .ToList();
+        }
+
+        return new CoachesPageDto(
+            withFigures,
             totalCount,
             totalCount - awayCount,
             awayCount);

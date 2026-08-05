@@ -1,0 +1,44 @@
+@* Strip above the planning grid: which school zone the gym is in, and what
+   falls inside the week on screen. Presentation only — the page fetches the
+   calendar, which is what lets the settings panel reuse CalendarCard on the
+   same data at a later lot.
+
+   A calendar that could not be read says so plainly rather than rendering an
+   empty strip: "Zone A · Calendrier indisponible" tells the user the banner is
+   missing, not that the week is quiet. *@
+
+<div class="gx-calbar">
+    <span class="gx-cal-zone">
+        <GxIcon Name="@GxIconPaths.Pin" Size="13"/>
+        Zone @Calendar.Zone
+    </span>
+
+    @if (!Calendar.IsAvailable)
+    {
+        <span class="muted">Calendrier indisponible</span>
+    }
+    else if (Marks.Count > 0)
+    {
+        <span class="items">
+            @foreach (var mark in Marks)
+            {
+                <span class="gx-cal-pill @CalendarFormats.MarkClass(mark.Kind)">
+                    <GxIcon Name="@CalendarFormats.MarkIcon(mark.Kind)" Size="13"/>
+                    @mark.Label
+                </span>
+            }
+        </span>
+    }
+    else
+    {
+        <span class="muted">@CalendarFormats.OutlookSentence(Calendar.Outlook(WeekStart))</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+    [Parameter, EditorRequired] public DateOnly WeekStart { get; set; }
+
+    private IReadOnlyList<SchoolDayMarkDto> Marks =>
+        Calendar.MarksBetween(WeekStart, WeekStart.AddDays(6));
+}

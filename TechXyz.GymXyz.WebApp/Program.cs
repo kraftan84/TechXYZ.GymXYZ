@@ -23,6 +23,16 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddHttpClient();
 builder.Services.AddFluentUIComponents();
+builder.Services.AddMemoryCache();
+
+// The school calendar is the one thing this application fetches from outside.
+// Named client so its own timeout and headers stay off everybody else's.
+builder.Services.AddHttpClient(SchoolCalendarService.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("GymXYZ/1.0");
+});
+builder.Services.AddScoped<ISchoolCalendarService, SchoolCalendarService>();
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddHttpContextAccessor();

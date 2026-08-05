@@ -14,4 +14,10 @@ public sealed class GetCoachesQuery : IRequest<CoachesPageDto>
 
     /// <summary>Null keeps every standing ("Tous").</summary>
     public CoachStatus? Status { get; init; }
+
+    /// <summary>
+    /// The prototype's "Trier : remplissage" chip. Off, the grid stays
+    /// alphabetical; on, the fullest classes come first.
+    /// </summary>
+    public bool SortByFillRate { get; init; }
 }

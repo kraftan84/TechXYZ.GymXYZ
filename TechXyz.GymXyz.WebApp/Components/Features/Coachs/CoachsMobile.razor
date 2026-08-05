@@ -59,15 +59,20 @@
     private string Subtitle => $"{GxFormats.Plural(Page.TotalCount, "coach", "coachs")} · planning partagé";
 
     /// <summary>
-    /// The role, then the leave when there is one. Sessions and fill rate join
-    /// this line at lot 5 (Planning).
+    /// The role, then the leave when there is one — otherwise the week's load,
+    /// which is what the prototype writes on the tile.
     /// </summary>
     private string MetaFor(CoachListItemDto coach)
     {
         var role = coach.RoleLabel ?? "Coach";
 
-        return coach.Status == CoachStatus.Away && coach.AwayUntil is { } until
-            ? $"{role} · jusqu'au {GxFormats.DayAndMonth(until)}"
+        if (coach.Status == CoachStatus.Away && coach.AwayUntil is { } until)
+        {
+            return $"{role} · jusqu'au {GxFormats.DayAndMonth(until)}";
+        }
+
+        return coach.ClassesPerWeek is { } classes
+            ? $"{role} · {GxFormats.Plural(classes, "cours", "cours")} cette semaine"
             : role;
     }
 }

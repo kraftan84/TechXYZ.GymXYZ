@@ -41,11 +41,11 @@
             {
                 <Kpi Label="Occupation"
                      Value="@(Location.Occupancy.AverageRate is { } rate ? $"{rate} %" : "—")"
-                     Sub="@PendingHint"/>
+                     Sub="@TrailingHint"/>
             }
             <Kpi Label="Créneaux / sem."
                  Value="@(Location.Occupancy.SessionsPerWeek is { } slots ? GxFormats.Count(slots) : "—")"
-                 Sub="@PendingHint"/>
+                 Sub="cette semaine"/>
             <Kpi Label="Capacité" Value="@GxFormats.Count(Location.Capacity)" Sub="@CapacitySub"/>
             @if (Location.Kind == LocationKind.Outdoor)
             {
@@ -70,7 +70,7 @@
                 @if (Location.Today.Count == 0)
                 {
                     <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
-                        Aucune séance aujourd'hui. Le planning arrive avec les séances datées.
+                        Aucune séance ici aujourd'hui.
                     </div>
                 }
                 else
@@ -228,7 +228,8 @@
 </div>
 
 @code {
-    private const string PendingHint = "avec le planning";
+    /// <summary>The window every rate on this build is averaged over.</summary>
+    private const string TrailingHint = "sur 4 semaines";
 
     private static readonly string[] DayLabels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 

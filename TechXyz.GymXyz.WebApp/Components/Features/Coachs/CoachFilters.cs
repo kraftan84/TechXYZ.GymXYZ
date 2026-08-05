@@ -27,6 +27,7 @@ public static class CoachFilters
     public static string LabelFor(CoachStatus status) => status switch
     {
         CoachStatus.Available => "Disponible",
+        CoachStatus.FullClasses => "Cours pleins",
         _ => "En congé"
     };
 
@@ -34,6 +35,7 @@ public static class CoachFilters
     public static GxTone ToneFor(CoachStatus status) => status switch
     {
         CoachStatus.Available => GxTone.Success,
+        CoachStatus.FullClasses => GxTone.Warning,
         _ => GxTone.Neutral
     };
 }
