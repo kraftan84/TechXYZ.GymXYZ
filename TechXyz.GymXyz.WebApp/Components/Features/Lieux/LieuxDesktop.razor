@@ -1,0 +1,253 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Lieux
+
+@* Desktop venue catalogue: page head, four KPI, two columns of cards. The card
+   adapts to the nature of the venue — a studio shows its surface and floor, an
+   outdoor spot its meeting point, a session at home says whose address it uses.
+
+   The prototype's subtitle counts the weekly slots, which are read from
+   sessions; the mobile prototype's wording is used instead until lot 5 fills
+   them, rather than writing a dash into the middle of a sentence.
+
+   The prototype also fetches a live forecast here and lets it drive the "repli"
+   state. That ships as its own lot after the notifications: warning the members
+   registered to an outdoor session is the point of it, and there is no channel
+   to warn them through yet. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Lieux" Subtitle="@Subtitle">
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Nouveau lieu
+    </FluentButton>
+</PageHead>
+
+<div class="gx-grid4" style="margin-bottom:18px">
+    <Kpi Label="Lieux" Value="@GxFormats.Count(Page.TotalCount)" Sub="@KindBreakdown"/>
+    <Kpi Label="Occupation salles"
+         Value="@(Page.AverageStudioOccupancy is { } occupancy ? $"{occupancy} %" : "—")"
+         Sub="@PendingHint"/>
+    <Kpi Label="Créneaux / semaine"
+         Value="@(Page.TotalSessionsPerWeek is { } slots ? GxFormats.Count(slots) : "—")"
+         Sub="@PendingHint"/>
+    <Kpi Label="Capacité totale"
+         Value="@GxFormats.Count(Page.TotalCapacity)"
+         Sub="places en simultané"/>
+</div>
+
+@if (Page.Items.Count == 0)
+{
+    <GxCard Padded="false">
+        <EmptyState Icon="@GxIconPaths.Pin"
+                    Title="Aucun lieu pour l'instant"
+                    Text="Créez le premier studio pour commencer."/>
+    </GxCard>
+}
+else
+{
+    <div class="gx-salles">
+        @foreach (var location in Page.Items)
+        {
+            <div class="gx-salle-card"
+                 role="button"
+                 tabindex="0"
+                 aria-label="@($"Ouvrir la fiche de {location.Name}")"
+                 @onclick="() => OnOpen.InvokeAsync(location)"
+                 @onkeydown="args => OnCardKeyDown(args, location)">
+                <div class="gx-salle-hd t-@LocationFilters.ToneClass(location.Tone)">
+                    <span class="ic">
+                        <GxIcon Name="@LocationFilters.IconFor(location.IconKey, location.Kind)" Size="26"/>
+                    </span>
+                    <div class="tt">
+                        <div class="nm">@location.Name</div>
+                        <div class="ty">@(location.TypeLabel ?? LocationFilters.LabelFor(location.Kind))</div>
+                    </div>
+                    <span class="chip-tr">
+                        <GxChip Tone="@LocationFilters.ToneFor(location.Status)">
+                            @LocationFilters.LabelFor(location.Status)
+                        </GxChip>
+                    </span>
+                </div>
+
+                <div class="gx-salle-bd">
+                    <div class="gx-salle-meta">
+                        @switch (location.Kind)
+                        {
+                            case LocationKind.Outdoor:
+                                <span class="it">
+                                    <GxIcon Name="@GxIconPaths.Users" Size="14"/>
+                                    @LocationFilters.CapacityLabel(location.Capacity)
+                                </span>
+                                @if (LocationFilters.AddressLine(location.Address) is { } meetingPoint)
+                                {
+                                    <span class="sep"></span>
+                                    <span class="it">
+                                        <GxIcon Name="@GxIconPaths.Pin" Size="14"/>
+                                        @meetingPoint
+                                    </span>
+                                }
+
+                                break;
+
+                            case LocationKind.Home:
+                                <span class="it">
+                                    <GxIcon Name="@GxIconPaths.User" Size="14"/>
+                                    Séance privée
+                                </span>
+                                <span class="sep"></span>
+                                <span class="it">
+                                    <GxIcon Name="@GxIconPaths.Home" Size="14"/>
+                                    Chez le membre
+                                </span>
+                                break;
+
+                            default:
+                                <span class="it">
+                                    <GxIcon Name="@GxIconPaths.Users" Size="14"/>
+                                    @LocationFilters.CapacityLabel(location.Capacity)
+                                </span>
+                                @if (LocationFilters.AreaLabel(location.AreaSqm) is { } area)
+                                {
+                                    <span class="sep"></span>
+                                    <span class="it">
+                                        <GxIcon Name="@GxIconPaths.Maximize" Size="14"/>
+                                        @area
+                                    </span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(location.Floor))
+                                {
+                                    <span class="sep"></span>
+                                    <span class="it">
+                                        <GxIcon Name="@GxIconPaths.Building" Size="14"/>
+                                        @location.Floor
+                                    </span>
+                                }
+
+                                break;
+                        }
+                    </div>
+
+                    @if (location.Equipment.Count > 0)
+                    {
+                        <div class="gx-tags" style="margin-top:12px">
+                            @foreach (var label in location.Equipment.Take(EquipmentShown))
+                            {
+                                <span class="gx-tag">@label</span>
+                            }
+                            @if (location.Equipment.Count > EquipmentShown)
+                            {
+                                <span class="gx-tag">+@(location.Equipment.Count - EquipmentShown)</span>
+                            }
+                        </div>
+                    }
+
+                    <div class="gx-salle-foot">
+                        @switch (location.Kind)
+                        {
+                            case LocationKind.Outdoor:
+                                <div class="gx-foot-info">
+                                    <div class="lab">Conditions</div>
+                                    <div class="row">
+                                        <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Sun">
+                                            @LocationFilters.LabelFor(location.Status)
+                                        </GxChip>
+                                        @if (location.FallbackLocationName is { } fallback)
+                                        {
+                                            <span class="repli">Repli <b>@fallback</b></span>
+                                        }
+                                    </div>
+                                </div>
+                                break;
+
+                            case LocationKind.Home:
+                                <div class="gx-foot-info">
+                                    <div class="lab">Lieu de la séance</div>
+                                    <div class="row">
+                                        <GxChip Icon="@GxIconPaths.Pin">Adresse du membre</GxChip>
+                                    </div>
+                                </div>
+                                break;
+
+                            default:
+                                <div class="occ">
+                                    <div class="lab">
+                                        <span>Occupation moyenne</span>
+                                        <b title="@PendingTitle">
+                                            @(location.OccupancyRate is { } rate ? $"{rate} %" : "—")
+                                        </b>
+                                    </div>
+                                    @if (location.OccupancyRate is { } cardOccupancy)
+                                    {
+                                        <GxBar Percent="cardOccupancy"
+                                               Tone="@(cardOccupancy >= 90 ? GxTone.Warning : GxTone.Brand)"
+                                               AriaLabel="@($"Occupation moyenne : {cardOccupancy} %")"/>
+                                    }
+                                </div>
+                                break;
+                        }
+
+                        <div style="text-align:right;flex:none">
+                            <div style="font-size:var(--text-lg);font-weight:var(--weight-bold);color:var(--text-strong);line-height:1;font-variant-numeric:tabular-nums"
+                                 title="@PendingTitle">
+                                @(location.SessionsPerWeek is { } cardSlots ? GxFormats.Count(cardSlots) : "—")
+                            </div>
+                            <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:3px">
+                                cours / sem.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Lieux")
+    ];
+
+    /// <summary>The prototype shows four chips and counts the rest.</summary>
+    private const int EquipmentShown = 4;
+
+    private const string PendingHint = "avec le planning";
+    private const string PendingTitle = "Disponible avec le planning.";
+
+    [Parameter, EditorRequired] public LocationsPageDto Page { get; set; } = LocationsPageDto.Empty;
+
+    [Parameter] public EventCallback<LocationListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle => GxFormats.Plural(Page.TotalCount, "lieu d'entraînement", "lieux d'entraînement");
+
+    /// <summary>"4 en salle · 1 extérieur · 1 à domicile", skipping what is absent.</summary>
+    private string KindBreakdown
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (Page.StudioCount > 0)
+            {
+                parts.Add($"{GxFormats.Count(Page.StudioCount)} en salle");
+            }
+
+            if (Page.OutdoorCount > 0)
+            {
+                parts.Add($"{GxFormats.Count(Page.OutdoorCount)} extérieur");
+            }
+
+            if (Page.HomeCount > 0)
+            {
+                parts.Add($"{GxFormats.Count(Page.HomeCount)} à domicile");
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    private Task OnCardKeyDown(KeyboardEventArgs args, LocationListItemDto location)
+        => args.Key is "Enter" or " " ? OnOpen.InvokeAsync(location) : Task.CompletedTask;
+}

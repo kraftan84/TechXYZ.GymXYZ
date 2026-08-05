@@ -1,0 +1,208 @@
+@page "/lieux/{LocationId:int}"
+@using FluentValidation
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Lieux
+@implements IDisposable
+
+@inject NavigationManager NavManager
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader
+
+<PageTitle>@(_location?.Name ?? "Lieu")</PageTitle>
+
+@if (_isLoading)
+{
+    <EmptyState Icon="@GxIconPaths.Pin" Title="Chargement de la fiche…"/>
+}
+else if (_location is null)
+{
+    <EmptyState Icon="@GxIconPaths.Pin"
+                Title="Lieu introuvable"
+                Text="Ce lieu n'existe plus ou a été archivé.">
+        <FluentButton Appearance="Appearance.Outline" @onclick="GoBackToList">
+            Retour aux lieux
+        </FluentButton>
+    </EmptyState>
+}
+else if (Responsive.IsMobile)
+{
+    <LocationDetailsMobile Location="_location"/>
+}
+else
+{
+    <div class="gx-screen">
+        <LocationDetailsDesktop Location="_location"
+                                OnEdit="OpenEditDrawer"
+                                OnPlanning="GoToPlanning"/>
+    </div>
+}
+
+@if (_location is not null && _isDrawerOpen)
+{
+    <LocationDrawer Model="_editModel"
+                    Sites="_sites"
+                    Studios="_studios"
+                    EditedLocationId="_location.Id"
+                    IsNew="false"
+                    IsSaving="_isSaving"
+                    EditingSubtitle="@EditingSubtitle"
+                    OnSave="SaveLocationAsync"
+                    OnCancel="CloseDrawer"
+                    OnDelete="DeleteLocationAsync"/>
+}
+
+@code {
+    [Parameter] public int LocationId { get; set; }
+
+    private LocationDetailsPageDto? _location;
+    private IReadOnlyList<SiteOptionDto> _sites = [];
+    private IReadOnlyList<LocationListItemDto> _studios = [];
+
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _isDrawerOpen;
+    private LocationEditModel _editModel = new();
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
+
+    protected override async Task OnParametersSetAsync() => await RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        _isLoading = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _location = await Sender.Send(new GetLocationDetailsPageQuery(LocationId));
+        }, "charger la fiche du lieu");
+
+        _isLoading = false;
+
+        // The mobile shell shows the venue name and a back arrow on a record.
+        if (_location is not null)
+        {
+            MobileHeader.UseSubHeader(_location.Name, GoBackToList);
+        }
+        else
+        {
+            MobileHeader.UseRootHeader();
+        }
+    }
+
+    private void GoBackToList() => NavManager.NavigateTo("/lieux");
+
+    private void GoToPlanning() => NavManager.NavigateTo(GxNavigation.Planning.Href);
+
+    private string EditingSubtitle => _location is null
+        ? string.Empty
+        : string.Join(" · ", new[] { _location.Name, _location.TypeLabel }
+            .Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    private async Task OpenEditDrawer()
+    {
+        if (_location is null)
+        {
+            return;
+        }
+
+        _editModel = LocationEditModel.From(_location);
+
+        // Loaded before the drawer opens, not after: a picker rendered against
+        // an empty list latches its first option and never picks the value up.
+        if (_sites.Count == 0 && _studios.Count == 0)
+        {
+            await UserFeedback.ExecuteAsync(async () =>
+            {
+                _sites = await Sender.Send(new GetSiteOptionsQuery());
+                _studios = (await Sender.Send(new GetLocationsQuery())).Items;
+            }, "charger les référentiels");
+        }
+
+        _isDrawerOpen = true;
+    }
+
+    private void CloseDrawer()
+    {
+        _isDrawerOpen = false;
+        _isSaving = false;
+    }
+
+    private async Task SaveLocationAsync()
+    {
+        if (_location is null || _isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var updated = await Sender.Send(new UpdateLocationCommand(
+                _location.Id,
+                _editModel.Name,
+                _editModel.Kind,
+                _editModel.Capacity,
+                _editModel.TypeLabel,
+                _editModel.IconKey,
+                _editModel.Tone,
+                _editModel.AreaSqm,
+                _editModel.Floor,
+                _editModel.Note,
+                _editModel.IsOpenAccess,
+                _editModel.SiteId,
+                _editModel.Street,
+                _editModel.ZipCode,
+                _editModel.City,
+                country: null,
+                _editModel.IsWeatherDependent,
+                _editModel.FallbackLocationId,
+                _editModel.EquipmentLines));
+
+            if (!updated)
+            {
+                throw new ValidationException("Lieu introuvable.");
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "mettre à jour le lieu", "Lieu mis à jour.");
+
+        _isSaving = false;
+    }
+
+    private async Task DeleteLocationAsync()
+    {
+        if (_location is null)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var archived = await Sender.Send(new DeleteLocationCommand(_location.Id));
+            if (!archived)
+            {
+                throw new ValidationException("Lieu introuvable.");
+            }
+
+            CloseDrawer();
+            GoBackToList();
+        }, "archiver le lieu", "Lieu archivé.");
+    }
+
+    private void OnShellChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
+        MobileHeader.UseRootHeader();
+    }
+}

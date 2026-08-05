@@ -1,0 +1,136 @@
+@page "/lieux"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Lieux
+@implements IDisposable
+
+@inject NavigationManager NavManager
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+
+<PageTitle>Lieux</PageTitle>
+
+@* One page, one set of state, two presentations. Unlike Coachs, a solo tenant
+   keeps this section whole: they still train people somewhere. *@
+@if (Responsive.IsMobile)
+{
+    <LieuxMobile Page="_page" OnOpen="OpenLocation" OnCreate="OpenCreateDrawer"/>
+}
+else
+{
+    <div class="gx-screen">
+        <LieuxDesktop Page="_page" OnOpen="OpenLocation" OnCreate="OpenCreateDrawer"/>
+    </div>
+}
+
+@if (_isDrawerOpen)
+{
+    <LocationDrawer Model="_editModel"
+                    Sites="_sites"
+                    Studios="_page.Items"
+                    IsNew="true"
+                    IsSaving="_isSaving"
+                    OnSave="CreateLocationAsync"
+                    OnCancel="CloseDrawer"/>
+}
+
+@code {
+    private LocationsPageDto _page = LocationsPageDto.Empty;
+    private IReadOnlyList<SiteOptionDto> _sites = [];
+
+    private bool _isDrawerOpen;
+    private bool _isSaving;
+    private LocationEditModel _editModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Responsive.Changed += OnResponsiveChanged;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _page = await Sender.Send(new GetLocationsQuery());
+        }, "charger les lieux");
+    }
+
+    private void OpenLocation(LocationListItemDto location)
+        => NavManager.NavigateTo($"/lieux/{location.Id}");
+
+    private async Task OpenCreateDrawer()
+    {
+        _editModel = LocationEditModel.ForCreate();
+
+        // Loaded on demand, and before the drawer opens: a picker rendered
+        // against an empty list latches its first option and never picks the
+        // value up.
+        await LoadReferentialsAsync();
+
+        _isDrawerOpen = true;
+    }
+
+    private async Task LoadReferentialsAsync()
+    {
+        if (_sites.Count > 0)
+        {
+            return;
+        }
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _sites = await Sender.Send(new GetSiteOptionsQuery());
+        }, "charger les référentiels");
+    }
+
+    private void CloseDrawer()
+    {
+        _isDrawerOpen = false;
+        _isSaving = false;
+    }
+
+    private async Task CreateLocationAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var createdId = await Sender.Send(new CreateLocationCommand(
+                _editModel.Name,
+                _editModel.Kind,
+                _editModel.Capacity,
+                _editModel.TypeLabel,
+                _editModel.IconKey,
+                _editModel.Tone,
+                _editModel.AreaSqm,
+                _editModel.Floor,
+                _editModel.Note,
+                _editModel.IsOpenAccess,
+                _editModel.SiteId,
+                _editModel.Street,
+                _editModel.ZipCode,
+                _editModel.City,
+                country: null,
+                _editModel.IsWeatherDependent,
+                _editModel.FallbackLocationId,
+                _editModel.EquipmentLines));
+
+            CloseDrawer();
+            NavManager.NavigateTo($"/lieux/{createdId}");
+        }, "créer le lieu", "Lieu créé.");
+
+        _isSaving = false;
+    }
+
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Responsive.Changed -= OnResponsiveChanged;
+}

@@ -1,0 +1,68 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Lieux
+
+@* Mobile venue list: large title, action button, one tile per venue.
+
+   One departure from the mobile prototype, aligning it with desktop: the tile
+   of a venue that seats one says "Séance privée" instead of "Cap. 1", the same
+   correction the course catalogue made at lot 3. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet" style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+            <div class="hi">Lieux</div>
+            <div class="sub">@Subtitle</div>
+        </div>
+        <div style="flex:none;padding-top:4px">
+            <button type="button" class="gx-m-iconbtn" aria-label="Ajouter un lieu" @onclick="OnCreate">
+                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+            </button>
+        </div>
+    </div>
+
+    @if (Page.Items.Count == 0)
+    {
+        <div class="gx-m-empty">
+            <div class="ic">
+                <GxIcon Name="@GxIconPaths.Pin" Size="28"/>
+            </div>
+            <h3>Aucun lieu pour l'instant</h3>
+            <p>Créez le premier studio pour commencer.</p>
+        </div>
+    }
+    else
+    {
+        <div class="gx-m-card" style="margin-top:14px">
+            @foreach (var location in Page.Items)
+            {
+                <button type="button" class="gx-m-tile" @onclick="() => OnOpen.InvokeAsync(location)">
+                    <span class="gx-m-ic lg t-@LocationFilters.ToneClass(location.Tone)">
+                        <GxIcon Name="@LocationFilters.IconFor(location.IconKey, location.Kind)" Size="21"/>
+                    </span>
+                    <div class="main">
+                        <div class="nm">@location.Name</div>
+                        <div class="meta">
+                            @(location.TypeLabel ?? LocationFilters.LabelFor(location.Kind))
+                            <span class="sep">·</span>
+                            @LocationFilters.CapacityLabel(location.Capacity)
+                        </div>
+                    </div>
+                    <div style="flex:none;display:flex;align-items:center;gap:8px">
+                        <GxChip Tone="@LocationFilters.ToneFor(location.Status)">
+                            @LocationFilters.LabelFor(location.Status)
+                        </GxChip>
+                        <span class="chev"><GxIcon Name="@GxIconPaths.ChevronRight" Size="18"/></span>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LocationsPageDto Page { get; set; } = LocationsPageDto.Empty;
+
+    [Parameter] public EventCallback<LocationListItemDto> OnOpen { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    private string Subtitle => GxFormats.Plural(Page.TotalCount, "lieu d'entraînement", "lieux d'entraînement");
+}

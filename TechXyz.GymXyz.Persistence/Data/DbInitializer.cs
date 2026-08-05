@@ -119,15 +119,20 @@ public static class DbInitializer
             }
         };
 
-        var locations = new List<Location> { new("Studio A"), new("Studio B"), new("Studio C") }
-            .ToDictionary(location => location.Name);
+        var locations = CreateLocations();
 
-        foreach (var location in locations.Values)
+        // Only the indoor venues belong to the building. The park and the
+        // member's home are venues of the gym without being rooms in it, which
+        // is exactly why Location.SiteId is optional.
+        foreach (var location in locations.Values.Where(location => location.Kind == LocationKind.Studio))
         {
             mainSite.AddLocation(location);
         }
 
         gym.AddSite(mainSite);
+
+        dbContext.Locations.AddRange(
+            locations.Values.Where(location => location.Kind != LocationKind.Studio));
 
         var disciplines = CreateDisciplines();
         dbContext.Disciplines.AddRange(disciplines.Values);
@@ -148,6 +153,121 @@ public static class DbInitializer
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// The six venues of the design hand-off demo set, in the three natures the
+    /// catalogue mixes: four studios, one outdoor spot and the member's home.
+    /// <para>
+    /// Occupancy, sessions per week, the day's schedule and the weekly heatmap
+    /// are absent on purpose: all four are counted from sessions, which the
+    /// planning produces at lot 5. So is the "Forte demande" chip Studio C wears
+    /// in the prototype — it reads an occupancy rate that does not exist yet.
+    /// </para>
+    /// </summary>
+    private static Dictionary<string, Location> CreateLocations()
+    {
+        Location Studio(
+            string name,
+            string typeLabel,
+            string iconKey,
+            string tone,
+            int capacity,
+            decimal areaSqm,
+            string floor,
+            string note,
+            string[] equipment,
+            bool isOpenAccess = false) =>
+            WithEquipment(
+                new Location(name)
+                {
+                    Kind = LocationKind.Studio,
+                    TypeLabel = typeLabel,
+                    IconKey = iconKey,
+                    Tone = tone,
+                    Capacity = capacity,
+                    AreaSqm = areaSqm,
+                    Floor = floor,
+                    Note = note,
+                    IsOpenAccess = isOpenAccess
+                },
+                equipment);
+
+        var studioA = Studio(
+            "Studio A", "Cours collectifs", "grid", "brand", 20, 65m, "Rez-de-chaussée",
+            "Grande salle polyvalente pour les formats collectifs — renforcement, HIIT, pilates.",
+            ["Tapis ×20", "Steps", "Haltères", "Élastiques", "Miroir mural", "Sono"]);
+
+        var studioB = Studio(
+            "Studio B", "Yoga & mobilité", "sparkles", "success", 20, 48m, "1ᵉʳ étage",
+            "Ambiance calme, parquet et lumière tamisée — dédiée au yoga, au pilates doux et à la mobilité.",
+            ["Tapis ×20", "Briques", "Bolsters", "Sangles", "Parquet", "Lumière tamisée"]);
+
+        var studioC = Studio(
+            "Studio C", "Cycling & cardio", "target", "danger", 24, 55m, "Sous-sol",
+            "Salle de cycling immersive — la plus demandée. Liste d'attente fréquente sur les créneaux du soir.",
+            ["24 vélos", "Sono immersive", "Écran LED", "Ventilation", "Éclairage scénique"]);
+
+        var openGym = Studio(
+            "Espace libre", "Musculation & open gym", "dumbbell", "neutral", 30, 120m, "Rez-de-chaussée",
+            "Plateau musculation en accès libre aux heures d'ouverture. Encadrement ponctuel sur les circuits.",
+            ["Rack squat ×2", "Bancs", "Haltères 2–40 kg", "Poulies", "Tapis de course ×4", "Rameurs ×2"],
+            isOpenAccess: true);
+
+        var park = WithEquipment(
+            new Location("Parc de la Tête d'Or")
+            {
+                Kind = LocationKind.Outdoor,
+                TypeLabel = "Plein air · bootcamp",
+                IconKey = "tree",
+                Tone = "success",
+                Capacity = 20,
+                Note = "Cours en extérieur sur la grande pelouse dès les beaux jours — bootcamp, "
+                       + "renforcement et cardio. Repli en salle en cas de pluie.",
+                // The prototype writes the meeting point and nothing else, so
+                // nothing else is invented here.
+                Address = new Address
+                {
+                    Street = "Entrée Bd des Belges",
+                    ZipCode = string.Empty,
+                    City = string.Empty,
+                    Country = string.Empty
+                },
+                Latitude = 45.78m,
+                Longitude = 4.85m,
+                IsWeatherDependent = true,
+                // Through the navigation, not the key: neither venue has an id
+                // before the insert.
+                FallbackLocation = studioA
+            },
+            ["Matériel apporté", "Tapis transportables", "Kettlebells", "Élastiques", "Plots & cônes"]);
+
+        var home = WithEquipment(
+            new Location("À domicile")
+            {
+                Kind = LocationKind.Home,
+                TypeLabel = "Chez le membre",
+                IconKey = "home",
+                Tone = "neutral",
+                Capacity = 1,
+                Note = "Séances individuelles au domicile du membre. L'adresse est renseignée sur la "
+                       + "fiche du membre puis transmise au coach avant chaque rendez-vous — le coach "
+                       + "apporte son matériel."
+            },
+            ["Matériel apporté par le coach"]);
+
+        return new List<Location> { studioA, studioB, studioC, openGym, park, home }
+            .ToDictionary(location => location.Name);
+    }
+
+    private static Location WithEquipment(Location location, string[] equipment)
+    {
+        for (var rank = 0; rank < equipment.Length; rank++)
+        {
+            location.AddEquipment(equipment[rank], rank);
+        }
+
+        return location;
     }
 
     /// <summary>

@@ -22,6 +22,18 @@ public class GxNavigationTests
         items.ShouldContain(GxNavigation.Membres);
     }
 
+    /// <summary>
+    /// The pre-hand-off /rooms screen was deleted with lot 4, so the entry has
+    /// to point at the hand-off one — both shells read it from here.
+    /// </summary>
+    [Fact]
+    public void Lieux_ShouldPointAtTheHandOffScreen()
+    {
+        GxNavigation.Lieux.Href.ShouldBe("/lieux");
+        GxNavigation.Groups[3].Items.ShouldContain(GxNavigation.Lieux);
+        GxNavigation.MobileMore.ShouldContain(GxNavigation.Lieux);
+    }
+
     [Fact]
     public void Visible_ShouldDropCoachs_FromTheMobilePlusSheet_ForASoloCoach()
     {

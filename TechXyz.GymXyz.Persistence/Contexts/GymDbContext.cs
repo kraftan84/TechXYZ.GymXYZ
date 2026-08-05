@@ -29,6 +29,7 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Gym> Gyms => Set<Gym>();
     public DbSet<Site> Sites =>  Set<Site>();
     public DbSet<Location> Locations =>  Set<Location>();
+    public DbSet<LocationEquipment> LocationEquipment => Set<LocationEquipment>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<PrivateLesson> PrivateLessons => Set<PrivateLesson>();
     public DbSet<CollectiveLesson> CollectiveLessons => Set<CollectiveLesson>();
@@ -107,6 +108,35 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             .HasOne(template => template.DefaultLocation)
             .WithMany()
             .HasForeignKey(template => template.DefaultLocationId);
+
+        modelBuilder.Entity<Location>(x =>
+        {
+            // Optional on purpose: the park and the member's home sit in no
+            // building of the gym's.
+            x.HasOne(location => location.Site)
+                .WithMany(site => site.Locations)
+                .HasForeignKey(location => location.SiteId)
+                .IsRequired(false);
+
+            // A venue points at the indoor one it falls back to. Restrict rather
+            // than cascade: losing the fallback must not take the outdoor venue
+            // with it.
+            x.HasOne(location => location.FallbackLocation)
+                .WithMany()
+                .HasForeignKey(location => location.FallbackLocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Spelled out because the engine defaults would round coordinates
+            // into uselessness.
+            x.Property(location => location.Latitude).HasPrecision(9, 6);
+            x.Property(location => location.Longitude).HasPrecision(9, 6);
+            x.Property(location => location.AreaSqm).HasPrecision(7, 2);
+        });
+
+        modelBuilder.Entity<LocationEquipment>()
+            .HasOne(equipment => equipment.Location)
+            .WithMany(location => location.Equipment)
+            .HasForeignKey(equipment => equipment.LocationId);
 
         modelBuilder.Entity<CourseTemplateCoach>(x =>
         {

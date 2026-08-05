@@ -122,30 +122,19 @@ public static class CoachCompositionHelper
         IReadOnlyList<string> certifications,
         CancellationToken cancellationToken)
     {
-        var labels = certifications
-            .Select(AddressHelper.NormalizeOptional)
-            .Where(label => label is not null)
-            .Select(label => label!)
-            .Distinct()
-            .ToList();
-
         var existing = await dbContext.CoachCertifications
             .Where(certification => certification.CoachId == coach.Id)
             .ToListAsync(cancellationToken);
 
-        if (existing.Count > 0)
-        {
-            dbContext.CoachCertifications.RemoveRange(existing);
-        }
-
-        for (var rank = 0; rank < labels.Count; rank++)
-        {
-            dbContext.CoachCertifications.Add(new CoachCertification(labels[rank])
+        OrderedLabelHelper.Replace(
+            dbContext.CoachCertifications,
+            existing,
+            OrderedLabelHelper.Normalize(certifications),
+            (label, rank) => new CoachCertification(label)
             {
                 CoachId = coach.Id,
                 Rank = rank,
                 TenantId = coach.TenantId
             });
-        }
     }
 }

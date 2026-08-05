@@ -1,6 +1,6 @@
 using FluentValidation;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -21,17 +21,35 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var site = await _dbContext.Sites
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.SiteId && candidate.IsActive, cancellationToken);
-
-        if (site is null)
+        var location = new Location(request.Name.Trim())
         {
-            throw new ValidationException("Site not found.");
+            Kind = request.Kind,
+            TypeLabel = AddressHelper.NormalizeOptional(request.TypeLabel),
+            IconKey = AddressHelper.NormalizeOptional(request.IconKey),
+            Tone = AddressHelper.NormalizeOptional(request.Tone),
+            Capacity = request.Capacity,
+            AreaSqm = request.AreaSqm,
+            Floor = AddressHelper.NormalizeOptional(request.Floor),
+            Note = AddressHelper.NormalizeOptional(request.Note),
+            IsOpenAccess = request.IsOpenAccess,
+            SiteId = await LocationCompositionHelper.ResolveSiteIdAsync(
+                _dbContext, request.SiteId, cancellationToken),
+            Address = AddressHelper.BuildOptionalAddress(
+                request.Street, request.ZipCode, request.City, request.Country),
+            IsWeatherDependent = request.IsWeatherDependent,
+            FallbackLocationId = await LocationCompositionHelper.ResolveFallbackLocationIdAsync(
+                _dbContext, request.FallbackLocationId, locationId: null, cancellationToken)
+        };
+
+        // Written through the navigation rather than the sync helper: the venue
+        // has no key yet, and EF fixes the foreign keys up on insert.
+        var equipment = OrderedLabelHelper.Normalize(request.Equipment);
+        for (var rank = 0; rank < equipment.Count; rank++)
+        {
+            location.AddEquipment(equipment[rank], rank);
         }
 
-        var location = new Location(request.Name.Trim());
-        site.AddLocation(location);
-
+        _dbContext.Locations.Add(location);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return location.Id;
