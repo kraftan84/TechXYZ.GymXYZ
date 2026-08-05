@@ -37,7 +37,7 @@
         var isOn = Format == filter.Format;
         <button type="button"
                 class="gx-fchip @(isOn ? "on" : null)"
-                aria-pressed="@isOn"
+                aria-pressed="@(isOn ? "true" : "false")"
                 @onclick="() => OnFormatChanged.InvokeAsync(filter.Format)">
             @filter.Label · @GxFormats.Count(CountFor(filter.Format))
         </button>

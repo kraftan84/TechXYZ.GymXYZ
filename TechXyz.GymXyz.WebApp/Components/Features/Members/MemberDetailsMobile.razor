@@ -19,12 +19,12 @@
         </div>
         <div class="gx-m-fiche-actions">
             <a class="gx-m-circbtn" href="@(Member.Phone is null ? null : $"tel:{Member.Phone}")"
-               aria-disabled="@(Member.Phone is null)">
+               aria-disabled="@(Member.Phone is null ? "true" : "false")">
                 <span class="b"><GxIcon Name="@GxIconPaths.Phone" Size="20"/></span>
                 <span class="cl">Appeler</span>
             </a>
             <a class="gx-m-circbtn" href="@(Member.Email is null ? null : $"mailto:{Member.Email}")"
-               aria-disabled="@(Member.Email is null)">
+               aria-disabled="@(Member.Email is null ? "true" : "false")">
                 <span class="b"><GxIcon Name="@GxIconPaths.Mail" Size="20"/></span>
                 <span class="cl">E-mail</span>
             </a>

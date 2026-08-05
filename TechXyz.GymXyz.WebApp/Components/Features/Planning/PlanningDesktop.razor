@@ -39,7 +39,7 @@
     {
         <button type="button"
                 class="gx-fchip @(Filters.CoachId is null ? "on" : null)"
-                aria-pressed="@(Filters.CoachId is null)"
+                aria-pressed="@(Filters.CoachId is null ? "true" : "false")"
                 @onclick="() => OnCoachChanged.InvokeAsync(null)">
             <GxIcon Name="@GxIconPaths.Filter" Size="14"/>
             Tous les coachs
@@ -49,7 +49,7 @@
             var isOn = Filters.CoachId == coach.Id;
             <button type="button"
                     class="gx-fchip @(isOn ? "on" : null)"
-                    aria-pressed="@isOn"
+                    aria-pressed="@(isOn ? "true" : "false")"
                     @onclick="() => OnCoachChanged.InvokeAsync(coach.Id)">
                 @coach.FirstName
             </button>
@@ -58,7 +58,7 @@
 
     <button type="button"
             class="gx-fchip @(Filters.LocationId is null ? "on" : null)"
-            aria-pressed="@(Filters.LocationId is null)"
+            aria-pressed="@(Filters.LocationId is null ? "true" : "false")"
             @onclick="() => OnLocationChanged.InvokeAsync(null)">
         Tous les lieux
     </button>
@@ -67,7 +67,7 @@
         var isOn = Filters.LocationId == location.Id;
         <button type="button"
                 class="gx-fchip @(isOn ? "on" : null)"
-                aria-pressed="@isOn"
+                aria-pressed="@(isOn ? "true" : "false")"
                 @onclick="() => OnLocationChanged.InvokeAsync(location.Id)">
             @location.Name
         </button>
@@ -78,7 +78,7 @@
         var isOn = Filters.Format == format.Value;
         <button type="button"
                 class="gx-fchip @(isOn ? "on" : null)"
-                aria-pressed="@isOn"
+                aria-pressed="@(isOn ? "true" : "false")"
                 @onclick="() => OnFormatChanged.InvokeAsync(isOn ? null : format.Value)">
             @format.Label
         </button>

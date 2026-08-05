@@ -29,7 +29,7 @@
             var isOn = Status == filter.Status;
             <button type="button"
                     class="gx-m-tag @(isOn ? "brand" : null)"
-                    aria-pressed="@isOn"
+                    aria-pressed="@(isOn ? "true" : "false")"
                     style="cursor:pointer"
                     @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
                 @filter.MobileLabel · @GxFormats.Count(CountFor(filter.Status))

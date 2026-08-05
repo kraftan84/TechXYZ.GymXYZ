@@ -18,7 +18,7 @@
             <span class="lbl">@tab.Label</span>
         </NavLink>
     }
-    <button type="button" class="gx-m-tab @(PlusActive ? "on" : null)" @onclick="OnPlus" aria-expanded="@PlusActive">
+    <button type="button" class="gx-m-tab @(PlusActive ? "on" : null)" @onclick="OnPlus" aria-expanded="@(PlusActive ? "true" : "false")">
         <span class="ti">
             <GxIcon Name="@GxIconPaths.Grid" Size="24"/>
         </span>

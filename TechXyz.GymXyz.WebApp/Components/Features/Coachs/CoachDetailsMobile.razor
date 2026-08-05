@@ -27,12 +27,12 @@
         }
         <div class="gx-m-fiche-actions">
             <a class="gx-m-circbtn" href="@(Coach.Phone is null ? null : $"tel:{Coach.Phone}")"
-               aria-disabled="@(Coach.Phone is null)">
+               aria-disabled="@(Coach.Phone is null ? "true" : "false")">
                 <span class="b"><GxIcon Name="@GxIconPaths.Phone" Size="20"/></span>
                 <span class="cl">Appeler</span>
             </a>
             <a class="gx-m-circbtn" href="@(Coach.Email is null ? null : $"mailto:{Coach.Email}")"
-               aria-disabled="@(Coach.Email is null)">
+               aria-disabled="@(Coach.Email is null ? "true" : "false")">
                 <span class="b"><GxIcon Name="@GxIconPaths.Mail" Size="20"/></span>
                 <span class="cl">E-mail</span>
             </a>

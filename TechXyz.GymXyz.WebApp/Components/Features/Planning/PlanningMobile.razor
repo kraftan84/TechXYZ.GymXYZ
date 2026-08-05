@@ -31,7 +31,7 @@
             <div class="gx-m-datechip @(isOn ? "on" : null)"
                  role="button"
                  tabindex="0"
-                 aria-pressed="@isOn"
+                 aria-pressed="@(isOn ? "true" : "false")"
                  aria-label="@PlanningFilters.LongDayLabel(day)"
                  @onclick="() => OnSelectDay.InvokeAsync(day)"
                  @onkeydown="args => OnDayKeyDown(args, day)">

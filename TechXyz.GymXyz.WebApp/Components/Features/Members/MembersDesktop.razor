@@ -25,7 +25,7 @@
         var isOn = Status == filter.Status;
         <button type="button"
                 class="gx-fchip @(filter.Status == MemberStatus.ExpiringSoon ? "warn" : null) @(isOn ? "on" : null)"
-                aria-pressed="@isOn"
+                aria-pressed="@(isOn ? "true" : "false")"
                 @onclick="() => OnStatusChanged.InvokeAsync(filter.Status)">
             @filter.DesktopLabel · @GxFormats.Count(CountFor(filter.Status))
         </button>
