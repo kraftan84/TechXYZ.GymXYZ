@@ -17,7 +17,7 @@ public sealed record CourseTemplatesPageDto(
 
 /// <summary>
 /// One row of the table. The average fill comes from past occurrences, so it is
-/// nullable and left unset — it renders as "—" rather than being invented.
+/// null for a course the planning has never run — "—" rather than a zero.
 /// </summary>
 public sealed record CourseTemplateListItemDto(
     int Id,
@@ -37,7 +37,10 @@ public sealed record CourseTemplateListItemDto(
     /// <summary>A course that seats one is a private lesson.</summary>
     public bool IsPrivate => Capacity == 1;
 
-    /// <summary>Average fill of the past sessions, 0–100. Filled at lot 5.</summary>
+    /// <summary>
+    /// Average fill of the sessions run over the trailing weeks, 0–100. Null for
+    /// a course that has never run.
+    /// </summary>
     public int? FillRate { get; init; }
 }
 

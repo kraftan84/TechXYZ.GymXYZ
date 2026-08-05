@@ -1,0 +1,144 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+
+@* The day view, reached by clicking a day header. Chronological list on the
+   left, what the day amounts to on the right.
+
+   The prototype puts a « Pointer » button on each slot and counts « présences
+   pointées » in the summary. Both read the attendance sheet, which is the next
+   lot — a control that marks nobody present would lie. « Aperçu membre du
+   jour » shows the member-facing view, which is later still. The waiting list
+   is real and stays. *@
+
+<PageHead Title="@PlanningFilters.LongDayLabel(Day)" Subtitle="@PlanningFilters.DaySummary(Sessions)">
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnBack">
+        <GxIcon Slot="start" Name="@GxIconPaths.ChevronLeft" Size="18"/>
+        Semaine
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Cours
+    </FluentButton>
+</PageHead>
+
+<div class="gx-grid2" style="grid-template-columns:1.6fr 1fr;align-items:start">
+    <GxCard>
+        <div style="font-size:var(--text-sm);font-weight:700;color:var(--text-strong);margin-bottom:16px">
+            Déroulé de la journée
+        </div>
+
+        @if (Sessions.Count == 0)
+        {
+            <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                Aucun cours programmé ce jour.
+            </div>
+        }
+        else
+        {
+            @foreach (var session in Sessions)
+            {
+                <div class="gx-slot">
+                    <div class="time">@GxFormats.Time(session.StartsAt)</div>
+                    <div class="card"
+                         role="button"
+                         tabindex="0"
+                         style="@(session.IsFull ? "border-left-color:var(--color-danger)" : null)"
+                         @onclick="() => OnOpenSession.InvokeAsync(session)"
+                         @onkeydown="args => OnSessionKeyDown(args, session)">
+                        <div class="top">
+                            <span class="nm" style="@(session.IsCancelled ? "text-decoration:line-through" : null)">
+                                @session.CourseName
+                            </span>
+                            @if (session.IsCancelled)
+                            {
+                                <GxChip Tone="GxTone.Neutral">Annulé</GxChip>
+                            }
+                            else if (session.IsPrivate)
+                            {
+                                <GxChip Tone="GxTone.Neutral">Privé</GxChip>
+                            }
+                            else
+                            {
+                                <GxChip Tone="@PlanningFilters.FillTone(session)">
+                                    @session.Registered/@session.Capacity
+                                </GxChip>
+                            }
+                            @if (session.Waitlisted > 0)
+                            {
+                                <GxChip Tone="GxTone.Brand" Icon="@GxIconPaths.Clock">
+                                    @GxFormats.Plural(session.Waitlisted, "en attente", "en attente")
+                                </GxChip>
+                            }
+                        </div>
+                        <div class="meta">@MetaFor(session)</div>
+                        @if (!session.IsPrivate && !session.IsCancelled)
+                        {
+                            <GxBar Percent="@session.FillRate()"
+                                   Tone="@PlanningFilters.FillTone(session)"
+                                   AriaLabel="@($"Remplissage : {session.FillRate()} %")"/>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Résumé du jour"/>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+                <span style="color:var(--text-muted)">Taux de remplissage</span>
+                <b>@(FillRate is { } rate ? $"{rate} %" : "—")</b>
+            </div>
+            @if (FillRate is { } gauge)
+            {
+                <GxBar Percent="gauge" AriaLabel="@($"Taux de remplissage du jour : {gauge} %")"/>
+            }
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+                <span style="color:var(--text-muted)">Places réservées</span>
+                <b>@Registered / @Capacity</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+                <span style="color:var(--text-muted)">Liste d'attente</span>
+                <b style="color:@(Waitlisted > 0 ? "var(--color-brand)" : "inherit")">
+                    @GxFormats.Plural(Waitlisted, "membre", "membres")
+                </b>
+            </div>
+        </div>
+    </GxCard>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DateOnly Day { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<PlanningSessionDto> Sessions { get; set; } = [];
+
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback<PlanningSessionDto> OnOpenSession { get; set; }
+
+    private IEnumerable<PlanningSessionDto> Counted =>
+        Sessions.Where(session => !session.IsCancelled);
+
+    private int Registered => Counted.Sum(session => session.Registered);
+    private int Capacity => Counted.Sum(session => session.Capacity);
+    private int Waitlisted => Counted.Sum(session => session.Waitlisted);
+
+    private int? FillRate => PlanningRules.FillRate(Registered, Capacity);
+
+    /// <summary>"Studio A · Nora Lemoine · 60 min", skipping what is absent.</summary>
+    private static string MetaFor(PlanningSessionDto session)
+    {
+        var parts = new List<string> { session.LocationName };
+
+        if (session.CoachFullName is { } coach)
+        {
+            parts.Add(coach);
+        }
+
+        parts.Add($"{(int)(session.EndsAt - session.StartsAt).TotalMinutes} min");
+
+        return string.Join(" · ", parts);
+    }
+
+    private Task OnSessionKeyDown(KeyboardEventArgs args, PlanningSessionDto session)
+        => args.Key is "Enter" or " " ? OnOpenSession.InvokeAsync(session) : Task.CompletedTask;
+}

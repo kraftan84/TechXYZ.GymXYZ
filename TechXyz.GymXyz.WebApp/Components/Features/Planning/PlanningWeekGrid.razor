@@ -1,0 +1,144 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* The week grid: an hour gutter and seven day columns, headers and gutter
+   sticky, the whole thing scrolling inside 560px.
+
+   The "now" line is placed from JavaScript because it is measured, not
+   computed: the rows grow with their content, so the pixel offset of the
+   current hour is only known once the browser has laid the grid out. The same
+   pass scrolls the current hour into view, which is what the prototype does in
+   a layout effect. *@
+
+<div class="gx-cal-scroll" @ref="_scroll">
+    <div class="gx-cal">
+        <div class="corner"></div>
+
+        @for (var index = 0; index < 7; index++)
+        {
+            var day = WeekStart.AddDays(index);
+            var mark = Calendar.MarkFor(day);
+            var isToday = day == Today;
+
+            <div class="hd @(isToday ? "today" : null) @(mark is null ? null : CalendarFormats.MarkClass(mark.Kind))"
+                 role="button"
+                 tabindex="0"
+                 aria-label="@($"Voir le détail du {PlanningFilters.LongDayLabel(day)}")"
+                 @onclick="() => OnOpenDay.InvokeAsync(day)"
+                 @onkeydown="args => OnHeaderKeyDown(args, day)">
+                <div class="d">@PlanningFilters.DayLabels[index]</div>
+                <div class="n">@PlanningFilters.DayNumberLabel(day)</div>
+                @if (mark is not null)
+                {
+                    <div class="gx-hd-mark @CalendarFormats.MarkClass(mark.Kind)" title="@mark.Label">
+                        <GxIcon Name="@CalendarFormats.MarkIcon(mark.Kind)" Size="11"/>
+                        <span>@mark.Label</span>
+                    </div>
+                }
+            </div>
+        }
+
+        @foreach (var hour in PlanningFilters.Hours)
+        {
+            <div class="gut">@hour:00</div>
+
+            @for (var index = 0; index < 7; index++)
+            {
+                var day = WeekStart.AddDays(index);
+                var mark = Calendar.MarkFor(day);
+                var cellSessions = SessionsAt(index, hour);
+
+                <div class="cell @(mark is null ? null : CalendarFormats.MarkClass(mark.Kind))">
+                    @foreach (var session in cellSessions)
+                    {
+                        <div class="@PlanningFilters.EventClass(session)"
+                             role="button"
+                             tabindex="0"
+                             title="@Tooltip(session)"
+                             aria-label="@Tooltip(session)"
+                             @onclick="() => OnOpenSession.InvokeAsync(session)"
+                             @onkeydown="args => OnSessionKeyDown(args, session)">
+                            <div class="t" style="@(session.IsCancelled ? "text-decoration:line-through" : null)">
+                                @session.CourseName
+                            </div>
+                            <div class="m">@PlanningFilters.MetaLine(session)</div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public WeekPlanningDto Page { get; set; } = WeekPlanningDto.Empty;
+    [Parameter, EditorRequired] public DateOnly WeekStart { get; set; }
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+    [Parameter] public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+
+    [Parameter] public EventCallback<DateOnly> OnOpenDay { get; set; }
+    [Parameter] public EventCallback<PlanningSessionDto> OnOpenSession { get; set; }
+
+    private ElementReference _scroll;
+    private IJSObjectReference? _module;
+    private DateOnly _placedWeek = DateOnly.MinValue;
+
+    private IEnumerable<PlanningSessionDto> SessionsAt(int dayIndex, int hour) =>
+        Page.Sessions.Where(session => session.DayIndex == dayIndex && session.Hour == hour);
+
+    private string Tooltip(PlanningSessionDto session)
+    {
+        var when = $"{GxFormats.Time(session.StartsAt)}–{GxFormats.Time(session.EndsAt)}";
+
+        return $"{session.CourseName} · {when} · {session.LocationName} · {PlanningFilters.MetaLine(session)}";
+    }
+
+    private Task OnHeaderKeyDown(KeyboardEventArgs args, DateOnly day)
+        => args.Key is "Enter" or " " ? OnOpenDay.InvokeAsync(day) : Task.CompletedTask;
+
+    private Task OnSessionKeyDown(KeyboardEventArgs args, PlanningSessionDto session)
+        => args.Key is "Enter" or " " ? OnOpenSession.InvokeAsync(session) : Task.CompletedTask;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Only when the week changes: re-placing on every render would fight the
+        // user's own scrolling.
+        if (_placedWeek == WeekStart)
+        {
+            return;
+        }
+
+        _placedWeek = WeekStart;
+
+        _module ??= await JS.InvokeAsync<IJSObjectReference>(
+            "import", "./Components/Features/Planning/PlanningWeekGrid.razor.js");
+
+        var todayIndex = Today >= WeekStart && Today <= WeekStart.AddDays(6)
+            ? (Today.DayNumber - WeekStart.DayNumber)
+            : -1;
+
+        await _module.InvokeVoidAsync(
+            "placeNow",
+            _scroll,
+            todayIndex,
+            DateTime.Now.Hour + DateTime.Now.Minute / 60d,
+            PlanningRules.FirstHour,
+            PlanningRules.LastHour);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit went before the module did; nothing left to release.
+            }
+        }
+    }
+}

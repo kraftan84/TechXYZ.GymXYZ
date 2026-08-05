@@ -22,7 +22,8 @@ public static class QueryableProjectionExtensions
             tenant.WordmarkAccent,
             tenant.IsSolo)
         {
-            City = tenant.City
+            City = tenant.City,
+            ZipCode = tenant.ZipCode
         });
     }
 

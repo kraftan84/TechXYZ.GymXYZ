@@ -46,8 +46,19 @@ public sealed class GetCourseTemplatesQueryHandler
             .SelectCourseTemplateListItemDto()
             .ToListAsync(cancellationToken);
 
+        var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(DateTime.Now);
+        var byTemplate = (await SessionStatistics.LoadAsync(_dbContext, trailingFrom, trailingTo, cancellationToken))
+            .GroupBy(fact => fact.CourseTemplateId)
+            .ToDictionary(group => group.Key, group => SessionStatistics.FillRate(group));
+
+        var withFigures = items
+            .Select(item => byTemplate.TryGetValue(item.Id, out var fillRate)
+                ? item with { FillRate = fillRate }
+                : item)
+            .ToList();
+
         return new CourseTemplatesPageDto(
-            items,
+            withFigures,
             totalCount,
             totalCount - privateCount,
             privateCount);

@@ -1,0 +1,47 @@
+@* "Calendrier scolaire" card. Built here rather than inside the planning
+   because Réglages shows the same card next to the postcode the zone is
+   derived from — it takes its data as a parameter so that panel can hand over
+   its own without changing anything. *@
+
+<GxCard Padded="false">
+    <CardHead Title="Calendrier scolaire">
+        <GxChip Tone="GxTone.Brand" Icon="@GxIconPaths.Pin">Zone @Calendar.Zone</GxChip>
+    </CardHead>
+
+    <div style="padding:12px 18px 6px">
+        <p style="margin:0 0 4px;font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+            Zone déduite du code postal de la salle. Elle sert à signaler les jours fériés et les
+            vacances scolaires sur le planning.
+        </p>
+
+        @if (!Calendar.IsAvailable)
+        {
+            <div class="gx-kv"><span class="k">Calendrier</span><span class="v">Indisponible</span></div>
+        }
+        else
+        {
+            <div class="gx-kv">
+                <span class="k">Prochain jour férié</span>
+                <span class="v" style="text-align:right;max-width:62%">
+                    @CalendarFormats.NextHolidayLabel(Outlook)
+                </span>
+            </div>
+            <div class="gx-kv">
+                <span class="k">Vacances scolaires</span>
+                <span class="v" style="text-align:right;max-width:62%">
+                    @CalendarFormats.VacationLabel(Outlook)
+                </span>
+            </div>
+        }
+    </div>
+</GxCard>
+
+@code {
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+
+    /// <summary>The day the card reads "next" from. Today, unless a caller says otherwise.</summary>
+    [Parameter] public DateOnly? On { get; set; }
+
+    private SchoolCalendarOutlookDto Outlook =>
+        Calendar.Outlook(On ?? DateOnly.FromDateTime(DateTime.Today));
+}

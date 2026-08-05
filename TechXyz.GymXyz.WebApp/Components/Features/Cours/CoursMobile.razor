@@ -67,10 +67,6 @@
     [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
 
-    /// <summary>
-    /// The prototype writes "8 modèles de cours". Sessions per week join the
-    /// tile's meta line at lot 5; the capacity takes that slot meanwhile rather
-    /// than a dash mid-sentence.
-    /// </summary>
+    /// <summary>The prototype writes "8 modèles de cours".</summary>
     private string Subtitle => GxFormats.Plural(Page.TotalCount, "modèle de cours", "modèles de cours");
 }

@@ -4,9 +4,8 @@ using TechXyz.GymXyz.Domain.Entities;
 namespace TechXyz.GymXyz.Application.Models;
 
 /// <summary>
-/// The venue record. Half of what the prototype draws on it — the day's
-/// schedule and the weekly heatmap — is read from sessions, so both come back
-/// empty until lot 5 and the cards say so rather than showing zeroes.
+/// The venue record. The day's schedule and the weekly heatmap are read from
+/// the sessions booked in it, and come back empty for a venue that hosts none.
 /// </summary>
 public sealed record LocationDetailsPageDto(
     int Id,
@@ -30,10 +29,11 @@ public sealed record LocationDetailsPageDto(
     List<LocationSessionDto> Today,
     LocationOccupancyDto Occupancy)
 {
-    public LocationStatus Status => LocationStatusRules.Resolve(Kind, IsOpenAccess, IsWeatherDependent);
+    public LocationStatus Status =>
+        LocationStatusRules.Resolve(Kind, IsOpenAccess, IsWeatherDependent, Occupancy.AverageRate);
 }
 
-/// <summary>One line of "Planning du jour". Filled at lot 5.</summary>
+/// <summary>One line of "Planning du jour".</summary>
 public sealed record LocationSessionDto(
     string Time,
     string CourseName,
@@ -48,8 +48,8 @@ public sealed record LocationSessionDto(
 /// <summary>
 /// The venue's occupancy figures: the average shown on the card, the weekly
 /// slot count, and the seven daily rates of the heatmap. Every one of them is
-/// counted from sessions, so an empty instance is what lot 4 can honestly
-/// answer.
+/// counted from sessions, so an empty instance is the honest answer for a venue
+/// that has hosted none.
 /// </summary>
 public sealed record LocationOccupancyDto(
     int? AverageRate,
