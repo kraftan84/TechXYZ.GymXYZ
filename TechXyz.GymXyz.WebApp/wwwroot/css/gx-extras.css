@@ -139,3 +139,41 @@ button.gx-coach-card { width: 100%; text-align: left; color: inherit; }
   .gx-login { grid-template-columns: 1fr; }
   .gx-login-brand { display: none; }
 }
+
+/* ---------- Blazor's unhandled-error bar ----------
+   Framework markup, styled by the project in the default template. This app
+   dropped that stylesheet for the hand-off CSS, so the bar had no rule at all
+   and sat visible at the bottom of every page — error or not.
+
+   Hidden here, and dressed so the one time it does appear it looks like part of
+   the product. Blazor reveals it by setting display:block inline, which wins
+   over the rule below; the same is true of the reconnect UI, which this app
+   replaces with its own ReconnectModal. */
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--z-toast);
+  padding: 14px 46px 14px 18px;
+  background: var(--color-danger-soft);
+  color: var(--danger-700);
+  border-top: 1px solid var(--color-danger);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+#blazor-error-ui .reload {
+  color: inherit;
+  text-decoration: underline;
+  margin-inline-start: 6px;
+}
+#blazor-error-ui .dismiss {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 16px;
+  cursor: pointer;
+  font-size: var(--text-md);
+  line-height: 1;
+  padding: 4px;
+}
