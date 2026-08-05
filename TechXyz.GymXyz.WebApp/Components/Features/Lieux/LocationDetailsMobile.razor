@@ -112,10 +112,10 @@
             }
             else
             {
-                <div class="gx-m-kv">
-                    <span class="v" style="font-weight:400;color:var(--text-muted)">
-                        La courbe se remplit avec les séances du planning.
-                    </span>
+                @* Prose rather than a key/value row: the value slot is right
+                   aligned, which a sentence long enough to wrap reads badly in. *@
+                <div class="gx-m-prose" style="color:var(--text-muted)">
+                    La courbe se remplit avec les séances du planning.
                 </div>
             }
         </div>
@@ -125,10 +125,8 @@
     <div class="gx-m-card">
         @if (Location.Today.Count == 0)
         {
-            <div class="gx-m-kv">
-                <span class="v" style="font-weight:400;color:var(--text-muted)">
-                    Le planning arrive avec les séances datées.
-                </span>
+            <div class="gx-m-prose" style="color:var(--text-muted)">
+                Le planning arrive avec les séances datées.
             </div>
         }
         else
@@ -167,10 +165,8 @@
     <div class="gx-m-card">
         @if (Location.Equipment.Count == 0)
         {
-            <div class="gx-m-kv">
-                <span class="v" style="font-weight:400;color:var(--text-muted)">
-                    Aucun équipement renseigné.
-                </span>
+            <div class="gx-m-prose" style="color:var(--text-muted)">
+                Aucun équipement renseigné.
             </div>
         }
         else
