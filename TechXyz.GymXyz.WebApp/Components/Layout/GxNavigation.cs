@@ -27,7 +27,7 @@ public static class GxNavigation
 
     public static readonly GxNavItem Cours = new("cours", "Cours", GxIconPaths.Dumbbell, "/cours");
     public static readonly GxNavItem Abonnements = new("abos", "Abonnements", GxIconPaths.Card, "/abonnements");
-    public static readonly GxNavItem Lieux = new("salles", "Lieux", GxIconPaths.Pin, "/rooms");
+    public static readonly GxNavItem Lieux = new("salles", "Lieux", GxIconPaths.Pin, "/lieux");
     public static readonly GxNavItem Reglages = new("reglages", "Réglages", GxIconPaths.Settings, "/reglages");
     public static readonly GxNavItem Administration = new("administration", "Administration", GxIconPaths.Shield, "/administration");
 

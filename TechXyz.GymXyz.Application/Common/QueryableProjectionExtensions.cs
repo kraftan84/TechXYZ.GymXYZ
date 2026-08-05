@@ -94,6 +94,39 @@ public static class QueryableProjectionExtensions
     }
 
     /// <summary>
+    /// Cards of the venue catalogue. Equipment comes out in display order — the
+    /// card shows the first four and counts the rest.
+    /// </summary>
+    public static IQueryable<LocationListItemDto> SelectLocationListItemDto(this IQueryable<Location> query)
+    {
+        return query.Select(location => new LocationListItemDto(
+            location.Id,
+            location.Name,
+            location.Kind,
+            location.TypeLabel,
+            location.IconKey,
+            location.Tone,
+            location.Capacity,
+            location.AreaSqm,
+            location.Floor,
+            location.IsOpenAccess,
+            location.IsWeatherDependent,
+            location.FallbackLocation == null ? null : location.FallbackLocation.Name,
+            location.Address == null
+                ? null
+                : new AddressDto(
+                    location.Address.Street,
+                    location.Address.ZipCode,
+                    location.Address.City,
+                    location.Address.Country),
+            location.Equipment!
+                .Where(equipment => equipment.IsActive)
+                .OrderBy(equipment => equipment.Rank)
+                .Select(equipment => equipment.Label)
+                .ToList()));
+    }
+
+    /// <summary>
     /// Rows of the members table. <c>CurrentSubscriptionEndsOn</c> is the latest
     /// end date among the subscriptions covering <paramref name="today"/> —
     /// the single value the standing rule reads.

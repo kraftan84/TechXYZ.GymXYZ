@@ -1,0 +1,199 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Lieux
+
+@* Mobile venue record: hero, then stacked sections. The header with the back
+   arrow is rendered by the page.
+
+   The mobile prototype draws the surface, the floor and the address cards
+   unconditionally, which writes an empty row for a park and for a session at
+   the member's home. Each card is drawn here only when the venue has something
+   to put in it — the same rule the desktop record follows. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-fiche-hero">
+        <span class="gx-m-ic lg t-@LocationFilters.ToneClass(Location.Tone)">
+            <GxIcon Name="@LocationFilters.IconFor(Location.IconKey, Location.Kind)" Size="26"/>
+        </span>
+        <div>
+            <div class="nm">@Location.Name</div>
+            <div class="rl">@(Location.TypeLabel ?? LocationFilters.LabelFor(Location.Kind))</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <GxChip Tone="@LocationFilters.ToneFor(Location.Status)">
+                @LocationFilters.LabelFor(Location.Status)
+            </GxChip>
+            <GxChip>@LocationFilters.CapacityLabel(Location.Capacity)</GxChip>
+        </div>
+    </div>
+
+    @if (HasStudioDetails)
+    {
+        <div class="gx-m-card">
+            @if (LocationFilters.AreaLabel(Location.AreaSqm) is { } area)
+            {
+                <div class="gx-m-kv">
+                    <span class="k">Surface</span>
+                    <span class="v">@area</span>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Location.Floor))
+            {
+                <div class="gx-m-kv">
+                    <span class="k">Niveau</span>
+                    <span class="v">@Location.Floor</span>
+                </div>
+            }
+            <div class="gx-m-kv">
+                <span class="k">Cours / sem.</span>
+                <span class="v">
+                    @(Location.Occupancy.SessionsPerWeek is { } slots ? GxFormats.Count(slots) : "—")
+                </span>
+            </div>
+        </div>
+    }
+
+    @if (Location.Kind != LocationKind.Studio)
+    {
+        <div class="gx-m-card">
+            <div class="gx-m-flex" style="padding:16px;gap:13px">
+                <span class="gx-m-ic t-brand">
+                    <GxIcon Name="@(IsOutdoor ? GxIconPaths.Pin : GxIconPaths.Home)" Size="21"/>
+                </span>
+                <div class="gx-m-grow">
+                    <div style="font-size:var(--text-md);font-weight:700;color:var(--text-strong)">
+                        @(IsOutdoor
+                            ? LocationFilters.AddressLine(Location.Address) ?? "Point de rendez-vous à préciser"
+                            : "Au domicile du membre")
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                        @if (IsOutdoor)
+                        {
+                            @(Location.FallbackLocationName is { } fallback
+                                ? $"Repli : {fallback} en cas de pluie"
+                                : "Aucun lieu de repli n'est défini")
+                        }
+                        else
+                        {
+                            @("Renseignée sur la fiche du membre")
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="gx-m-sec"><span class="t">À propos</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-prose">
+            @(string.IsNullOrWhiteSpace(Location.Note)
+                ? "Aucune description pour l'instant."
+                : Location.Note)
+        </div>
+    </div>
+
+    @if (Location.Kind == LocationKind.Studio)
+    {
+        <div class="gx-m-sec"><span class="t">Occupation de la semaine</span></div>
+        <div class="gx-m-card">
+            @if (Location.Occupancy.HasHeatmap)
+            {
+                <div class="gx-m-heat">
+                    @for (var day = 0; day < DayLabels.Length; day++)
+                    {
+                        var rate = Location.Occupancy.DailyRates[day];
+
+                        <div class="d">
+                            <div class="bar">
+                                <i style="height:@(rate)%;background:@HeatColor(rate)"></i>
+                            </div>
+                            <div class="lab">@DayLabels[day]</div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                @* Prose rather than a key/value row: the value slot is right
+                   aligned, which a sentence long enough to wrap reads badly in. *@
+                <div class="gx-m-prose" style="color:var(--text-muted)">
+                    La courbe se remplit avec les séances du planning.
+                </div>
+            }
+        </div>
+    }
+
+    <div class="gx-m-sec"><span class="t">Aujourd'hui</span></div>
+    <div class="gx-m-card">
+        @if (Location.Today.Count == 0)
+        {
+            <div class="gx-m-prose" style="color:var(--text-muted)">
+                Le planning arrive avec les séances datées.
+            </div>
+        }
+        else
+        {
+            @foreach (var session in Location.Today)
+            {
+                var percent = session.Capacity == 0
+                    ? 0
+                    : (int)Math.Round(session.Registered * 100d / session.Capacity);
+
+                <div class="gx-m-class" style="cursor:default">
+                    <div class="time">@session.Time</div>
+                    <div class="main">
+                        <div class="nm">@session.CourseName</div>
+                        <div class="meta">@(session.CoachName ?? "Accès libre")</div>
+                    </div>
+                    @if (session.IsPrivate)
+                    {
+                        <div style="flex:none"><GxChip>Privé</GxChip></div>
+                    }
+                    else
+                    {
+                        <div class="occ">
+                            <div class="n">@session.Registered/@session.Capacity</div>
+                            <GxBar Percent="percent" Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)"/>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec">
+        <span class="t">@(Location.Kind == LocationKind.Studio ? "Équipement" : "Matériel")</span>
+    </div>
+    <div class="gx-m-card">
+        @if (Location.Equipment.Count == 0)
+        {
+            <div class="gx-m-prose" style="color:var(--text-muted)">
+                Aucun équipement renseigné.
+            </div>
+        }
+        else
+        {
+            <div class="gx-m-tags" style="padding:16px">
+                @foreach (var label in Location.Equipment)
+                {
+                    <span class="gx-m-tag">@label</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly string[] DayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+
+    [Parameter, EditorRequired] public LocationDetailsPageDto Location { get; set; } = default!;
+
+    private bool IsOutdoor => Location.Kind == LocationKind.Outdoor;
+
+    private bool HasStudioDetails => Location.Kind == LocationKind.Studio;
+
+    private static string HeatColor(int rate) => rate switch
+    {
+        >= 90 => "var(--color-danger)",
+        >= 70 => "var(--color-primary)",
+        _ => "var(--azure-300)"
+    };
+}

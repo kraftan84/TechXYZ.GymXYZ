@@ -1,8 +1,8 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
-using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -21,27 +21,41 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var sites = await _dbContext.Sites
-            .Include(site => site.Locations)
-            .Where(site => site.IsActive && (site.Id == request.SiteId || site.Locations!.Any(location => location.IsActive && location.Id == request.Id)))
-            .ToListAsync(cancellationToken);
-
-        var targetSite = sites.FirstOrDefault(site => site.Id == request.SiteId);
-        var currentSite = sites.FirstOrDefault(site => site.Locations!.Any(location => location.IsActive && location.Id == request.Id));
-
-        if (targetSite is null || currentSite is null)
+        var location = await _dbContext.Locations
+            .Include(candidate => candidate.Address)
+            .FirstOrDefaultAsync(
+                candidate => candidate.Id == request.Id && candidate.IsActive,
+                cancellationToken);
+        if (location is null)
         {
             return false;
         }
 
-        var location = currentSite.Locations!.First(candidate => candidate.IsActive && candidate.Id == request.Id);
         location.Name = request.Name.Trim();
+        location.Kind = request.Kind;
+        location.TypeLabel = AddressHelper.NormalizeOptional(request.TypeLabel);
+        location.IconKey = AddressHelper.NormalizeOptional(request.IconKey);
+        location.Tone = AddressHelper.NormalizeOptional(request.Tone);
+        location.Capacity = request.Capacity;
+        location.AreaSqm = request.AreaSqm;
+        location.Floor = AddressHelper.NormalizeOptional(request.Floor);
+        location.Note = AddressHelper.NormalizeOptional(request.Note);
+        location.IsOpenAccess = request.IsOpenAccess;
+        location.IsWeatherDependent = request.IsWeatherDependent;
 
-        if (currentSite.Id != targetSite.Id)
-        {
-            currentSite.Locations!.Remove(location);
-            targetSite.AddLocation(location);
-        }
+        location.SiteId = await LocationCompositionHelper.ResolveSiteIdAsync(
+            _dbContext, request.SiteId, cancellationToken);
+
+        location.FallbackLocationId = await LocationCompositionHelper.ResolveFallbackLocationIdAsync(
+            _dbContext, request.FallbackLocationId, location.Id, cancellationToken);
+
+        location.Address = AddressHelper.Apply(
+            location.Address,
+            AddressHelper.BuildOptionalAddress(
+                request.Street, request.ZipCode, request.City, request.Country));
+
+        await LocationCompositionHelper.SyncEquipmentAsync(
+            _dbContext, location, request.Equipment ?? [], cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

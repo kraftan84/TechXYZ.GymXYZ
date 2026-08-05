@@ -1,0 +1,218 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Lieux
+@using TechXyz.GymXyz.Application.Common
+
+@* Create / edit a venue. The prototype draws no drawer for this section, so it
+   follows the one lots 1 to 3 established; what it shows follows the kind, the
+   way every other view of a venue does. *@
+
+<GxDrawer Title="@(IsNew ? "Nouveau lieu" : "Modifier le lieu")"
+          Subtitle="@Subtitle"
+          Icon="@(IsNew ? GxIconPaths.Pin : GxIconPaths.Settings)"
+          OnClose="OnCancel">
+    <ChildContent>
+        <div class="gx-seclab">Le lieu</div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Nom" Placeholder="Studio A" Required="true"
+                             @bind-Value="Model.Name" style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Nature"
+                          TOption="LocationKind"
+                          Items="@Kinds"
+                          OptionValue="@(kind => kind.ToString())"
+                          OptionText="@(kind => LocationFilters.LabelFor(kind))"
+                          OptionSelected="@(kind => kind == Model.Kind)"
+                          SelectedOptionChanged="OnKindChanged"
+                          style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextField Label="Type" Placeholder="Cours collectifs"
+                             @bind-Value="Model.TypeLabel" style="width:100%"/>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                La ligne sous le nom, sur la carte et sur la fiche.
+            </div>
+        </div>
+        <div class="gx-form-field">
+            <FluentTextArea Label="Description" Rows="3"
+                            Placeholder="Grande salle polyvalente pour les formats collectifs."
+                            @bind-Value="Model.Note" style="width:100%"/>
+        </div>
+
+        <div class="gx-seclab">Capacité et accès</div>
+        <div class="gx-form-row">
+            <FluentNumberField Label="Capacité"
+                               Min="@LocationRules.MinimumCapacity.ToString()"
+                               Max="@LocationRules.MaximumCapacity.ToString()"
+                               Disabled="@IsHome"
+                               @bind-Value="Model.Capacity" style="width:100%"/>
+            @if (IsStudio)
+            {
+                <FluentNumberField Label="Surface (m²)" Placeholder="65" Step="0.5"
+                                   Min="@LocationRules.MinimumAreaSqm.ToString("0")"
+                                   Max="@LocationRules.MaximumAreaSqm.ToString("0")"
+                                   @bind-Value="Model.AreaSqm" style="width:100%"/>
+            }
+        </div>
+        @if (IsHome)
+        {
+            <div class="gx-form-field">
+                <div style="font-size:var(--text-xs);color:var(--text-muted)">
+                    Une séance à domicile ne reçoit qu'une personne.
+                </div>
+            </div>
+        }
+        @if (IsStudio)
+        {
+            <div class="gx-form-field">
+                <FluentTextField Label="Étage" Placeholder="Rez-de-chaussée"
+                                 @bind-Value="Model.Floor" style="width:100%"/>
+            </div>
+            <div class="gx-form-field">
+                <FluentSelect Label="Site"
+                              TOption="SelectOption"
+                              Items="@SiteOptions"
+                              OptionValue="@(option => option.Value)"
+                              OptionText="@(option => option.Label)"
+                              OptionSelected="@(option => option.Value == ValueOf(Model.SiteId))"
+                              SelectedOptionChanged="OnSiteChanged"
+                              style="width:100%"/>
+            </div>
+            <div class="gx-form-field">
+                <FluentSwitch Value="@Model.IsOpenAccess"
+                              ValueChanged="value => Model.IsOpenAccess = value">
+                    Accès libre aux heures d'ouverture
+                </FluentSwitch>
+            </div>
+        }
+
+        @if (IsOutdoor)
+        {
+            <div class="gx-seclab">Point de rendez-vous</div>
+            <div class="gx-form-field">
+                <FluentTextField Label="Lieu de rendez-vous" Placeholder="Entrée Bd des Belges"
+                                 @bind-Value="Model.Street" style="width:100%"/>
+            </div>
+            <div class="gx-form-row">
+                <FluentTextField Label="Code postal" Placeholder="69006"
+                                 @bind-Value="Model.ZipCode" style="width:100%"/>
+                <FluentTextField Label="Ville" Placeholder="Lyon"
+                                 @bind-Value="Model.City" style="width:100%"/>
+            </div>
+
+            <div class="gx-seclab">Météo</div>
+            <div class="gx-form-field">
+                <FluentSwitch Value="@Model.IsWeatherDependent"
+                              ValueChanged="value => Model.IsWeatherDependent = value">
+                    La séance dépend de la météo
+                </FluentSwitch>
+            </div>
+            <div class="gx-form-field">
+                <FluentSelect Label="Lieu de repli"
+                              TOption="SelectOption"
+                              Items="@FallbackOptions"
+                              OptionValue="@(option => option.Value)"
+                              OptionText="@(option => option.Label)"
+                              OptionSelected="@(option => option.Value == ValueOf(Model.FallbackLocationId))"
+                              SelectedOptionChanged="OnFallbackChanged"
+                              style="width:100%"/>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                    La salle où la séance se replie en cas de pluie. Les inscrits ne sont pas
+                    encore prévenus automatiquement.
+                </div>
+            </div>
+        }
+
+        @if (IsHome)
+        {
+            <div class="gx-form-field">
+                <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                    L'adresse d'une séance à domicile est celle du membre : elle est renseignée
+                    sur sa fiche, pas ici.
+                </div>
+            </div>
+        }
+
+        <div class="gx-seclab">@(IsStudio ? "Équipement" : "Matériel")</div>
+        <div class="gx-form-field">
+            <FluentTextArea Label="Un élément par ligne" Rows="5"
+                            Placeholder="Tapis ×20&#10;Steps&#10;Haltères"
+                            @bind-Value="Model.Equipment" style="width:100%"/>
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (!IsNew && OnDelete.HasDelegate)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="OnDelete">
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
+                Archiver
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                @(IsNew ? "Créer le lieu" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    /// <summary>An empty choice, so a picker can be cleared.</summary>
+    public sealed record SelectOption(string Value, string Label);
+
+    private static readonly LocationKind[] Kinds = Enum.GetValues<LocationKind>();
+
+    [Parameter, EditorRequired] public LocationEditModel Model { get; set; } = new();
+
+    /// <summary>The buildings a studio can sit in.</summary>
+    [Parameter] public IReadOnlyList<SiteOptionDto> Sites { get; set; } = [];
+
+    /// <summary>
+    /// The venues an outdoor spot can fall back to. Only studios shelter from
+    /// the rain, and a venue never falls back on itself.
+    /// </summary>
+    [Parameter] public IReadOnlyList<LocationListItemDto> Studios { get; set; } = [];
+
+    /// <summary>The venue being edited, so it cannot pick itself as fallback.</summary>
+    [Parameter] public int? EditedLocationId { get; set; }
+
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+
+    /// <summary>"Studio A · Cours collectifs" when editing.</summary>
+    [Parameter] public string? EditingSubtitle { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private bool IsStudio => Model.Kind == LocationKind.Studio;
+    private bool IsOutdoor => Model.Kind == LocationKind.Outdoor;
+    private bool IsHome => Model.Kind == LocationKind.Home;
+
+    private string Subtitle => IsNew
+        ? "Ajouter un lieu au catalogue"
+        : EditingSubtitle ?? string.Empty;
+
+    private IReadOnlyList<SelectOption> SiteOptions =>
+        [new(string.Empty, "Aucun"), .. Sites.Select(site => new SelectOption(site.Id.ToString(), site.Name))];
+
+    private IReadOnlyList<SelectOption> FallbackOptions =>
+    [
+        new(string.Empty, "Aucun"),
+        .. Studios
+            .Where(studio => studio.Kind == LocationKind.Studio && studio.Id != EditedLocationId)
+            .Select(studio => new SelectOption(studio.Id.ToString(), studio.Name))
+    ];
+
+    private static string ValueOf(int? id) => id?.ToString() ?? string.Empty;
+
+    private void OnKindChanged(LocationKind kind) => Model.ApplyKind(kind);
+
+    private void OnSiteChanged(SelectOption? option)
+        => Model.SiteId = int.TryParse(option?.Value, out var id) ? id : null;
+
+    private void OnFallbackChanged(SelectOption? option)
+        => Model.FallbackLocationId = int.TryParse(option?.Value, out var id) ? id : null;
+}
