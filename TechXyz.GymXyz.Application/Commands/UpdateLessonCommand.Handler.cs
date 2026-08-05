@@ -23,9 +23,9 @@ public sealed class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCom
 
         var coach = await _dbContext.Coaches
             .FirstOrDefaultAsync(candidate => candidate.Id == request.CoachId && candidate.IsActive, cancellationToken);
-        var room = await _dbContext.Rooms
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.RoomId && candidate.IsActive, cancellationToken);
-        if (coach is null || room is null)
+        var location = await _dbContext.Locations
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId && candidate.IsActive, cancellationToken);
+        if (coach is null || location is null)
         {
             return false;
         }
@@ -42,7 +42,7 @@ public sealed class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCom
         }
 
         var collectiveLesson = await _dbContext.CollectiveLessons
-            .Include(lesson => lesson.Rooms)
+            .Include(lesson => lesson.Locations)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
         if (collectiveLesson is not null)
         {
@@ -53,7 +53,7 @@ public sealed class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCom
 
             ApplyCommonFields(collectiveLesson, request, coach, theme);
             collectiveLesson.MaxParticipants = request.MaxParticipants ?? 1;
-            collectiveLesson.Rooms = [room];
+            collectiveLesson.Locations = [location];
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             return true;
@@ -72,7 +72,7 @@ public sealed class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCom
         }
 
         ApplyCommonFields(privateLesson, request, coach, theme);
-        privateLesson.Room = room;
+        privateLesson.Location = location;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;

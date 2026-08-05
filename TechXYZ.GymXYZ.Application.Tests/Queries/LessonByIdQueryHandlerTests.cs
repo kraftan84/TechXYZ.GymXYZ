@@ -11,7 +11,7 @@ public class LessonByIdQueryHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnLesson_WhenItExists));
         var coach = new Coach("John", "Doe");
-        var room = new Room("Studio A");
+        var location = new Location("Studio A");
         var theme = new LessonTheme("Cardio");
         var lesson = new CollectiveLesson
         {
@@ -19,14 +19,14 @@ public class LessonByIdQueryHandlerTests
             Type = LessonType.Collective,
             Coach = coach,
             Theme = theme,
-            Rooms = new List<Room> { room },
+            Locations = new List<Location> { location },
             MaxParticipants = 20,
             StartDate = DateTime.UtcNow.Date.AddHours(10),
             EndDate = DateTime.UtcNow.Date.AddHours(11)
         };
 
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         dbContext.LessonThemes.Add(theme);
         dbContext.CollectiveLessons.Add(lesson);
         await dbContext.SaveChangesAsync();
@@ -36,7 +36,7 @@ public class LessonByIdQueryHandlerTests
 
         result.ShouldNotBeNull();
         result!.Name.ShouldBe("Collective lesson");
-        result.Rooms.Count.ShouldBe(1);
+        result.Locations.Count.ShouldBe(1);
         result.MaxParticipants.ShouldBe(20);
     }
 

@@ -14,7 +14,7 @@ public sealed class UpdateLessonCommand : IRequest<bool>
         int coachId,
         DateTime startDate,
         DateTime endDate,
-        int roomId,
+        int locationId,
         int? maxParticipants)
     {
         Id = id;
@@ -25,7 +25,7 @@ public sealed class UpdateLessonCommand : IRequest<bool>
         CoachId = coachId;
         StartDate = startDate;
         EndDate = endDate;
-        RoomId = roomId;
+        LocationId = locationId;
         MaxParticipants = maxParticipants;
     }
 
@@ -37,6 +37,6 @@ public sealed class UpdateLessonCommand : IRequest<bool>
     public int CoachId { get; }
     public DateTime StartDate { get; }
     public DateTime EndDate { get; }
-    public int RoomId { get; }
+    public int LocationId { get; }
     public int? MaxParticipants { get; }
 }

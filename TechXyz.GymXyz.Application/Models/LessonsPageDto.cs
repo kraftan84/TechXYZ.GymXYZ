@@ -6,7 +6,7 @@ public sealed record LessonsPageDto(
     List<LessonListItemDto> Lessons,
     List<LessonThemeDto> Themes,
     List<LessonCoachDto> Coaches,
-    List<RoomDto> Rooms);
+    List<LocationOptionDto> Locations);
 
 public sealed record LessonListItemDto(
     int Id,
@@ -20,7 +20,7 @@ public sealed record LessonListItemDto(
     string CoachLastName,
     DateTime StartDate,
     DateTime EndDate,
-    List<RoomDto> Rooms,
+    List<LocationOptionDto> Locations,
     int? MaxParticipants);
 
 public sealed record LessonThemeDto(

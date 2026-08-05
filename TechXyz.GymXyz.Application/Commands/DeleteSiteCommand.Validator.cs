@@ -2,9 +2,9 @@ using FluentValidation;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteRoomCommandValidator : AbstractValidator<DeleteRoomCommand>
+public sealed class DeleteSiteCommandValidator : AbstractValidator<DeleteSiteCommand>
 {
-    public DeleteRoomCommandValidator()
+    public DeleteSiteCommandValidator()
     {
         RuleFor(command => command.Id).GreaterThan(0);
     }

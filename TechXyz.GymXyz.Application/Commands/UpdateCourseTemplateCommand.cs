@@ -13,7 +13,7 @@ public sealed class UpdateCourseTemplateCommand : IRequest<bool>
         int capacity,
         CourseLevel level,
         CourseIntensity intensity,
-        int? defaultRoomId = null,
+        int? defaultLocationId = null,
         decimal? price = null,
         string? description = null,
         string? iconKey = null,
@@ -26,7 +26,7 @@ public sealed class UpdateCourseTemplateCommand : IRequest<bool>
         Capacity = capacity;
         Level = level;
         Intensity = intensity;
-        DefaultRoomId = defaultRoomId;
+        DefaultLocationId = defaultLocationId;
         Price = price;
         Description = description;
         IconKey = iconKey;
@@ -45,7 +45,7 @@ public sealed class UpdateCourseTemplateCommand : IRequest<bool>
     /// Applied as given: passing null is how the default studio is cleared, and
     /// the drawer always sends the value it shows.
     /// </summary>
-    public int? DefaultRoomId { get; }
+    public int? DefaultLocationId { get; }
 
     /// <summary>
     /// Applied as given too: null is not "unchanged", it is "included in the

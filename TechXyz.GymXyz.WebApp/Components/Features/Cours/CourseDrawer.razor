@@ -49,12 +49,12 @@
         </div>
         <div class="gx-form-field">
             <FluentSelect Label="Studio par défaut"
-                          TOption="RoomOption"
-                          Items="@RoomOptions"
-                          OptionValue="@(room => room.Value)"
-                          OptionText="@(room => room.Label)"
-                          OptionSelected="@(room => room.Value == (Model.DefaultRoomId?.ToString() ?? string.Empty))"
-                          SelectedOptionChanged="OnRoomChanged"
+                          TOption="LocationOption"
+                          Items="@LocationOptions"
+                          OptionValue="@(location => location.Value)"
+                          OptionText="@(location => location.Label)"
+                          OptionSelected="@(location => location.Value == (Model.DefaultLocationId?.ToString() ?? string.Empty))"
+                          SelectedOptionChanged="OnLocationChanged"
                           style="width:100%"/>
         </div>
         <div class="gx-form-row">
@@ -136,7 +136,7 @@
 
 @code {
     /// <summary>An empty studio choice, so the field can be cleared.</summary>
-    public sealed record RoomOption(string Value, string Label);
+    public sealed record LocationOption(string Value, string Label);
 
     private static readonly CourseLevel[] Levels = Enum.GetValues<CourseLevel>();
     private static readonly CourseIntensity[] Intensities = Enum.GetValues<CourseIntensity>();
@@ -145,7 +145,7 @@
 
     [Parameter, EditorRequired] public CourseEditModel Model { get; set; } = new();
     [Parameter] public IReadOnlyList<DisciplineDto> Disciplines { get; set; } = [];
-    [Parameter] public IReadOnlyList<RoomDto> Rooms { get; set; } = [];
+    [Parameter] public IReadOnlyList<LocationOptionDto> Locations { get; set; } = [];
     [Parameter] public IReadOnlyList<CoachListItemDto> Coaches { get; set; } = [];
     [Parameter] public bool IsNew { get; set; }
     [Parameter] public bool IsSaving { get; set; }
@@ -162,8 +162,8 @@
         ? "Ajouter un modèle au catalogue"
         : EditingSubtitle ?? string.Empty;
 
-    private IReadOnlyList<RoomOption> RoomOptions =>
-        [new(string.Empty, "Aucun"), .. Rooms.Select(room => new RoomOption(room.Id.ToString(), room.Name))];
+    private IReadOnlyList<LocationOption> LocationOptions =>
+        [new(string.Empty, "Aucun"), .. Locations.Select(location => new LocationOption(location.Id.ToString(), location.Name))];
 
     private void OnDisciplineChanged(DisciplineDto? discipline)
     {
@@ -173,8 +173,8 @@
         }
     }
 
-    private void OnRoomChanged(RoomOption? room)
-        => Model.DefaultRoomId = int.TryParse(room?.Value, out var id) ? id : null;
+    private void OnLocationChanged(LocationOption? location)
+        => Model.DefaultLocationId = int.TryParse(location?.Value, out var id) ? id : null;
 
     private void OnLevelChanged(CourseLevel level) => Model.Level = level;
 

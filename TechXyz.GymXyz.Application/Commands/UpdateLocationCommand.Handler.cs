@@ -21,19 +21,27 @@ public sealed class UpdateLocationCommandHandler : IRequestHandler<UpdateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var location = await _dbContext.Locations
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
-        if (location is null)
+        var sites = await _dbContext.Sites
+            .Include(site => site.Locations)
+            .Where(site => site.IsActive && (site.Id == request.SiteId || site.Locations!.Any(location => location.IsActive && location.Id == request.Id)))
+            .ToListAsync(cancellationToken);
+
+        var targetSite = sites.FirstOrDefault(site => site.Id == request.SiteId);
+        var currentSite = sites.FirstOrDefault(site => site.Locations!.Any(location => location.IsActive && location.Id == request.Id));
+
+        if (targetSite is null || currentSite is null)
         {
             return false;
         }
 
+        var location = currentSite.Locations!.First(candidate => candidate.IsActive && candidate.Id == request.Id);
         location.Name = request.Name.Trim();
-        location.Address ??= new Address();
-        location.Address.Street = request.Street.Trim();
-        location.Address.ZipCode = request.ZipCode.Trim();
-        location.Address.City = request.City.Trim();
-        location.Address.Country = request.Country.Trim();
+
+        if (currentSite.Id != targetSite.Id)
+        {
+            currentSite.Locations!.Remove(location);
+            targetSite.AddLocation(location);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

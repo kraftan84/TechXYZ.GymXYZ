@@ -13,10 +13,10 @@ public class CreateLessonCommandHandlerTests
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateCollectiveLesson));
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
-        var room = new Room(faker.Commerce.ProductName());
+        var location = new Location(faker.Commerce.ProductName());
         var theme = new LessonTheme(faker.Commerce.Department());
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         dbContext.LessonThemes.Add(theme);
         await dbContext.SaveChangesAsync();
 
@@ -33,7 +33,7 @@ public class CreateLessonCommandHandlerTests
                 coach.Id,
                 startDate,
                 endDate,
-                room.Id,
+                location.Id,
                 15),
             CancellationToken.None);
 
@@ -49,9 +49,9 @@ public class CreateLessonCommandHandlerTests
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreatePrivateLesson));
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
-        var room = new Room(faker.Commerce.ProductName());
+        var location = new Location(faker.Commerce.ProductName());
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
         var handler = new CreateLessonCommandHandler(dbContext, new CreateLessonCommandValidator());
@@ -67,7 +67,7 @@ public class CreateLessonCommandHandlerTests
                 coach.Id,
                 startDate,
                 endDate,
-                room.Id,
+                location.Id,
                 null),
             CancellationToken.None);
 
@@ -78,7 +78,7 @@ public class CreateLessonCommandHandlerTests
     public async Task Handle_ShouldThrowValidationException_WhenCoachDoesNotExist()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenCoachDoesNotExist));
-        dbContext.Rooms.Add(new Room("Room"));
+        dbContext.Locations.Add(new Location("Location"));
         await dbContext.SaveChangesAsync();
 
         var handler = new CreateLessonCommandHandler(dbContext, new CreateLessonCommandValidator());

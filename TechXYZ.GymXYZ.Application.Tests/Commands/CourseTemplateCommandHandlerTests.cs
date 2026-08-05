@@ -17,8 +17,8 @@ public class CourseTemplateCommandHandlerTests
         var cycling = new Discipline("Cycling");
         dbContext.Disciplines.Add(cycling);
 
-        var studioC = new Room("Studio C");
-        dbContext.Rooms.Add(studioC);
+        var studioC = new Location("Studio C");
+        dbContext.Locations.Add(studioC);
 
         var lea = new Coach("Léa", "Fontaine");
         var nora = new Coach("Nora", "Lemoine");
@@ -34,7 +34,7 @@ public class CourseTemplateCommandHandlerTests
             capacity: 24,
             CourseLevel.Intermediate,
             CourseIntensity.High,
-            defaultRoomId: studioC.Id,
+            defaultLocationId: studioC.Id,
             price: null,
             description: "  Séance de vélo indoor.  ",
             iconKey: "   ",
@@ -47,7 +47,7 @@ public class CourseTemplateCommandHandlerTests
         created.Name.ShouldBe("Power Cycle");
         created.Description.ShouldBe("Séance de vélo indoor.");
         created.IconKey.ShouldBeNull();
-        created.DefaultRoomId.ShouldBe(studioC.Id);
+        created.DefaultLocationId.ShouldBe(studioC.Id);
         created.Price.ShouldBeNull();
         created.Coaches!.OrderBy(link => link.Rank).Select(link => link.CoachId)
             .ShouldBe([lea.Id, nora.Id]);
@@ -98,7 +98,7 @@ public class CourseTemplateCommandHandlerTests
             capacity: 20,
             CourseLevel.Beginner,
             CourseIntensity.Moderate,
-            defaultRoomId: null,
+            defaultLocationId: null,
             price: 45m,
             description: null,
             iconKey: null,
@@ -246,15 +246,15 @@ public class CourseTemplateCommandHandlerTests
         var coaching = new Discipline("Coaching perso");
         dbContext.Disciplines.Add(coaching);
 
-        var studioC = new Room("Studio C");
-        dbContext.Rooms.Add(studioC);
+        var studioC = new Location("Studio C");
+        dbContext.Locations.Add(studioC);
 
         var samir = new Coach("Samir", "El Amrani");
         var karim = new Coach("Karim", "Bouaziz");
         dbContext.Coaches.AddRange(samir, karim);
 
         var template = NewTemplate("Coaching Perso", coaching, capacity: 1);
-        template.DefaultRoom = studioC;
+        template.DefaultLocation = studioC;
         template.Price = 45m;
         template.Level = CourseLevel.Custom;
         template.Intensity = CourseIntensity.Private;
@@ -280,7 +280,7 @@ public class CourseTemplateCommandHandlerTests
         copy.Name.ShouldBe("Coaching Perso (copie)");
         copy.Capacity.ShouldBe(1);
         copy.Price.ShouldBe(45m);
-        copy.DefaultRoomId.ShouldBe(studioC.Id);
+        copy.DefaultLocationId.ShouldBe(studioC.Id);
         copy.Level.ShouldBe(CourseLevel.Custom);
         copy.Intensity.ShouldBe(CourseIntensity.Private);
         copy.Description.ShouldBe("Séance individuelle.");

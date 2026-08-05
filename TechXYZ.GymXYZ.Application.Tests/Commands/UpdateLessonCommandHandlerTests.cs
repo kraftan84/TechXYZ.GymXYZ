@@ -13,20 +13,20 @@ public class UpdateLessonCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldUpdatePrivateLesson));
         var coach = new Coach("John", "Doe");
         var coach2 = new Coach("Jane", "Doe");
-        var room = new Room("Studio A");
-        var room2 = new Room("Studio B");
+        var location = new Location("Studio A");
+        var location2 = new Location("Studio B");
         var lesson = new PrivateLesson
         {
             Name = "Lesson",
             Type = LessonType.Private,
             Coach = coach,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow.Date.AddHours(10),
             EndDate = DateTime.UtcNow.Date.AddHours(11)
         };
 
         dbContext.Coaches.AddRange(coach, coach2);
-        dbContext.Rooms.AddRange(room, room2);
+        dbContext.Locations.AddRange(location, location2);
         dbContext.PrivateLessons.Add(lesson);
         await dbContext.SaveChangesAsync();
 
@@ -41,14 +41,14 @@ public class UpdateLessonCommandHandlerTests
                 coach2.Id,
                 DateTime.UtcNow.Date.AddHours(12),
                 DateTime.UtcNow.Date.AddHours(13),
-                room2.Id,
+                location2.Id,
                 null),
             CancellationToken.None);
 
         result.ShouldBeTrue();
         lesson.Name.ShouldBe("Updated lesson");
         lesson.Coach.Id.ShouldBe(coach2.Id);
-        lesson.Room.Id.ShouldBe(room2.Id);
+        lesson.Location.Id.ShouldBe(location2.Id);
     }
 
     [Fact]
@@ -56,9 +56,9 @@ public class UpdateLessonCommandHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnFalse_WhenLessonNotFound));
         var coach = new Coach("John", "Doe");
-        var room = new Room("Studio A");
+        var location = new Location("Studio A");
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
         var handler = new UpdateLessonCommandHandler(dbContext, new UpdateLessonCommandValidator());
@@ -72,7 +72,7 @@ public class UpdateLessonCommandHandlerTests
                 coach.Id,
                 DateTime.UtcNow.Date.AddHours(12),
                 DateTime.UtcNow.Date.AddHours(13),
-                room.Id,
+                location.Id,
                 null),
             CancellationToken.None);
 
@@ -84,19 +84,19 @@ public class UpdateLessonCommandHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenTypeChanges));
         var coach = new Coach("John", "Doe");
-        var room = new Room("Studio A");
+        var location = new Location("Studio A");
         var lesson = new PrivateLesson
         {
             Name = "Lesson",
             Type = LessonType.Private,
             Coach = coach,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow.Date.AddHours(10),
             EndDate = DateTime.UtcNow.Date.AddHours(11)
         };
 
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         dbContext.PrivateLessons.Add(lesson);
         await dbContext.SaveChangesAsync();
 
@@ -112,7 +112,7 @@ public class UpdateLessonCommandHandlerTests
                 coach.Id,
                 DateTime.UtcNow.Date.AddHours(10),
                 DateTime.UtcNow.Date.AddHours(11),
-                room.Id,
+                location.Id,
                 10),
             CancellationToken.None));
     }

@@ -8,47 +8,50 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class CreateLocationCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldCreateLocationInDefaultGym()
+    public async Task Handle_ShouldCreateLocationInSite()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateLocationInDefaultGym));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateLocationInSite));
 
-        var gym = new Gym(faker.Company.CompanyName());
-        dbContext.Gyms.Add(gym);
+        var site = new Site(faker.Address.City())
+        {
+            Address = new Address
+            {
+                Street = faker.Address.StreetAddress(),
+                ZipCode = faker.Address.ZipCode(),
+                City = faker.Address.City(),
+                Country = faker.Address.Country()
+            }
+        };
+        dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
         var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
-        var command = new CreateLocationCommand(
-            $" {faker.Address.City()} ",
-            $" {faker.Address.StreetAddress()} ",
-            $" {faker.Address.ZipCode()} ",
-            $" {faker.Address.City()} ",
-            $" {faker.Address.Country()} ");
+        var locationName = faker.Commerce.ProductName();
+        var locationId = await handler.Handle(new CreateLocationCommand($" {locationName} ", site.Id), CancellationToken.None);
 
-        var createdId = await handler.Handle(command, CancellationToken.None);
-
-        var location = dbContext.Locations.Single(l => l.Id == createdId);
-        location.Name.ShouldBe(command.Name.Trim());
-        location.Address.ShouldNotBeNull();
-        location.Address.Street.ShouldBe(command.Street.Trim());
+        locationId.ShouldBeGreaterThan(0);
+        dbContext.Locations.Any(r => r.Id == locationId && r.Name == locationName).ShouldBeTrue();
     }
 
     [Fact]
-    public async Task Handle_ShouldThrowValidationException_WhenNameIsEmpty()
+    public async Task Handle_ShouldThrowValidationException_WhenSiteIdIsInvalid()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenNameIsEmpty));
-        dbContext.Gyms.Add(new Gym(faker.Company.CompanyName()));
-        await dbContext.SaveChangesAsync();
-
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenSiteIdIsInvalid));
         var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(
-            string.Empty,
-            faker.Address.StreetAddress(),
-            faker.Address.ZipCode(),
-            faker.Address.City(),
-            faker.Address.Country()), CancellationToken.None));
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(faker.Commerce.ProductName(), 0), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldThrowValidationException_WhenSiteDoesNotExist()
+    {
+        var faker = TestInfrastructure.Faker();
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenSiteDoesNotExist));
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
+
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(faker.Commerce.ProductName(), 999), CancellationToken.None));
     }
 }

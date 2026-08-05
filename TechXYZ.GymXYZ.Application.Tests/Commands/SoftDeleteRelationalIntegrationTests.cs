@@ -49,7 +49,7 @@ public class SoftDeleteRelationalIntegrationTests
         var dbContext = scope.DbContext;
 
         var coach = new Coach(faker.Name.FirstName(), faker.Name.LastName());
-        var location = new Location(faker.Address.City())
+        var site = new Site(faker.Address.City())
         {
             Address = new Address
             {
@@ -59,11 +59,11 @@ public class SoftDeleteRelationalIntegrationTests
                 Country = faker.Address.Country()
             }
         };
-        var room = new Room(faker.Commerce.ProductName());
-        location.AddRoom(room);
+        var location = new Location(faker.Commerce.ProductName());
+        site.AddLocation(location);
 
         dbContext.Coaches.Add(coach);
-        dbContext.Locations.Add(location);
+        dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
         dbContext.PrivateLessons.Add(new PrivateLesson
@@ -71,7 +71,7 @@ public class SoftDeleteRelationalIntegrationTests
             Name = faker.Company.CatchPhrase(),
             Type = LessonType.Private,
             Coach = coach,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddHours(1)
         });

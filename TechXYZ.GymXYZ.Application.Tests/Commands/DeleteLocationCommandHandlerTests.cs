@@ -7,23 +7,10 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class DeleteLocationCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldSoftDeleteLocationAndItsRooms()
+    public async Task Handle_ShouldSoftDeleteLocation()
     {
-        var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteLocationAndItsRooms));
-
-        var location = new Location(faker.Address.City())
-        {
-            Address = new Address
-            {
-                Street = faker.Address.StreetAddress(),
-                ZipCode = faker.Address.ZipCode(),
-                City = faker.Address.City(),
-                Country = faker.Address.Country()
-            },
-            Rooms = [new Room("Room A"), new Room("Room B")]
-        };
-
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteLocation));
+        var location = new Location("Location 1");
         dbContext.Locations.Add(location);
         await dbContext.SaveChangesAsync();
 
@@ -32,7 +19,6 @@ public class DeleteLocationCommandHandlerTests
         var deleted = await handler.Handle(new DeleteLocationCommand(location.Id), CancellationToken.None);
 
         deleted.ShouldBeTrue();
-        dbContext.Locations.Single(l => l.Id == location.Id).IsActive.ShouldBeFalse();
-        dbContext.Rooms.All(room => room.IsActive == false).ShouldBeTrue();
+        dbContext.Locations.Single(r => r.Id == location.Id).IsActive.ShouldBeFalse();
     }
 }

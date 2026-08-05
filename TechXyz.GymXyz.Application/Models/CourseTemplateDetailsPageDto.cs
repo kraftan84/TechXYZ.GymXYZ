@@ -11,8 +11,8 @@ public sealed record CourseTemplateDetailsPageDto(
     string? IconKeyOverride,
     int DurationMinutes,
     int Capacity,
-    int? DefaultRoomId,
-    string? DefaultRoomName,
+    int? DefaultLocationId,
+    string? DefaultLocationName,
     CourseLevel Level,
     CourseIntensity Intensity,
     decimal? Price,
@@ -44,6 +44,6 @@ public sealed record CourseTemplateStatsDto(
 public sealed record CourseSessionDto(
     string DayLabel,
     string Time,
-    string RoomName,
+    string LocationName,
     int Occupancy,
     int Capacity);

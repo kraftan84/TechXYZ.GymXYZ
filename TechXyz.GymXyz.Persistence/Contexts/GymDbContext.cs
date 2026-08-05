@@ -27,8 +27,8 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Gym> Gyms => Set<Gym>();
+    public DbSet<Site> Sites =>  Set<Site>();
     public DbSet<Location> Locations =>  Set<Location>();
-    public DbSet<Room> Rooms =>  Set<Room>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<PrivateLesson> PrivateLessons => Set<PrivateLesson>();
     public DbSet<CollectiveLesson> CollectiveLessons => Set<CollectiveLesson>();
@@ -73,7 +73,7 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             {
                 x.HasOne(pl => pl.Coach)
                     .WithMany(c => c.PrivateLessons);
-                x.HasOne(pl => pl.Room)
+                x.HasOne(pl => pl.Location)
                     .WithMany();
 
                 x.HasOne(pl => pl.Member)
@@ -83,7 +83,7 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             {
                 x.HasOne(pl => pl.Coach)
                     .WithMany(c => c.CollectiveLessons);
-                x.HasMany(cl => cl.Rooms)
+                x.HasMany(cl => cl.Locations)
                     .WithMany();
 
                 x.HasMany(cl => cl.Participants)
@@ -104,9 +104,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         });
 
         modelBuilder.Entity<CourseTemplate>()
-            .HasOne(template => template.DefaultRoom)
+            .HasOne(template => template.DefaultLocation)
             .WithMany()
-            .HasForeignKey(template => template.DefaultRoomId);
+            .HasForeignKey(template => template.DefaultLocationId);
 
         modelBuilder.Entity<CourseTemplateCoach>(x =>
         {

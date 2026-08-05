@@ -37,8 +37,8 @@ public class CourseTemplate : EntityBase<int>, ITenantScoped
     public int Capacity { get; set; }
 
     /// <summary>Studio the planning proposes first. Optional.</summary>
-    public int? DefaultRoomId { get; set; }
-    public Room? DefaultRoom { get; set; }
+    public int? DefaultLocationId { get; set; }
+    public Location? DefaultLocation { get; set; }
 
     public CourseLevel Level { get; set; }
 

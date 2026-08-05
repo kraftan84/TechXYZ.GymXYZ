@@ -1,4 +1,3 @@
-using FluentValidation;
 using Shouldly;
 using TechXyz.GymXyz.Application.Commands;
 using TechXyz.GymXyz.Domain.Entities;
@@ -8,54 +7,31 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class UpdateLocationCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldUpdateLocation()
+    public async Task Handle_ShouldMoveLocationAndRename()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldUpdateLocation));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldMoveLocationAndRename));
 
-        var location = new Location(faker.Address.City())
+        var source = new Site("Source")
         {
-            Address = new Address
-            {
-                Street = faker.Address.StreetAddress(),
-                ZipCode = faker.Address.ZipCode(),
-                City = faker.Address.City(),
-                Country = faker.Address.Country()
-            }
+            Address = new Address { Street = "S", ZipCode = "1", City = "A", Country = "FR" }
         };
+        var target = new Site("Target")
+        {
+            Address = new Address { Street = "T", ZipCode = "2", City = "B", Country = "FR" }
+        };
+        var location = new Location("Old Name");
+        source.AddLocation(location);
 
-        dbContext.Locations.Add(location);
+        dbContext.Sites.AddRange(source, target);
         await dbContext.SaveChangesAsync();
 
         var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
 
-        var updatedName = faker.Address.City();
-        var updatedStreet = faker.Address.StreetAddress();
-        var updated = await handler.Handle(new UpdateLocationCommand(
-            location.Id,
-            $" {updatedName} ",
-            $" {updatedStreet} ",
-            faker.Address.ZipCode(),
-            faker.Address.City(),
-            faker.Address.Country()), CancellationToken.None);
+        var newName = faker.Commerce.ProductName();
+        var updated = await handler.Handle(new UpdateLocationCommand(location.Id, $" {newName} ", target.Id), CancellationToken.None);
 
         updated.ShouldBeTrue();
-        dbContext.Locations.Single(l => l.Id == location.Id).Name.ShouldBe(updatedName);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldThrowValidationException_WhenIdIsInvalid()
-    {
-        var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenIdIsInvalid));
-        var handler = new UpdateLocationCommandHandler(dbContext, new UpdateLocationCommandValidator());
-
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new UpdateLocationCommand(
-            0,
-            faker.Address.City(),
-            faker.Address.StreetAddress(),
-            faker.Address.ZipCode(),
-            faker.Address.City(),
-            faker.Address.Country()), CancellationToken.None));
+        dbContext.Locations.Single(r => r.Id == location.Id).Name.ShouldBe(newName);
     }
 }

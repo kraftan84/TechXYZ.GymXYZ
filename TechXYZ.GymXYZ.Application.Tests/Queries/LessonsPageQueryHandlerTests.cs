@@ -12,8 +12,8 @@ public class LessonsPageQueryHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnOnlyActiveData));
         var coach = new Coach("John", "Doe");
         var inactiveCoach = new Coach("Inactive", "Coach") { IsActive = false };
-        var room = new Room("Studio A");
-        var inactiveRoom = new Room("Studio B") { IsActive = false };
+        var location = new Location("Studio A");
+        var inactiveLocation = new Location("Studio B") { IsActive = false };
         var theme = new LessonTheme("Cardio");
         var inactiveTheme = new LessonTheme("Old theme") { IsActive = false };
 
@@ -23,7 +23,7 @@ public class LessonsPageQueryHandlerTests
             Type = LessonType.Private,
             Coach = coach,
             Theme = theme,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow.Date.AddHours(8),
             EndDate = DateTime.UtcNow.Date.AddHours(9)
         };
@@ -34,7 +34,7 @@ public class LessonsPageQueryHandlerTests
             Type = LessonType.Collective,
             Coach = coach,
             Theme = theme,
-            Rooms = new List<Room> { room, inactiveRoom },
+            Locations = new List<Location> { location, inactiveLocation },
             MaxParticipants = 20,
             StartDate = DateTime.UtcNow.Date.AddHours(10),
             EndDate = DateTime.UtcNow.Date.AddHours(11)
@@ -46,14 +46,14 @@ public class LessonsPageQueryHandlerTests
             Type = LessonType.Private,
             Coach = inactiveCoach,
             Theme = inactiveTheme,
-            Room = room,
+            Location = location,
             IsActive = false,
             StartDate = DateTime.UtcNow.Date.AddHours(12),
             EndDate = DateTime.UtcNow.Date.AddHours(13)
         };
 
         dbContext.Coaches.AddRange(coach, inactiveCoach);
-        dbContext.Rooms.AddRange(room, inactiveRoom);
+        dbContext.Locations.AddRange(location, inactiveLocation);
         dbContext.LessonThemes.AddRange(theme, inactiveTheme);
         dbContext.PrivateLessons.AddRange(privateLesson, inactiveLesson);
         dbContext.CollectiveLessons.Add(collectiveLesson);
@@ -65,7 +65,7 @@ public class LessonsPageQueryHandlerTests
         result.Lessons.Count.ShouldBe(2);
         result.Themes.Count.ShouldBe(1);
         result.Coaches.Count.ShouldBe(1);
-        result.Rooms.Count.ShouldBe(1);
-        result.Lessons.Single(lesson => lesson.Name == "Collective lesson").Rooms.Count.ShouldBe(1);
+        result.Locations.Count.ShouldBe(1);
+        result.Lessons.Single(lesson => lesson.Name == "Collective lesson").Locations.Count.ShouldBe(1);
     }
 }

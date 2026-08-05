@@ -18,7 +18,7 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
     {
         var privateLessonsRaw = await _dbContext.PrivateLessons
             .AsNoTracking()
-            .Where(lesson => lesson.IsActive && lesson.Coach.IsActive && lesson.Room.IsActive)
+            .Where(lesson => lesson.IsActive && lesson.Coach.IsActive && lesson.Location.IsActive)
             .Select(lesson => new
             {
                 lesson.Id,
@@ -32,8 +32,8 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
                 CoachLastName = lesson.Coach.LastName,
                 lesson.StartDate,
                 lesson.EndDate,
-                RoomId = lesson.Room.Id,
-                RoomName = lesson.Room.Name
+                LocationId = lesson.Location.Id,
+                LocationName = lesson.Location.Name
             })
             .ToListAsync(cancellationToken);
 
@@ -52,10 +52,10 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
                 lesson.Coach.LastName,
                 lesson.StartDate,
                 lesson.EndDate,
-                lesson.Rooms
-                    .Where(room => room.IsActive)
-                    .OrderBy(room => room.Name)
-                    .Select(room => new RoomDto(room.Id, room.Name))
+                lesson.Locations
+                    .Where(location => location.IsActive)
+                    .OrderBy(location => location.Name)
+                    .Select(location => new LocationOptionDto(location.Id, location.Name))
                     .ToList(),
                 lesson.MaxParticipants))
             .ToListAsync(cancellationToken);
@@ -75,11 +75,11 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
             .Select(coach => new LessonCoachDto(coach.Id, coach.FirstName, coach.LastName))
             .ToListAsync(cancellationToken);
 
-        var rooms = await _dbContext.Rooms
+        var locations = await _dbContext.Locations
             .AsNoTracking()
-            .Where(room => room.IsActive)
-            .OrderBy(room => room.Name)
-            .Select(room => new RoomDto(room.Id, room.Name))
+            .Where(location => location.IsActive)
+            .OrderBy(location => location.Name)
+            .Select(location => new LocationOptionDto(location.Id, location.Name))
             .ToListAsync(cancellationToken);
 
         var privateLessons = privateLessonsRaw
@@ -95,7 +95,7 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
                 lesson.CoachLastName,
                 lesson.StartDate,
                 lesson.EndDate,
-                [new RoomDto(lesson.RoomId, lesson.RoomName)],
+                [new LocationOptionDto(lesson.LocationId, lesson.LocationName)],
                 null))
             .ToList();
 
@@ -109,6 +109,6 @@ public sealed class GetLessonsPageQueryHandler : IRequestHandler<GetLessonsPageQ
             lessons,
             themes,
             coaches,
-            rooms);
+            locations);
     }
 }

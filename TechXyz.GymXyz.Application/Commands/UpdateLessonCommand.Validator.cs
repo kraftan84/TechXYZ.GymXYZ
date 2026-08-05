@@ -11,7 +11,7 @@ public sealed class UpdateLessonCommandValidator : AbstractValidator<UpdateLesso
         RuleFor(command => command.Name).NotEmpty().MaximumLength(150);
         RuleFor(command => command.Description).MaximumLength(1000);
         RuleFor(command => command.CoachId).GreaterThan(0);
-        RuleFor(command => command.RoomId).GreaterThan(0);
+        RuleFor(command => command.LocationId).GreaterThan(0);
         RuleFor(command => command.ThemeId)
             .GreaterThan(0)
             .When(command => command.ThemeId.HasValue);

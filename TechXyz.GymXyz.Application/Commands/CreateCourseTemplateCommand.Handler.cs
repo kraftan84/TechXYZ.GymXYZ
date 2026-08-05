@@ -39,7 +39,7 @@ public sealed class CreateCourseTemplateCommandHandler : IRequestHandler<CreateC
             IconKey = AddressHelper.NormalizeOptional(request.IconKey),
             DurationMinutes = request.DurationMinutes,
             Capacity = request.Capacity,
-            DefaultRoomId = await ResolveRoomIdAsync(request.DefaultRoomId, cancellationToken),
+            DefaultLocationId = await ResolveLocationIdAsync(request.DefaultLocationId, cancellationToken),
             Level = request.Level,
             Intensity = request.Intensity,
             Price = request.Price,
@@ -65,15 +65,15 @@ public sealed class CreateCourseTemplateCommandHandler : IRequestHandler<CreateC
         return template.Id;
     }
 
-    private async Task<int?> ResolveRoomIdAsync(int? roomId, CancellationToken cancellationToken)
+    private async Task<int?> ResolveLocationIdAsync(int? locationId, CancellationToken cancellationToken)
     {
-        if (roomId is not { } id)
+        if (locationId is not { } id)
         {
             return null;
         }
 
-        var exists = await _dbContext.Rooms
-            .AnyAsync(room => room.Id == id && room.IsActive, cancellationToken);
+        var exists = await _dbContext.Locations
+            .AnyAsync(location => location.Id == id && location.IsActive, cancellationToken);
 
         return exists ? id : throw new ValidationException("Studio introuvable.");
     }

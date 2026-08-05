@@ -46,11 +46,11 @@ public sealed class UpdateCourseTemplateCommandHandler : IRequestHandler<UpdateC
             template.DisciplineId = request.DisciplineId;
         }
 
-        if (request.DefaultRoomId is { } roomId)
+        if (request.DefaultLocationId is { } locationId)
         {
-            var roomExists = await _dbContext.Rooms
-                .AnyAsync(room => room.Id == roomId && room.IsActive, cancellationToken);
-            if (!roomExists)
+            var locationExists = await _dbContext.Locations
+                .AnyAsync(location => location.Id == locationId && location.IsActive, cancellationToken);
+            if (!locationExists)
             {
                 throw new ValidationException("Studio introuvable.");
             }
@@ -60,7 +60,7 @@ public sealed class UpdateCourseTemplateCommandHandler : IRequestHandler<UpdateC
         template.IconKey = AddressHelper.NormalizeOptional(request.IconKey);
         template.DurationMinutes = request.DurationMinutes;
         template.Capacity = request.Capacity;
-        template.DefaultRoomId = request.DefaultRoomId;
+        template.DefaultLocationId = request.DefaultLocationId;
         template.Level = request.Level;
         template.Intensity = request.Intensity;
         template.Price = request.Price;

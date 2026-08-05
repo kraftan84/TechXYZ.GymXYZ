@@ -14,7 +14,7 @@ public sealed class CourseEditModel
     public int DisciplineId { get; set; }
     public int DurationMinutes { get; set; } = 60;
     public int Capacity { get; set; } = 16;
-    public int? DefaultRoomId { get; set; }
+    public int? DefaultLocationId { get; set; }
     public CourseLevel Level { get; set; } = CourseLevel.AllLevels;
     public CourseIntensity Intensity { get; set; } = CourseIntensity.Moderate;
     public decimal? Price { get; set; }
@@ -39,7 +39,7 @@ public sealed class CourseEditModel
             DisciplineId = course.DisciplineId,
             DurationMinutes = course.DurationMinutes,
             Capacity = course.Capacity,
-            DefaultRoomId = course.DefaultRoomId,
+            DefaultLocationId = course.DefaultLocationId,
             Level = course.Level,
             Intensity = course.Intensity,
             Price = course.Price,

@@ -3,4 +3,4 @@ using TechXyz.GymXyz.Application.Models;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
-public sealed class GetRoomsPageQuery : IRequest<RoomsPageDto?>;
+public sealed class GetSitesPageQuery : IRequest<SitesPageDto?>;

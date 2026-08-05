@@ -4,20 +4,20 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Domain.Tests;
 
-public class GymAndLocationBehaviorTests
+public class GymAndSiteBehaviorTests
 {
     [Fact]
-    public void AddLocation_ShouldInitializeCollectionAndAppendLocation()
+    public void AddSite_ShouldInitializeCollectionAndAppendSite()
     {
         var faker = Faker();
         var gym = new Gym(faker.Company.CompanyName());
-        var location = new Location(faker.Address.City());
+        var site = new Site(faker.Address.City());
 
-        gym.AddLocation(location);
+        gym.AddSite(site);
 
-        gym.Locations.ShouldNotBeNull();
-        gym.Locations.Count.ShouldBe(1);
-        gym.Locations.First().ShouldBeSameAs(location);
+        gym.Sites.ShouldNotBeNull();
+        gym.Sites.Count.ShouldBe(1);
+        gym.Sites.First().ShouldBeSameAs(site);
     }
 
     [Fact]
@@ -49,17 +49,17 @@ public class GymAndLocationBehaviorTests
     }
 
     [Fact]
-    public void AddRoom_ShouldInitializeCollectionAndAppendRoom()
+    public void AddLocation_ShouldInitializeCollectionAndAppendLocation()
     {
         var faker = Faker();
-        var location = new Location(faker.Address.City());
-        var room = new Room(faker.Commerce.ProductName());
+        var site = new Site(faker.Address.City());
+        var location = new Location(faker.Commerce.ProductName());
 
-        location.AddRoom(room);
+        site.AddLocation(location);
 
-        location.Rooms.ShouldNotBeNull();
-        location.Rooms.Count.ShouldBe(1);
-        location.Rooms.First().ShouldBeSameAs(room);
+        site.Locations.ShouldNotBeNull();
+        site.Locations.Count.ShouldBe(1);
+        site.Locations.First().ShouldBeSameAs(location);
     }
 
     private static Faker Faker() => new("en");

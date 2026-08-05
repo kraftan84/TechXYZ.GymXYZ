@@ -22,17 +22,10 @@ public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocatio
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var location = await _dbContext.Locations
-            .Include(candidate => candidate.Rooms)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
-
         if (location is null)
         {
             return false;
-        }
-
-        foreach (var room in location.Rooms?.ToList() ?? [])
-        {
-            room.IsActive = false;
         }
 
         location.IsActive = false;

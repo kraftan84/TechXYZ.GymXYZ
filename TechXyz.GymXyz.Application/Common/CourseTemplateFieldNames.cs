@@ -13,7 +13,7 @@ public static class CourseTemplateFieldNames
     public const string IconKey = "L'icône";
     public const string DurationMinutes = "La durée";
     public const string Capacity = "La capacité";
-    public const string DefaultRoom = "Le studio";
+    public const string DefaultLocation = "Le studio";
     public const string Level = "Le niveau";
     public const string Intensity = "L'intensité";
     public const string Price = "Le tarif";

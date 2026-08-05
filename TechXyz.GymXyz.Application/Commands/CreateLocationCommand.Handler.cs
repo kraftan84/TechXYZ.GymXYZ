@@ -1,6 +1,6 @@
 using FluentValidation;
 using MediatR;
-using TechXyz.GymXyz.Application.Common;
+using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
@@ -21,20 +21,17 @@ public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocatio
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var defaultGym = await _dbContext.GetRequiredDefaultGymAsync(cancellationToken);
+        var site = await _dbContext.Sites
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.SiteId && candidate.IsActive, cancellationToken);
 
-        var location = new Location(request.Name.Trim())
+        if (site is null)
         {
-            Address = new Address
-            {
-                Street = request.Street.Trim(),
-                ZipCode = request.ZipCode.Trim(),
-                City = request.City.Trim(),
-                Country = request.Country.Trim()
-            }
-        };
+            throw new ValidationException("Site not found.");
+        }
 
-        defaultGym.AddLocation(location);
+        var location = new Location(request.Name.Trim());
+        site.AddLocation(location);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return location.Id;
