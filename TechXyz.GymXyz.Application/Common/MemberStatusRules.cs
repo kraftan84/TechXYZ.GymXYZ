@@ -19,8 +19,13 @@ namespace TechXyz.GymXyz.Application.Common;
 /// </para>
 /// <para>
 /// Business decision of lot 1: the standing is derived from the subscription
-/// alone. The "no visit for a while" leg joins at lot 6 (attendance) and the
-/// whole thing moves onto Plan/Subscription/Payment at lot 7.
+/// alone, and it stays that way. Attendance arrived at lot 6 without adding an
+/// inactivity leg here: the prototype's members table shows Actif / Expire
+/// bientôt / Inactif, all three read from the cover, and no standing in it
+/// expresses "has not come in a while". Poor attendance surfaces where the
+/// prototype puts it — the assiduité column and the "absents à relancer" card —
+/// rather than as a fourth chip nothing in the design asks for.
+/// The whole thing moves onto Plan/Subscription/Payment at lot 7.
 /// </para>
 /// </summary>
 public static class MemberStatusRules

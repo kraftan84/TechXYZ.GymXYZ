@@ -65,6 +65,60 @@ public class SessionStatisticsTests
     }
 
     [Fact]
+    public void AttendanceRate_ShouldCountLateArrivalsAsAttended()
+    {
+        // 7 of the 8 seats that were pointed had the member in the room.
+        var rate = SessionStatistics.AttendanceRate([Fact(20, 8, present: 6, late: 1, absent: 1)]);
+
+        rate.ShouldBe(88);
+    }
+
+    [Fact]
+    public void AttendanceRate_ShouldBeNullWhenNothingWasMarked()
+    {
+        // A full session whose sheet nobody opened. Nought per cent would be a
+        // verdict; there is none.
+        var rate = SessionStatistics.AttendanceRate([Fact(20, 20), Fact(16, 12)]);
+
+        rate.ShouldBeNull();
+    }
+
+    [Fact]
+    public void AttendanceRate_ShouldIgnoreTheSeatsStillPending()
+    {
+        // Half-pointed sheet: 4 marked, 3 of them attended. The 16 seats nobody
+        // reached must not drag it down.
+        var rate = SessionStatistics.AttendanceRate([Fact(20, 20, present: 3, absent: 1)]);
+
+        rate.ShouldBe(75);
+    }
+
+    [Fact]
+    public void AttendanceRate_ShouldPoolTheSessionsRatherThanAverageTheirRates()
+    {
+        // A twenty-seat class and a one-to-one do not weigh the same. Pooling
+        // gives 19/21; averaging the two rates would give 50.
+        var rate = SessionStatistics.AttendanceRate(
+        [
+            Fact(20, 20, present: 19, absent: 1),
+            Fact(1, 1, absent: 1)
+        ]);
+
+        rate.ShouldBe(90);
+    }
+
+    [Fact]
+    public void AttendanceWindow_ShouldRunBackAQuarter()
+    {
+        var now = DateTime.Today.AddHours(15);
+
+        var (from, to) = SessionStatistics.AttendanceWindow(now);
+
+        from.ShouldBe(DateTime.Today.AddDays(-SessionStatistics.AttendanceWindowDays));
+        to.ShouldBe(now);
+    }
+
+    [Fact]
     public void CurrentWeek_ShouldRunMondayToMonday()
     {
         var (from, to) = SessionStatistics.CurrentWeek(DateTime.Today.AddHours(15));
@@ -74,6 +128,13 @@ public class SessionStatisticsTests
         to.ShouldBe(from.AddDays(7));
     }
 
-    private static SessionFact Fact(int capacity, int registered, DateTime? startsAt = null) =>
-        new(0, 0, null, 0, startsAt ?? DateTime.Today, capacity, registered);
+    private static SessionFact Fact(
+        int capacity,
+        int registered,
+        DateTime? startsAt = null,
+        int present = 0,
+        int late = 0,
+        int absent = 0,
+        DateTime? closedAt = null) =>
+        new(0, 0, null, 0, startsAt ?? DateTime.Today, capacity, registered, present, late, absent, closedAt);
 }

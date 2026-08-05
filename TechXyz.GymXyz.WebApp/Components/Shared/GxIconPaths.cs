@@ -32,6 +32,9 @@ public static class GxIconPaths
     public const string Trash = "trash";
     public const string History = "history";
     public const string Clock = "clock";
+    public const string Minus = "minus";
+    public const string Percent = "percent";
+    public const string UserCheck = "userCheck";
     public const string Alert = "alert";
     public const string Euro = "euro";
     public const string Copy = "copy";

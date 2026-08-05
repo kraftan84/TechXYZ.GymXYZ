@@ -109,7 +109,8 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                 Math.Max(
                     0,
                     registration.Session.Capacity - registration.Session.Registrations!
-                        .Count(seat => seat.IsActive && !seat.IsWaitlisted))))
+                        .Count(seat => seat.IsActive && !seat.IsWaitlisted)),
+                registration.Status))
             .ToListAsync(cancellationToken);
 
         var upcomingSessions = sessions
@@ -124,10 +125,15 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
 
         // "Séances · depuis l'inscription" counts what the member has already
         // been to, so the seats booked for the weeks ahead stay out of it.
-        //
-        // Attendance rate and last visit come from check-in (lot 6): left unset
-        // rather than approximated from the schedule.
-        var stats = new MemberStatsDto(pastSessions.Count, AttendanceRate: null, LastVisitOn: null);
+        var (attendanceFrom, attendanceTo) = SessionStatistics.AttendanceWindow(now);
+        var attendance = await MemberAttendance.LoadAsync(
+            _dbContext, [member.Id], attendanceFrom, attendanceTo, cancellationToken);
+
+        // The same two figures as the row on the members table, from the same
+        // helper — a record that disagreed with the list it was opened from
+        // would be worse than either.
+        var fact = attendance.GetValueOrDefault(member.Id);
+        var stats = new MemberStatsDto(pastSessions.Count, fact?.Rate, fact?.LastVisitOnDate);
 
         return new MemberDetailsPageDto(
             member.Id,

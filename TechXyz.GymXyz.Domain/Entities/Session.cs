@@ -8,7 +8,7 @@ namespace TechXyz.GymXyz.Domain.Entities;
 /// Studio C, Nora". The catalogue entry it comes from is <see cref="CourseTemplate"/>,
 /// and the two are deliberately separate — one row per occurrence is what the
 /// planning grid reads, what occupancy counts, and what attendance is marked
-/// against at lot 6.
+/// against.
 /// </summary>
 public class Session : EntityBase<int>, ITenantScoped
 {
@@ -49,6 +49,27 @@ public class Session : EntityBase<int>, ITenantScoped
     /// The rule itself is not stored: the rows are the truth.
     /// </summary>
     public Guid? SeriesId { get; set; }
+
+    /// <summary>
+    /// When the attendance sheet was validated. Null means it is still open, and
+    /// that single field is what "pointée" reads: the state is derived from it
+    /// rather than stored twice.
+    /// <para>
+    /// Once set, the sheet is read-only. Only a <c>GymManager</c> can clear it,
+    /// through <c>ReopenAttendanceSheetCommand</c>.
+    /// </para>
+    /// </summary>
+    public DateTime? AttendanceClosedAt { get; set; }
+
+    /// <summary>
+    /// Who reopened a validated sheet, and when. Reopening is the one way to
+    /// rewrite a record that was already closed, so it leaves a trace rather
+    /// than happening silently.
+    /// </summary>
+    public string? AttendanceReopenedBy { get; set; }
+
+    /// <inheritdoc cref="AttendanceReopenedBy"/>
+    public DateTime? AttendanceReopenedAt { get; set; }
 
     public ICollection<Registration>? Registrations { get; set; }
 }

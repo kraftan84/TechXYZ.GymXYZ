@@ -35,8 +35,9 @@
         TenantContext.SetTenant(_brand?.Id ?? 0, _brand?.Slug);
 
         // No HttpContext inside a circuit: carry the user across explicitly so
-        // audit stamping keeps naming a person instead of "system".
-        CurrentUserService.SetCircuitUser(principal.Identity?.Name);
+        // audit stamping keeps naming a person instead of "system", and so a
+        // handler reserving an action to a role still sees that role.
+        CurrentUserService.SetCircuitUser(principal);
 
         _user = BuildUserInfo(principal);
         _ready = true;

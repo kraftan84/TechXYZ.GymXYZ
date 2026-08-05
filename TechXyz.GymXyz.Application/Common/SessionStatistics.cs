@@ -16,7 +16,21 @@ public sealed record SessionFact(
     int CourseTemplateId,
     DateTime StartsAt,
     int Capacity,
-    int Registered);
+    int Registered,
+    int Present,
+    int Late,
+    int Absent,
+    DateTime? AttendanceClosedAt)
+{
+    /// <summary>Seats somebody actually pointed. The divider of an attendance rate.</summary>
+    public int Marked => Present + Late + Absent;
+
+    /// <summary>Seats pointed as having attended, a late arrival included.</summary>
+    public int Attended => Present + Late;
+
+    /// <summary>Whether the sheet has been validated.</summary>
+    public bool IsPointed => AttendanceClosedAt is not null;
+}
 
 /// <summary>
 /// Where every occupancy, fill rate and slot count in the application comes
@@ -38,6 +52,34 @@ public static class SessionStatistics
     /// </summary>
     public static (DateTime From, DateTime To) TrailingWindow(DateTime now) =>
         (PlanningRules.MondayOf(now).AddDays(-7 * TrailingWeeks), now);
+
+    /// <summary>
+    /// How far back an attendance rate looks. Decided before lot 1 and already
+    /// documented on the member DTOs: a rolling quarter, long enough that a
+    /// fortnight away does not read as having lapsed.
+    /// </summary>
+    public const int AttendanceWindowDays = 90;
+
+    /// <summary>The sessions an attendance rate is computed over: the trailing quarter.</summary>
+    public static (DateTime From, DateTime To) AttendanceWindow(DateTime now) =>
+        (now.Date.AddDays(-AttendanceWindowDays), now);
+
+    /// <summary>
+    /// The shorter window the Présences screen reads. Its own "taux par cours"
+    /// card is labelled "30 derniers jours" in the prototype, and the headline
+    /// rate is compared against the thirty days before that to produce the
+    /// "+4 pts ce mois" the KPI carries.
+    /// <para>
+    /// Deliberately not <see cref="AttendanceWindowDays"/>: a member's assiduité
+    /// is a standing, which wants a quarter, while this screen is about the month
+    /// the manager is running.
+    /// </para>
+    /// </summary>
+    public const int RecentAttendanceDays = 30;
+
+    /// <summary>The trailing month — what the Présences screen counts over.</summary>
+    public static (DateTime From, DateTime To) RecentAttendanceWindow(DateTime now) =>
+        (now.Date.AddDays(-RecentAttendanceDays), now);
 
     /// <summary>Monday to Monday of the week in progress — what "cette semaine" counts.</summary>
     public static (DateTime From, DateTime To) CurrentWeek(DateTime now)
@@ -75,7 +117,14 @@ public static class SessionStatistics
                 session.CourseTemplateId,
                 session.StartsAt,
                 session.Capacity,
-                session.Registrations!.Count(seat => seat.IsActive && !seat.IsWaitlisted)))
+                session.Registrations!.Count(seat => seat.IsActive && !seat.IsWaitlisted),
+                session.Registrations!.Count(seat =>
+                    seat.IsActive && !seat.IsWaitlisted && seat.Status == AttendanceStatus.Present),
+                session.Registrations!.Count(seat =>
+                    seat.IsActive && !seat.IsWaitlisted && seat.Status == AttendanceStatus.Late),
+                session.Registrations!.Count(seat =>
+                    seat.IsActive && !seat.IsWaitlisted && seat.Status == AttendanceStatus.Absent),
+                session.AttendanceClosedAt))
             .ToListAsync(cancellationToken);
     }
 
@@ -97,6 +146,31 @@ public static class SessionStatistics
         return counted.Count == 0
             ? null
             : PlanningRules.FillRate(counted.Sum(fact => fact.Registered), counted.Sum(fact => fact.Capacity));
+    }
+
+    /// <summary>
+    /// Seats pointed as attended over seats pointed at all, as a percentage.
+    /// Null when nothing was marked.
+    /// <para>
+    /// That null is the point of the method. A sheet nobody opened has every
+    /// seat <see cref="AttendanceStatus.Pending"/>, and reading it as nought per
+    /// cent attendance would drag every average down for a class that may well
+    /// have been full — the same rule <see cref="FillRate"/> follows for a week
+    /// with no sessions in it, and the screens show "—" for it.
+    /// </para>
+    /// <para>
+    /// Private sessions are counted here, unlike a fill rate: a one-to-one that
+    /// the member missed is exactly the no-show the screen is looking for.
+    /// </para>
+    /// </summary>
+    public static int? AttendanceRate(IEnumerable<SessionFact> facts)
+    {
+        var counted = facts.ToList();
+        var marked = counted.Sum(fact => fact.Marked);
+
+        return marked == 0
+            ? null
+            : (int)Math.Round(100d * counted.Sum(fact => fact.Attended) / marked);
     }
 
     /// <summary>

@@ -31,6 +31,8 @@ else
                       ManagerName="@User.DisplayName"
                       OnSearchChanged="ApplySearchAsync"
                       OnFormatChanged="ApplyFormatAsync"
+                      SortByPopularity="_sortByPopularity"
+                      OnSortByPopularityChanged="ApplyPopularitySortAsync"
                       OnOpen="OpenCourse"
                       OnCreate="OpenCreateDrawer"/>
     </div>
@@ -60,6 +62,7 @@ else
 
     private string? _search;
     private CourseFormat? _format;
+    private bool _sortByPopularity;
 
     private bool _isDrawerOpen;
     private bool _isSaving;
@@ -80,7 +83,8 @@ else
             _page = await Sender.Send(new GetCourseTemplatesQuery
             {
                 Search = _search,
-                Format = _format
+                Format = _format,
+                SortByPopularity = _sortByPopularity
             });
         }, "charger le catalogue des cours");
     }
@@ -94,6 +98,12 @@ else
     private async Task ApplyFormatAsync(CourseFormat? format)
     {
         _format = format;
+        await RefreshAsync();
+    }
+
+    private async Task ApplyPopularitySortAsync(bool sortByPopularity)
+    {
+        _sortByPopularity = sortByPopularity;
         await RefreshAsync();
     }
 

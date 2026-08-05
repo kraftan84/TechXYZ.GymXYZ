@@ -1,3 +1,5 @@
+using TechXyz.GymXyz.Domain.Entities;
+
 namespace TechXyz.GymXyz.Application.Models;
 
 public sealed record MemberDetailsPageDto(
@@ -22,8 +24,8 @@ public sealed record MemberDetailsPageDto(
 }
 
 /// <summary>
-/// Numbers on the record. The two nullable ones are produced by attendance
-/// check-in and stay unset until lot 6 — they are shown as "—", never guessed.
+/// Numbers on the record. The rate is null while none of the member's seats has
+/// been pointed — "—", never a nought that would read as a verdict.
 /// </summary>
 public sealed record MemberStatsDto(
     int TotalSessions,
@@ -65,7 +67,15 @@ public sealed record MemberSessionDto(
     string? CoachFirstName,
     string? CoachLastName,
     int Capacity,
-    int RemainingSpots)
+    int RemainingSpots,
+    AttendanceStatus AttendanceStatus)
 {
     public bool IsPrivate => Capacity == 1;
+
+    /// <summary>
+    /// Whether the sheet recorded anything for this seat. "Présences récentes"
+    /// chips a past session « Passé » only while nobody pointed it — once
+    /// pointed it says présent, en retard or absent.
+    /// </summary>
+    public bool IsPointed => AttendanceStatus != AttendanceStatus.Pending;
 }
