@@ -699,6 +699,60 @@ public static class DbInitializer
     private const int WaitlistDepth = 2;
 
     /// <summary>
+    /// How well each course is attended, as a percentage of the seats that were
+    /// taken. These are what the "taux par cours" bars read, and the order is the
+    /// prototype's: Power Cycle in front, Boxing Fundamentals last.
+    /// <para>
+    /// A course is not equally well attended just because it is equally full —
+    /// that is the whole point of the screen, so the figures deliberately do not
+    /// track the occupancies in <see cref="DemoWeek"/>.
+    /// </para>
+    /// </summary>
+    private static readonly Dictionary<string, int> CourseAttendanceRates = new()
+    {
+        ["Power Cycle"] = 96,
+        ["Coaching Perso"] = 94,
+        ["Core Express"] = 91,
+        ["HIIT Blast"] = 86,
+        ["Strength Foundations"] = 84,
+        ["Yoga Restore"] = 82,
+        ["Pilates Core"] = 78,
+        ["Boxing Fundamentals"] = 71
+    };
+
+    /// <summary>
+    /// The three the "absents à relancer" card is about, keyed by their index in
+    /// the seeded member list, with how far below everybody else they sit.
+    /// Théo Garnier (4) misses most of it, Camille Durand (1) roughly a third,
+    /// Maxime Roussel (7) rather less.
+    /// <para>
+    /// The offsets deliberately overlap <see cref="RegularReliability"/>. A flat
+    /// "always the first to be marked absent" made Camille miss every single
+    /// session of the demo — nought per cent and no last visit at all, which is
+    /// not somebody to chase but somebody who never came. The prototype's own
+    /// card reads "5 absences / 6", "3 / 8", "3 / 9": people who turn up
+    /// sometimes.
+    /// </para>
+    /// <para>
+    /// Two of the three are the prototype's own. Its third, "Léa Dubois", is not
+    /// a member the catalogue holds; Maxime Roussel stands in, and is on the
+    /// prototype's rosters too.
+    /// </para>
+    /// </summary>
+    private static readonly Dictionary<int, int> ChronicAbsentees = new()
+    {
+        [4] = 0,
+        [1] = 55,
+        [7] = 85
+    };
+
+    /// <summary>Where everybody else sits — high enough to be picked last, low enough to overlap.</summary>
+    private const int RegularReliability = 120;
+
+    /// <summary>How long after the end of a session the sheet gets validated.</summary>
+    private const int SheetClosedAfterMinutes = 15;
+
+    /// <summary>
     /// Rolls the demo week out over the seeding horizon, one row per occurrence.
     /// Every occurrence of the same slot shares a <c>SeriesId</c>, which is what
     /// makes "this one and all the following" a single query later on.
@@ -714,8 +768,8 @@ public static class DbInitializer
         IReadOnlyDictionary<string, Coach> coaches,
         IReadOnlyList<Member> members)
     {
-        var now = DateTime.Now;
-        var monday = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7));
+        var today = DateTime.Today;
+        var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
 
         for (var slotIndex = 0; slotIndex < DemoWeek.Length; slotIndex++)
         {
@@ -745,7 +799,7 @@ public static class DbInitializer
                     // Copied, not read through the template: editing the
                     // catalogue must not rewrite what already happened.
                     Capacity = template.Capacity,
-                    Status = startsAt < now ? SessionStatus.Done : SessionStatus.Scheduled,
+                    Status = SessionStatus.Scheduled,
                     SeriesId = seriesId,
                     Registrations = []
                 };
@@ -767,6 +821,14 @@ public static class DbInitializer
                     });
                 }
 
+                // Anything before today has been through the sheet; today's stays
+                // open so the screen has something to point when it is first
+                // opened.
+                if (startsAt.Date < today)
+                {
+                    MarkAttendance(session, slot.CourseName, offset, members.Count, slotIndex, week);
+                }
+
                 yield return session;
             }
         }
@@ -774,4 +836,82 @@ public static class DbInitializer
 
     /// <summary>Between -2 and +2 seats, decided by the week and the slot rather than by chance.</summary>
     private static int Wobble(int week, int slotIndex) => ((week * 3 + slotIndex) % 5 + 5) % 5 - 2;
+
+    /// <summary>
+    /// Runs a past session through its attendance sheet and validates it.
+    /// <para>
+    /// The seats are ranked by <see cref="Reliability"/> and the least reliable
+    /// are the ones marked absent, as many as the course's rate calls for. Doing
+    /// it by rank rather than by a per-seat draw is what makes the "taux par
+    /// cours" bars land on the intended figures instead of near them, and what
+    /// concentrates the absences on <see cref="ChronicAbsentees"/> rather than
+    /// sprinkling them over the whole room.
+    /// </para>
+    /// <para>
+    /// Waiting-list seats are left <see cref="AttendanceStatus.Pending"/>: the
+    /// member never got in, so there was nothing to point.
+    /// </para>
+    /// </summary>
+    private static void MarkAttendance(
+        Session session,
+        string courseName,
+        int offset,
+        int memberCount,
+        int slotIndex,
+        int week)
+    {
+        var seated = session.Registrations!
+            .Select((registration, seat) => (registration, memberIndex: (offset + seat) % memberCount))
+            .Where(seat => !seat.registration.IsWaitlisted)
+            .OrderBy(seat => Reliability(seat.memberIndex, slotIndex, week))
+            .ToList();
+
+        if (seated.Count == 0)
+        {
+            return;
+        }
+
+        var rate = CourseAttendanceRates.GetValueOrDefault(courseName, 85);
+        var attended = (int)Math.Round(seated.Count * rate / 100d, MidpointRounding.AwayFromZero);
+        var absent = seated.Count - attended;
+
+        // One or two of those who did come turned up after the start. Small
+        // classes get none: a nine-seat room where two people are late reads as
+        // a broken course rather than a busy morning.
+        var late = attended >= 8 ? 2 : attended >= 4 ? 1 : 0;
+
+        for (var rank = 0; rank < seated.Count; rank++)
+        {
+            var registration = seated[rank].registration;
+
+            if (rank < absent)
+            {
+                registration.Status = AttendanceStatus.Absent;
+                continue;
+            }
+
+            // The least reliable of those who showed up are the ones who showed
+            // up late, so the same faces recur there too.
+            var isLate = rank < absent + late;
+            registration.Status = isLate ? AttendanceStatus.Late : AttendanceStatus.Present;
+            registration.CheckedInAt = isLate
+                ? session.StartsAt.AddMinutes(4 + rank % 9)
+                : session.StartsAt.AddMinutes(-(3 + rank % 8));
+        }
+
+        session.AttendanceClosedAt = session.EndsAt.AddMinutes(SheetClosedAfterMinutes);
+    }
+
+    /// <summary>
+    /// How likely a member is to turn up, as a sortable rank rather than a
+    /// probability. The jitter spans the gap between the bands, so a member who
+    /// usually misses can still turn up on a good week and a regular can still
+    /// skip one — which is what keeps the demo from reading as two castes.
+    /// </summary>
+    private static int Reliability(int memberIndex, int slotIndex, int week)
+    {
+        var jitter = ((memberIndex * 13 + slotIndex * 29 + week * 7) % 101 + 101) % 101;
+
+        return jitter + ChronicAbsentees.GetValueOrDefault(memberIndex, RegularReliability);
+    }
 }

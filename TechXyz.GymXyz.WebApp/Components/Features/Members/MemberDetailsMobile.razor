@@ -99,7 +99,19 @@
                         <div class="nm">@session.Name</div>
                         <div class="meta">@GxFormats.DayAndTime(session.StartsAt)</div>
                     </div>
-                    <div class="trail"><GxChip Tone="GxTone.Neutral">Passé</GxChip></div>
+                    <div class="trail">
+                        @if (session.IsPointed)
+                        {
+                            <GxChip Tone="@AttendanceLabels.Tone(session.AttendanceStatus)"
+                                    Icon="@AttendanceLabels.Icon(session.AttendanceStatus)">
+                                @AttendanceLabels.Label(session.AttendanceStatus)
+                            </GxChip>
+                        }
+                        else
+                        {
+                            <GxChip Tone="GxTone.Neutral">Passé</GxChip>
+                        }
+                    </div>
                 </div>
             }
         }

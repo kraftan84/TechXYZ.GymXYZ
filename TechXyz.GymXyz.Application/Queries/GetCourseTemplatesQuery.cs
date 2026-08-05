@@ -14,4 +14,11 @@ public sealed class GetCourseTemplatesQuery : IRequest<CourseTemplatesPageDto>
 
     /// <summary>Null keeps every format ("Tous").</summary>
     public CourseFormat? Format { get; init; }
+
+    /// <summary>
+    /// The "Trier : popularité" chip. False keeps the default alphabetical
+    /// order. Popularity reads the attendance rate, not the fill: a course that
+    /// books out and empties on the night is not the popular one.
+    /// </summary>
+    public bool SortByPopularity { get; init; }
 }

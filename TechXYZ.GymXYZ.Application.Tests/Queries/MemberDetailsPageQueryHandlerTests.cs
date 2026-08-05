@@ -84,7 +84,8 @@ public class MemberDetailsPageQueryHandlerTests
         result.UpcomingSessions[0].IsPrivate.ShouldBeFalse();
         result.UpcomingSessions[0].RemainingSpots.ShouldBe(19);
 
-        // Attendance is produced by check-in (lot 6) — never approximated here.
+        // Nothing on this member's seats has been pointed, so there is no
+        // assiduité to show — null, not nought, and the card reads "—".
         result.Stats.AttendanceRate.ShouldBeNull();
         result.Stats.LastVisitOn.ShouldBeNull();
 

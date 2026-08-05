@@ -66,6 +66,8 @@ public class GymDbContextAuditTests
     private sealed class TestCurrentUserService : ICurrentUserService
     {
         public string? UserName { get; set; }
+
+        public bool IsInRole(string role) => false;
     }
 
     private sealed class TestTenantContext : ITenantContext

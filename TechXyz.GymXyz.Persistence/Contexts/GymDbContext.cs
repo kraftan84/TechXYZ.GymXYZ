@@ -85,6 +85,10 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             x.HasIndex(session => new { session.LocationId, session.StartsAt });
             x.HasIndex(session => new { session.CoachId, session.StartsAt });
             x.HasIndex(session => session.SeriesId);
+
+            // "Combien de feuilles à pointer" asks for the sessions whose sheet
+            // is still open, on every load of the Présences screen.
+            x.HasIndex(session => session.AttendanceClosedAt);
         });
 
         modelBuilder.Entity<Registration>(x =>
@@ -102,6 +106,10 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // twice is the same seat, not two.
             x.HasIndex(registration => new { registration.SessionId, registration.MemberId })
                 .IsUnique();
+
+            // Tallying a sheet — how many present, late, absent — is the one
+            // question the roster asks, and it asks it per session.
+            x.HasIndex(registration => new { registration.SessionId, registration.Status });
         });
 
         modelBuilder.Entity<CoachDiscipline>(x =>

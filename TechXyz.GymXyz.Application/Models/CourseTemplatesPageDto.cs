@@ -42,6 +42,17 @@ public sealed record CourseTemplateListItemDto(
     /// a course that has never run.
     /// </summary>
     public int? FillRate { get; init; }
+
+    /// <summary>
+    /// How well the course is attended over the same weeks, 0–100 — what "Trier :
+    /// popularité" orders on. Null while none of its sheets has been pointed.
+    /// <para>
+    /// Deliberately not <see cref="FillRate"/>: a course can book out and empty
+    /// on the night, and telling the two apart is the point of the Présences
+    /// screen.
+    /// </para>
+    /// </summary>
+    public int? AttendanceRate { get; init; }
 }
 
 /// <summary>A coach allowed to run the course, in avatar-stack order.</summary>

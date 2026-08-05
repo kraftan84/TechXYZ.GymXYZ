@@ -41,9 +41,16 @@ public sealed record MemberListItemDto(
     /// <summary>Credit gauge, 0–100. Filled at lot 7 (Abonnements).</summary>
     public int? CreditsPercent { get; init; }
 
-    /// <summary>Attendance over the last 90 days. Filled at lot 6 (Présences).</summary>
+    /// <summary>
+    /// Attendance over the rolling quarter — seats pointed as attended over
+    /// seats pointed at all. Null while none of theirs has been pointed: that is
+    /// not a poor attendance, and the column reads "—" for it.
+    /// </summary>
     public int? AttendanceRate { get; init; }
 
-    /// <summary>Last time the member showed up. Filled at lot 6 (Présences).</summary>
+    /// <summary>
+    /// Last time the member actually turned up. Not bounded by the rate's
+    /// window — somebody who last came four months ago should read so.
+    /// </summary>
     public DateOnly? LastVisitOn { get; init; }
 }

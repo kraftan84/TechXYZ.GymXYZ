@@ -19,18 +19,8 @@ namespace TechXyz.GymXyz.Application.Common;
 /// </summary>
 public static class SessionCompositionHelper
 {
-    /// <summary>
-    /// Refuses the write with a message the user actually reads.
-    /// <para>
-    /// <c>new ValidationException(text)</c> fills the exception's own message but
-    /// leaves <c>Errors</c> empty, and the toast is built from <c>Errors</c> — so
-    /// a plain-text throw reaches the screen as "Validation invalide". These
-    /// invariants exist to say which room is taken and by whom, so they are
-    /// raised as a failure, not as a message.
-    /// </para>
-    /// </summary>
     private static ValidationException Refuse(string field, string message) =>
-        new([new ValidationFailure(field, message)]);
+        ValidationFailures.Refuse(field, message);
 
     public static async Task<CourseTemplate> LoadCourseTemplateAsync(
         IGymDbContext dbContext,

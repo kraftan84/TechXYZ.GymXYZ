@@ -54,11 +54,24 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Me
             .SelectMemberListItemDto(today)
             .ToListAsync(cancellationToken);
 
+        // Assiduité and last visit, for the page on screen only: the window is a
+        // quarter and the table pages at 200, so this stays one small query
+        // rather than one per row.
+        var (attendanceFrom, attendanceTo) = SessionStatistics.AttendanceWindow(DateTime.Now);
+        var attendance = await MemberAttendance.LoadAsync(
+            _dbContext,
+            [.. items.Select(item => item.Id)],
+            attendanceFrom,
+            attendanceTo,
+            cancellationToken);
+
         return new MembersPageDto(
             items
                 .Select(item => item with
                 {
-                    Status = MemberStatusRules.Resolve(item.CurrentSubscriptionEndsOn, horizon)
+                    Status = MemberStatusRules.Resolve(item.CurrentSubscriptionEndsOn, horizon),
+                    AttendanceRate = attendance.GetValueOrDefault(item.Id)?.Rate,
+                    LastVisitOn = attendance.GetValueOrDefault(item.Id)?.LastVisitOnDate
                 })
                 .ToList(),
             totalCount,

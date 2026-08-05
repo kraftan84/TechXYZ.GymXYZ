@@ -23,9 +23,20 @@ internal static class TestInfrastructure
     }
 
     public static Faker Faker() => new Faker("en");
+}
 
-    private sealed class TestCurrentUserService : ICurrentUserService
-    {
-        public string? UserName => "test-user";
-    }
+/// <summary>
+/// The signed-in user, as the tests decide it. Roles are settable because the
+/// handlers that reserve an action — reopening a validated attendance sheet —
+/// are only testable by handing them somebody who does and does not hold one.
+/// </summary>
+internal sealed class TestCurrentUserService : ICurrentUserService
+{
+    public TestCurrentUserService(params string[] roles) => Roles = roles;
+
+    public string? UserName { get; set; } = "test-user";
+
+    public string[] Roles { get; set; }
+
+    public bool IsInRole(string role) => Roles.Contains(role);
 }

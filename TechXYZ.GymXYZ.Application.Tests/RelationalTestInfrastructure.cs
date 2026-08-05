@@ -42,9 +42,4 @@ internal static class RelationalTestInfrastructure
             await Connection.DisposeAsync();
         }
     }
-
-    private sealed class TestCurrentUserService : ICurrentUserService
-    {
-        public string? UserName => "test-user";
-    }
 }

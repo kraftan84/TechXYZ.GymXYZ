@@ -49,13 +49,35 @@ public sealed class GetCourseTemplatesQueryHandler
         var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(DateTime.Now);
         var byTemplate = (await SessionStatistics.LoadAsync(_dbContext, trailingFrom, trailingTo, cancellationToken))
             .GroupBy(fact => fact.CourseTemplateId)
-            .ToDictionary(group => group.Key, group => SessionStatistics.FillRate(group));
+            .ToDictionary(
+                group => group.Key,
+                group => (
+                    FillRate: SessionStatistics.FillRate(group),
+                    AttendanceRate: SessionStatistics.AttendanceRate(group)));
 
         var withFigures = items
-            .Select(item => byTemplate.TryGetValue(item.Id, out var fillRate)
-                ? item with { FillRate = fillRate }
+            .Select(item => byTemplate.TryGetValue(item.Id, out var figures)
+                ? item with { FillRate = figures.FillRate, AttendanceRate = figures.AttendanceRate }
                 : item)
             .ToList();
+
+        // "Trier : popularité" — how well the course is actually attended, which
+        // is not how full it books.
+        //
+        // A private course is not ranked: it seats one, so it has no popularity
+        // to measure, and the "Remplissage moyen" column beside it is blank for
+        // the same reason — leading the ranking with a dash reads as a fault.
+        // Unrated courses go last too, rather than pretending to nought.
+        if (request.SortByPopularity)
+        {
+            withFigures =
+            [
+                .. withFigures
+                    .OrderByDescending(item => !item.IsPrivate && item.AttendanceRate.HasValue)
+                    .ThenByDescending(item => item.IsPrivate ? 0 : item.AttendanceRate ?? 0)
+                    .ThenBy(item => item.Name)
+            ];
+        }
 
         return new CourseTemplatesPageDto(
             withFigures,

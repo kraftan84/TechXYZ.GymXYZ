@@ -4,8 +4,16 @@
    every piece of state and every action comes from Cours.razor.
 
    The hand-off describes cards here; the prototype draws a table, and the
-   prototype wins. The "Trier : popularité" chip is inert in the prototype and
-   needs attendance data (lot 6), so it is not rendered. *@
+   prototype wins.
+
+   "Trier : popularité" is a decorative span in the prototype — no handler, no
+   behaviour. It is rendered here as a real toggle rather than as another inert
+   control: attendance now exists, and popularity is what a course is attended
+   at, which the "Remplissage moyen" column beside it does not say.
+
+   That brings the one column the prototype's table does not draw. Sorting on a
+   figure the table does not show leaves it looking unsorted — 95, 84, 68, 78 —
+   so "Assiduité" is shown beside the fill it is deliberately not the same as. *@
 
 <Crumb Parts="@_crumb"/>
 
@@ -34,6 +42,15 @@
             @filter.Label · @GxFormats.Count(CountFor(filter.Format))
         </button>
     }
+
+    <button type="button"
+            class="gx-fchip @(SortByPopularity ? "on" : null)"
+            style="margin-left:auto"
+            aria-pressed="@SortByPopularity"
+            @onclick="() => OnSortByPopularityChanged.InvokeAsync(!SortByPopularity)">
+        <GxIcon Name="@GxIconPaths.Filter" Size="14"/>
+        Trier : popularité
+    </button>
 </div>
 
 <GxCard Padded="false">
@@ -54,6 +71,7 @@
                     <th>Capacité</th>
                     <th>@(IsSolo ? "Coach" : "Coachs")</th>
                     <th>Remplissage moyen</th>
+                    <th>Assiduité</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -116,6 +134,16 @@
                                 <span style="color:var(--text-subtle)" title="@PendingHint">—</span>
                             }
                         </td>
+                        <td style="font-variant-numeric:tabular-nums">
+                            @if (course.AttendanceRate is { } attendance)
+                            {
+                                <b style="color:var(--text-strong);font-size:var(--text-xs)">@attendance&nbsp;%</b>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-subtle)" title="@AttendancePendingHint">—</span>
+                            }
+                        </td>
                         <td style="text-align:right;color:var(--text-subtle)">
                             <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
                         </td>
@@ -136,6 +164,8 @@
 
     private const string PendingHint = "Aucune séance passée à moyenner.";
 
+    private const string AttendancePendingHint = "Aucune feuille de présence pointée sur ce cours.";
+
     [Parameter, EditorRequired] public CourseTemplatesPageDto Page { get; set; } = CourseTemplatesPageDto.Empty;
     [Parameter] public string? Search { get; set; }
     [Parameter] public CourseFormat? Format { get; set; }
@@ -147,6 +177,8 @@
 
     [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
     [Parameter] public EventCallback<CourseFormat?> OnFormatChanged { get; set; }
+    [Parameter] public bool SortByPopularity { get; set; }
+    [Parameter] public EventCallback<bool> OnSortByPopularityChanged { get; set; }
     [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
 
