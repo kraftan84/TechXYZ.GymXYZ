@@ -29,8 +29,9 @@ public sealed record CourseTemplateDetailsPageDto(
 }
 
 /// <summary>
-/// Figures on the record. All three are counted from past occurrences, so they
-/// stay unset until lot 5 and are shown as "—".
+/// Figures on the record. All three are counted from the course's occurrences,
+/// so they stay unset for a course the planning has never run and are shown
+/// as "—".
 /// </summary>
 public sealed record CourseTemplateStatsDto(
     int? SessionsPerWeek,
@@ -40,7 +41,7 @@ public sealed record CourseTemplateStatsDto(
     public static CourseTemplateStatsDto Empty { get; } = new(null, null, null);
 }
 
-/// <summary>Shape of the "Prochaines séances" list. Filled at lot 5.</summary>
+/// <summary>One line of "Prochaines séances".</summary>
 public sealed record CourseSessionDto(
     string DayLabel,
     string Time,

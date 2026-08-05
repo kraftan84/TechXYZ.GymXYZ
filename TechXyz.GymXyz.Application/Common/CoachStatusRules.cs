@@ -21,13 +21,28 @@ public static class CoachStatusRules
     /// <summary>
     /// A leave covers its last day: a coach away "jusqu'au 15 juin" is back on
     /// the 16th, and a date already past means nothing at all.
+    /// <para>
+    /// Leave is asked first: a coach on holiday reads "En congé" even if the
+    /// classes they left behind were full.
+    /// </para>
     /// </summary>
-    public static CoachStatus Resolve(DateOnly? awayUntil, DateOnly today)
-        => awayUntil is { } until && until >= today
-            ? CoachStatus.Away
-            : CoachStatus.Available;
+    public static CoachStatus Resolve(DateOnly? awayUntil, DateOnly today, int? fillRate = null)
+    {
+        if (awayUntil is { } until && until >= today)
+        {
+            return CoachStatus.Away;
+        }
 
-    /// <summary>The same condition, over the entity.</summary>
+        return fillRate >= PlanningRules.HighDemandThreshold
+            ? CoachStatus.FullClasses
+            : CoachStatus.Available;
+    }
+
+    /// <summary>
+    /// The same condition, over the entity. Only leave can be asked of the
+    /// database — "Cours pleins" is counted from sessions and is a refinement of
+    /// being available, so it filters as available, which is what it is.
+    /// </summary>
     public static Expression<Func<Coach, bool>> Matches(CoachStatus status, DateOnly today)
         => status == CoachStatus.Away
             ? coach => coach.AwayUntil != null && coach.AwayUntil >= today

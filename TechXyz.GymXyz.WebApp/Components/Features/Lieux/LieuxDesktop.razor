@@ -4,10 +4,6 @@
    adapts to the nature of the venue — a studio shows its surface and floor, an
    outdoor spot its meeting point, a session at home says whose address it uses.
 
-   The prototype's subtitle counts the weekly slots, which are read from
-   sessions; the mobile prototype's wording is used instead until lot 5 fills
-   them, rather than writing a dash into the middle of a sentence.
-
    The prototype also fetches a live forecast here and lets it drive the "repli"
    state. That ships as its own lot after the notifications: warning the members
    registered to an outdoor session is the point of it, and there is no channel
@@ -29,7 +25,7 @@
          Sub="@PendingHint"/>
     <Kpi Label="Créneaux / semaine"
          Value="@(Page.TotalSessionsPerWeek is { } slots ? GxFormats.Count(slots) : "—")"
-         Sub="@PendingHint"/>
+         Sub="cette semaine"/>
     <Kpi Label="Capacité totale"
          Value="@GxFormats.Count(Page.TotalCapacity)"
          Sub="places en simultané"/>
@@ -188,7 +184,7 @@ else
 
                         <div style="text-align:right;flex:none">
                             <div style="font-size:var(--text-lg);font-weight:var(--weight-bold);color:var(--text-strong);line-height:1;font-variant-numeric:tabular-nums"
-                                 title="@PendingTitle">
+                                 title="Séances programmées cette semaine.">
                                 @(location.SessionsPerWeek is { } cardSlots ? GxFormats.Count(cardSlots) : "—")
                             </div>
                             <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:3px">
@@ -212,8 +208,10 @@ else
     /// <summary>The prototype shows four chips and counts the rest.</summary>
     private const int EquipmentShown = 4;
 
-    private const string PendingHint = "avec le planning";
-    private const string PendingTitle = "Disponible avec le planning.";
+    /// <summary>What the KPI says under a figure counted from the last four weeks.</summary>
+    private const string PendingHint = "sur 4 semaines";
+
+    private const string PendingTitle = "Moyenne des séances des quatre dernières semaines.";
 
     [Parameter, EditorRequired] public LocationsPageDto Page { get; set; } = LocationsPageDto.Empty;
 

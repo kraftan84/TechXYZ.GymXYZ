@@ -53,8 +53,8 @@ public sealed record WeeklyAvailabilityDto(
 }
 
 /// <summary>
-/// Figures on the record. All three are produced by the planning and the
-/// attendance sheets, so they stay unset until lot 5 and are shown as "—".
+/// Figures on the record, counted from the sessions the coach runs. They stay
+/// unset for a coach who runs none, and are shown as "—".
 /// </summary>
 public sealed record CoachStatsDto(
     int? ClassesPerWeek,
@@ -64,7 +64,7 @@ public sealed record CoachStatsDto(
     public static CoachStatsDto Empty { get; } = new(null, null, null);
 }
 
-/// <summary>Shape of the "Cours animés cette semaine" list. Filled at lot 5.</summary>
+/// <summary>One line of "Cours animés cette semaine".</summary>
 public sealed record CoachSessionDto(
     string DayLabel,
     string Time,

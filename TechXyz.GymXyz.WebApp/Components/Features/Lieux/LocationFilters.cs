@@ -22,6 +22,7 @@ public static class LocationFilters
 
     public static string LabelFor(LocationStatus status) => status switch
     {
+        LocationStatus.HighDemand => "Forte demande",
         LocationStatus.OpenAccess => "Accès libre",
         LocationStatus.WeatherDependent => "Météo-dépendant",
         LocationStatus.ByAppointment => "Sur rendez-vous",
@@ -32,6 +33,9 @@ public static class LocationFilters
     {
         LocationStatus.Available => GxTone.Success,
         LocationStatus.WeatherDependent => GxTone.Success,
+        // Amber, not red: a room everyone wants is good news with a waiting
+        // list behind it, not a fault.
+        LocationStatus.HighDemand => GxTone.Warning,
         _ => GxTone.Neutral
     };
 

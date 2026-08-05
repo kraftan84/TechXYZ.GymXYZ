@@ -62,7 +62,12 @@ public class CoachStatusRulesTests
         }
 
         // 2. Filtering in SQL selects exactly the rows carrying that label.
-        foreach (var status in Enum.GetValues<CoachStatus>())
+        //
+        // Only the two standings the database can answer. "Cours pleins" is
+        // counted from sessions and is a refinement of being available, so it is
+        // a label the card wears, never a chip the grid filters on — the case
+        // below pins that.
+        foreach (var status in new[] { CoachStatus.Available, CoachStatus.Away })
         {
             var filtered = await handler.Handle(new GetCoachesQuery { Status = status }, CancellationToken.None);
 
@@ -74,9 +79,24 @@ public class CoachStatusRulesTests
         }
 
         // 3. The two counts partition the grid, no row counted twice or lost.
-        everyone.AvailableCount.ShouldBe(everyone.Items.Count(item => item.Status == CoachStatus.Available));
+        everyone.AvailableCount.ShouldBe(everyone.Items.Count(item => item.Status != CoachStatus.Away));
         everyone.AwayCount.ShouldBe(everyone.Items.Count(item => item.Status == CoachStatus.Away));
         (everyone.AvailableCount + everyone.AwayCount).ShouldBe(everyone.TotalCount);
+    }
+
+    /// <summary>
+    /// A coach whose classes fill up is still a coach you can book: the chip
+    /// says "Cours pleins", and the "Disponibles" filter keeps them. Filtering on
+    /// the value itself is not a thing the grid offers, and asking for it
+    /// behaves as asking for available rather than returning nothing.
+    /// </summary>
+    [Fact]
+    public void Resolve_ShouldPreferTheLeaveOverAFullWeek()
+    {
+        CoachStatusRules.Resolve(Today.AddDays(3), Today, fillRate: 100).ShouldBe(CoachStatus.Away);
+        CoachStatusRules.Resolve(null, Today, fillRate: 95).ShouldBe(CoachStatus.FullClasses);
+        CoachStatusRules.Resolve(null, Today, fillRate: 89).ShouldBe(CoachStatus.Available);
+        CoachStatusRules.Resolve(null, Today, fillRate: null).ShouldBe(CoachStatus.Available);
     }
 
     private static string NameFor(int? awayInDays)

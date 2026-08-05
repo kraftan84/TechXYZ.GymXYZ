@@ -32,13 +32,13 @@
         <div class="gx-grid3">
             <Kpi Label="Cours / sem."
                  Value="@(Coach.Stats.ClassesPerWeek?.ToString() ?? "—")"
-                 Sub="@PendingHint"/>
+                 Sub="cette semaine"/>
             <Kpi Label="Remplissage"
                  Value="@(Coach.Stats.FillRate is { } fill ? $"{fill} %" : "—")"
-                 Sub="@PendingHint"/>
+                 Sub="@TrailingHint"/>
             <Kpi Label="Membres suivis"
                  Value="@(Coach.Stats.FollowedMembers?.ToString() ?? "—")"
-                 Sub="@PendingHint"/>
+                 Sub="@TrailingHint"/>
         </div>
 
         <GxCard Padded="false">
@@ -166,7 +166,8 @@
 </div>
 
 @code {
-    private const string PendingHint = "avec le planning";
+    /// <summary>The window every rate on this build is averaged over.</summary>
+    private const string TrailingHint = "sur 4 semaines";
 
     [Parameter, EditorRequired] public CoachDetailsPageDto Coach { get; set; } = default!;
 

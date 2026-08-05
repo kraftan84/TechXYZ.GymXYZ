@@ -249,7 +249,7 @@ public class CourseTemplateQueriesHandlerTests
         result.IsPrivate.ShouldBeFalse();
         result.Coaches.Select(coach => coach.LastName).ShouldBe(["Fontaine", "Lemoine"]);
 
-        // Everything the planning produces stays unset until lot 5.
+        // A course the planning has never run has no figures to show.
         result.Stats.ShouldBe(CourseTemplateStatsDto.Empty);
         result.NextSessions.ShouldBeEmpty();
         result.Price.ShouldBeNull();

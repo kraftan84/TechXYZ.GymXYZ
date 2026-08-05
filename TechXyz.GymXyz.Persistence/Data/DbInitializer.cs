@@ -664,13 +664,15 @@ public static class DbInitializer
     /// The occupancy figures are what make the story on the other screens true:
     /// Studio C comes out the busiest venue and wears "Forte demande", Léa is
     /// the one coach whose sessions read "Cours pleins", and Power Cycle fills
-    /// up with a waiting list behind it.
+    /// up with a waiting list behind it. Samir sits deliberately clear of the
+    /// threshold rather than on it — a demo where a chip depends on rounding is
+    /// a demo that changes its mind.
     /// </para>
     /// </summary>
     private static readonly WeeklySlot[] DemoWeek =
     [
         new("Strength Foundations", "Nora", DayOfWeek.Monday, 7, 15, 16),
-        new("Core Express", "Samir", DayOfWeek.Monday, 12, 30, 16),
+        new("Core Express", "Samir", DayOfWeek.Monday, 12, 30, 15),
         new("Strength Foundations", "Karim", DayOfWeek.Monday, 17, 0, 15),
         new("Power Cycle", "Léa", DayOfWeek.Monday, 18, 30, 24),
         new("Yoga Restore", "Inès", DayOfWeek.Tuesday, 8, 0, 16),

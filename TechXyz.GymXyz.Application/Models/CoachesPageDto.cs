@@ -33,9 +33,9 @@ public sealed record CoachListItemDto(
     /// <summary>Set by the query handler from <c>CoachStatusRules</c>.</summary>
     public CoachStatus Status { get; init; }
 
-    /// <summary>Sessions run this week. Filled at lot 5 (Planning).</summary>
+    /// <summary>Sessions run in the week in progress, null for a coach who runs none.</summary>
     public int? ClassesPerWeek { get; init; }
 
-    /// <summary>Average fill of those sessions, 0–100. Filled at lot 5.</summary>
+    /// <summary>Average fill of the sessions run over the trailing weeks, 0–100.</summary>
     public int? FillRate { get; init; }
 }

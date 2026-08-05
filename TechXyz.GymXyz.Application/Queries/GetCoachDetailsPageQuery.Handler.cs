@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
+using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
@@ -74,6 +75,51 @@ public sealed class GetCoachDetailsPageQueryHandler
         }
 
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = DateTime.Now;
+        var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(now);
+        var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
+
+        var facts = (await SessionStatistics.LoadAsync(
+                _dbContext, trailingFrom, trailingTo > weekTo ? trailingTo : weekTo, cancellationToken))
+            .Where(fact => fact.CoachId == coach.Id)
+            .ToList();
+
+        var fillRate = SessionStatistics.FillRate(
+            facts.Where(fact => fact.StartsAt >= trailingFrom && fact.StartsAt < trailingTo));
+
+        var weekSessionIds = facts
+            .Where(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo)
+            .Select(fact => fact.SessionId)
+            .ToList();
+
+        var weekSessions = await _dbContext.Sessions
+            .AsNoTracking()
+            .Where(session => weekSessionIds.Contains(session.Id))
+            .OrderBy(session => session.StartsAt)
+            .Select(session => new
+            {
+                session.StartsAt,
+                CourseName = session.CourseTemplate!.Name,
+                session.Capacity,
+                Registered = session.Registrations!.Count(seat => seat.IsActive && !seat.IsWaitlisted)
+            })
+            .ToListAsync(cancellationToken);
+
+        // Distinct people seen over the window: "membres suivis" is a head
+        // count, not a seat count.
+        var followedMembers = facts.Count == 0
+            ? (int?)null
+            : await _dbContext.Registrations
+                .AsNoTracking()
+                .Where(seat => seat.IsActive && seat.Session!.CoachId == coach.Id &&
+                               seat.Session.StartsAt >= trailingFrom && seat.Session.StartsAt < trailingTo)
+                .Select(seat => seat.MemberId)
+                .Distinct()
+                .CountAsync(cancellationToken);
+
+        var stats = facts.Count == 0
+            ? CoachStatsDto.Empty
+            : new CoachStatsDto(weekSessionIds.Count, fillRate, followedMembers);
 
         return new CoachDetailsPageDto(
             coach.Id,
@@ -89,11 +135,17 @@ public sealed class GetCoachDetailsPageQueryHandler
             coach.Availability,
             coach.Disciplines,
             coach.Certifications,
-            // Sessions of the week arrive with the planning (lot 5).
-            [],
-            CoachStatsDto.Empty)
+            weekSessions
+                .Select(session => new CoachSessionDto(
+                    SessionLabels.ShortDay(session.StartsAt),
+                    SessionLabels.Time(session.StartsAt),
+                    session.CourseName,
+                    session.Registered,
+                    session.Capacity))
+                .ToList(),
+            stats)
         {
-            Status = CoachStatusRules.Resolve(coach.AwayUntil, today),
+            Status = CoachStatusRules.Resolve(coach.AwayUntil, today, fillRate),
             HasAccount = coach.HasAccount
         };
     }

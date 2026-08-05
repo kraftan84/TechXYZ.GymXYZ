@@ -43,6 +43,8 @@ public static class GxIconPaths
     public const string Send = "send";
     public const string Cloud = "cloud";
     public const string Sun = "sun";
+    public const string Star = "star";
+    public const string Share = "share";
 
     private static readonly Dictionary<string, string> Paths = new(StringComparer.OrdinalIgnoreCase)
     {

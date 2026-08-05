@@ -25,10 +25,7 @@ public sealed record LocationsPageDto(
         .Where(item => item.Kind != LocationKind.Home)
         .Sum(item => item.Capacity);
 
-    /// <summary>
-    /// Average occupancy over the studios, or null while no session has been
-    /// held. Counted from sessions, so it stays null until lot 5.
-    /// </summary>
+    /// <summary>Average occupancy over the studios, or null while none has hosted a session.</summary>
     public int? AverageStudioOccupancy
     {
         get
@@ -42,7 +39,7 @@ public sealed record LocationsPageDto(
         }
     }
 
-    /// <summary>Slots a week across every venue. Null until the planning fills it.</summary>
+    /// <summary>Slots a week across every venue, null while there are none.</summary>
     public int? TotalSessionsPerWeek
     {
         get
@@ -55,9 +52,9 @@ public sealed record LocationsPageDto(
 }
 
 /// <summary>
-/// One card of the grid. Occupancy and sessions per week come from past and
-/// booked sessions, so they are nullable and left unset — they render as "—"
-/// rather than being invented.
+/// One card of the grid. Occupancy and sessions per week are counted from the
+/// venue's sessions, and stay null for a venue that has hosted none — the card
+/// renders "—" rather than a zero it cannot justify.
 /// </summary>
 public sealed record LocationListItemDto(
     int Id,
@@ -75,11 +72,15 @@ public sealed record LocationListItemDto(
     AddressDto? Address,
     List<string> Equipment)
 {
-    public LocationStatus Status => LocationStatusRules.Resolve(Kind, IsOpenAccess, IsWeatherDependent);
+    public LocationStatus Status =>
+        LocationStatusRules.Resolve(Kind, IsOpenAccess, IsWeatherDependent, OccupancyRate);
 
-    /// <summary>Average fill of the venue's sessions, 0–100. Filled at lot 5.</summary>
+    /// <summary>
+    /// Average fill of the venue's sessions over the trailing weeks, 0–100.
+    /// Null when it has hosted none — no session is not an empty one.
+    /// </summary>
     public int? OccupancyRate { get; init; }
 
-    /// <summary>Slots booked in a normal week. Filled at lot 5.</summary>
+    /// <summary>Slots booked in the week in progress.</summary>
     public int? SessionsPerWeek { get; init; }
 }

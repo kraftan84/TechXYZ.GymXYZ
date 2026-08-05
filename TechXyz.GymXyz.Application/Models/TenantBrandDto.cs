@@ -23,4 +23,11 @@ public sealed record TenantBrandDto(
 {
     /// <summary>Town the customer operates in — "6 membres · Lyon 3ᵉ".</summary>
     public string? City { get; init; }
+
+    /// <summary>
+    /// Postcode of the gym. Carried here because the school-holiday zone is
+    /// derived from it, and the planning banner needs it before anything else
+    /// about the customer is loaded.
+    /// </summary>
+    public string? ZipCode { get; init; }
 }

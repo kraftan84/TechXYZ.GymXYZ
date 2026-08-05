@@ -26,8 +26,10 @@ else
         <CoachsDesktop Page="_page"
                        Search="@_search"
                        Status="_status"
+                       SortByFillRate="_sortByFillRate"
                        OnSearchChanged="ApplySearchAsync"
                        OnStatusChanged="ApplyStatusAsync"
+                       OnSortByFillRateChanged="ApplySortAsync"
                        OnOpen="OpenCoach"
                        OnCreate="OpenCreateDrawer"/>
     </div>
@@ -53,6 +55,7 @@ else
 
     private string? _search;
     private CoachStatus? _status;
+    private bool _sortByFillRate;
 
     private bool _isDrawerOpen;
     private bool _isSaving;
@@ -78,7 +81,8 @@ else
             _page = await Sender.Send(new GetCoachesQuery
             {
                 Search = _search,
-                Status = _status
+                Status = _status,
+                SortByFillRate = _sortByFillRate
             });
         }, "charger la liste des coachs");
     }
@@ -92,6 +96,12 @@ else
     private async Task ApplyStatusAsync(CoachStatus? status)
     {
         _status = status;
+        await RefreshAsync();
+    }
+
+    private async Task ApplySortAsync(bool sortByFillRate)
+    {
+        _sortByFillRate = sortByFillRate;
         await RefreshAsync();
     }
 

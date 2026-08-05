@@ -67,10 +67,10 @@ public class LocationQueriesHandlerTests
     /// invents a figure to fill the gap.
     /// </summary>
     [Fact]
-    public async Task GetLocations_ShouldLeaveTheSessionFiguresUnset()
+    public async Task GetLocations_ShouldLeaveTheFiguresUnset_WhenNothingIsBookedThere()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(
-            nameof(GetLocations_ShouldLeaveTheSessionFiguresUnset));
+            nameof(GetLocations_ShouldLeaveTheFiguresUnset_WhenNothingIsBookedThere));
 
         dbContext.Locations.Add(NewLocation("Studio A", LocationKind.Studio));
         await dbContext.SaveChangesAsync();
