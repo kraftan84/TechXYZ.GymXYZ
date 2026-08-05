@@ -6,29 +6,29 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteRoomCommandHandler : IRequestHandler<DeleteRoomCommand, bool>
+public sealed class DeleteLocationCommandHandler : IRequestHandler<DeleteLocationCommand, bool>
 {
     private readonly IGymDbContext _dbContext;
-    private readonly IValidator<DeleteRoomCommand> _validator;
+    private readonly IValidator<DeleteLocationCommand> _validator;
 
-    public DeleteRoomCommandHandler(IGymDbContext dbContext, IValidator<DeleteRoomCommand> validator)
+    public DeleteLocationCommandHandler(IGymDbContext dbContext, IValidator<DeleteLocationCommand> validator)
     {
         _dbContext = dbContext;
         _validator = validator;
     }
 
-    public async Task<bool> Handle(DeleteRoomCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteLocationCommand request, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var room = await _dbContext.Rooms
+        var location = await _dbContext.Locations
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
-        if (room is null)
+        if (location is null)
         {
             return false;
         }
 
-        room.IsActive = false;
+        location.IsActive = false;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

@@ -14,5 +14,5 @@ public sealed record LessonDetailsDto(
     string CoachLastName,
     DateTime StartDate,
     DateTime EndDate,
-    List<RoomDto> Rooms,
+    List<LocationOptionDto> Locations,
     int? MaxParticipants);

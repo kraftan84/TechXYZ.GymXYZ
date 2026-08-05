@@ -119,12 +119,12 @@ public static class DbInitializer
             }
         };
 
-        var rooms = new List<Room> { new("Studio A"), new("Studio B"), new("Studio C") }
-            .ToDictionary(room => room.Name);
+        var locations = new List<Location> { new("Studio A"), new("Studio B"), new("Studio C") }
+            .ToDictionary(location => location.Name);
 
-        foreach (var room in rooms.Values)
+        foreach (var location in locations.Values)
         {
-            mainSite.AddRoom(room);
+            mainSite.AddLocation(location);
         }
 
         gym.AddSite(mainSite);
@@ -144,7 +144,7 @@ public static class DbInitializer
             gym.AddMember(member);
         }
 
-        dbContext.CourseTemplates.AddRange(CreateCourseTemplates(disciplines, rooms, coaches));
+        dbContext.CourseTemplates.AddRange(CreateCourseTemplates(disciplines, locations, coaches));
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
@@ -189,7 +189,7 @@ public static class DbInitializer
     /// </summary>
     private static IEnumerable<CourseTemplate> CreateCourseTemplates(
         IReadOnlyDictionary<string, Discipline> disciplines,
-        IReadOnlyDictionary<string, Room> rooms,
+        IReadOnlyDictionary<string, Location> locations,
         IReadOnlyDictionary<string, Coach> coaches)
     {
         CourseTemplate Create(
@@ -211,7 +211,7 @@ public static class DbInitializer
                 IconKey = iconKey,
                 DurationMinutes = durationMinutes,
                 Capacity = capacity,
-                DefaultRoom = rooms[studio],
+                DefaultLocation = locations[studio],
                 Level = level,
                 Intensity = intensity,
                 Price = price,

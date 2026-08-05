@@ -12,7 +12,7 @@ public sealed class CreateCourseTemplateCommand : IRequest<int>
         int capacity,
         CourseLevel level,
         CourseIntensity intensity,
-        int? defaultRoomId = null,
+        int? defaultLocationId = null,
         decimal? price = null,
         string? description = null,
         string? iconKey = null,
@@ -24,7 +24,7 @@ public sealed class CreateCourseTemplateCommand : IRequest<int>
         Capacity = capacity;
         Level = level;
         Intensity = intensity;
-        DefaultRoomId = defaultRoomId;
+        DefaultLocationId = defaultLocationId;
         Price = price;
         Description = description;
         IconKey = iconKey;
@@ -42,7 +42,7 @@ public sealed class CreateCourseTemplateCommand : IRequest<int>
     public CourseIntensity Intensity { get; }
 
     /// <summary>Studio the planning proposes first. Optional.</summary>
-    public int? DefaultRoomId { get; }
+    public int? DefaultLocationId { get; }
 
     /// <summary>Null means the course is included in the subscription.</summary>
     public decimal? Price { get; }

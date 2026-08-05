@@ -214,15 +214,15 @@ public class CourseTemplateQueriesHandlerTests
         var cycling = new Discipline("Cycling") { IconKey = "target", Tone = "warning" };
         dbContext.Disciplines.Add(cycling);
 
-        var studioC = new Room("Studio C");
-        dbContext.Rooms.Add(studioC);
+        var studioC = new Location("Studio C");
+        dbContext.Locations.Add(studioC);
 
         var lea = new Coach("Léa", "Fontaine") { RoleLabel = "Coach cycling" };
         var nora = new Coach("Nora", "Lemoine");
         dbContext.Coaches.AddRange(lea, nora);
 
         var powerCycle = NewTemplate("Power Cycle", cycling, capacity: 24);
-        powerCycle.DefaultRoom = studioC;
+        powerCycle.DefaultLocation = studioC;
         powerCycle.DurationMinutes = 45;
         powerCycle.Level = CourseLevel.Intermediate;
         powerCycle.Intensity = CourseIntensity.High;
@@ -242,7 +242,7 @@ public class CourseTemplateQueriesHandlerTests
         result!.Name.ShouldBe("Power Cycle");
         result.DisciplineName.ShouldBe("Cycling");
         result.IconKey.ShouldBe("target");
-        result.DefaultRoomName.ShouldBe("Studio C");
+        result.DefaultLocationName.ShouldBe("Studio C");
         result.DurationMinutes.ShouldBe(45);
         result.Level.ShouldBe(CourseLevel.Intermediate);
         result.Intensity.ShouldBe(CourseIntensity.High);

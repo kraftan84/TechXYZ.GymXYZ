@@ -59,8 +59,8 @@ public class SoftDeleteRelationalIntegrationTests
                 Country = faker.Address.Country()
             }
         };
-        var room = new Room(faker.Commerce.ProductName());
-        site.AddRoom(room);
+        var location = new Location(faker.Commerce.ProductName());
+        site.AddLocation(location);
 
         dbContext.Coaches.Add(coach);
         dbContext.Sites.Add(site);
@@ -71,7 +71,7 @@ public class SoftDeleteRelationalIntegrationTests
             Name = faker.Company.CatchPhrase(),
             Type = LessonType.Private,
             Coach = coach,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddHours(1)
         });

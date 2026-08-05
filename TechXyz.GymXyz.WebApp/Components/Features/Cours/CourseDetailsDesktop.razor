@@ -77,7 +77,7 @@
                                 @session.DayLabel · @session.Time
                             </span>
                             <div class="main">
-                                <div class="t">@session.RoomName</div>
+                                <div class="t">@session.LocationName</div>
                             </div>
                             <GxChip Tone="@(percent >= 100 ? GxTone.Danger : GxTone.Brand)">
                                 @(session.Capacity == 1 ? "Privé" : $"{session.Occupancy}/{session.Capacity}")
@@ -103,7 +103,7 @@
                 </div>
                 <div class="gx-kv">
                     <span class="k">Studio</span>
-                    <span class="v">@(Course.DefaultRoomName ?? "—")</span>
+                    <span class="v">@(Course.DefaultLocationName ?? "—")</span>
                 </div>
                 <div class="gx-kv">
                     <span class="k">Niveau</span>

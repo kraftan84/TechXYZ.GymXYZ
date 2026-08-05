@@ -65,7 +65,7 @@
         </div>
         <div class="gx-m-kv">
             <span class="k">Studio</span>
-            <span class="v">@(Course.DefaultRoomName ?? "—")</span>
+            <span class="v">@(Course.DefaultLocationName ?? "—")</span>
         </div>
     </div>
 
@@ -126,7 +126,7 @@
                 <div class="gx-m-class" style="cursor:default">
                     <div class="time" style="width:64px">@session.DayLabel @session.Time</div>
                     <div class="main">
-                        <div class="nm">@session.RoomName</div>
+                        <div class="nm">@session.LocationName</div>
                         <div class="meta">@session.Occupancy/@session.Capacity places</div>
                     </div>
                     <div class="occ">

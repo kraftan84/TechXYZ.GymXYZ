@@ -22,7 +22,7 @@ public sealed class DeleteSiteCommandHandler : IRequestHandler<DeleteSiteCommand
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var site = await _dbContext.Sites
-            .Include(candidate => candidate.Rooms)
+            .Include(candidate => candidate.Locations)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
 
         if (site is null)
@@ -30,9 +30,9 @@ public sealed class DeleteSiteCommandHandler : IRequestHandler<DeleteSiteCommand
             return false;
         }
 
-        foreach (var room in site.Rooms?.ToList() ?? [])
+        foreach (var location in site.Locations?.ToList() ?? [])
         {
-            room.IsActive = false;
+            location.IsActive = false;
         }
 
         site.IsActive = false;

@@ -2,14 +2,16 @@ using MediatR;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateRoomCommand : IRequest<int>
+public sealed class UpdateLocationCommand : IRequest<bool>
 {
-    public CreateRoomCommand(string name, int siteId)
+    public UpdateLocationCommand(int id, string name, int siteId)
     {
+        Id = id;
         Name = name;
         SiteId = siteId;
     }
 
+    public int Id { get; }
     public string Name { get; }
     public int SiteId { get; }
 }

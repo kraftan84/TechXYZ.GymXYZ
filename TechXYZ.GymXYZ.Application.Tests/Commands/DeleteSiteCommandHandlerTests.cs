@@ -7,10 +7,10 @@ namespace TechXYZ.GymXYZ.Application.Tests.Members;
 public class DeleteSiteCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldSoftDeleteSiteAndItsRooms()
+    public async Task Handle_ShouldSoftDeleteSiteAndItsLocations()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteSiteAndItsRooms));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteSiteAndItsLocations));
 
         var site = new Site(faker.Address.City())
         {
@@ -21,7 +21,7 @@ public class DeleteSiteCommandHandlerTests
                 City = faker.Address.City(),
                 Country = faker.Address.Country()
             },
-            Rooms = [new Room("Room A"), new Room("Room B")]
+            Locations = [new Location("Location A"), new Location("Location B")]
         };
 
         dbContext.Sites.Add(site);
@@ -33,6 +33,6 @@ public class DeleteSiteCommandHandlerTests
 
         deleted.ShouldBeTrue();
         dbContext.Sites.Single(l => l.Id == site.Id).IsActive.ShouldBeFalse();
-        dbContext.Rooms.All(room => room.IsActive == false).ShouldBeTrue();
+        dbContext.Locations.All(location => location.IsActive == false).ShouldBeTrue();
     }
 }

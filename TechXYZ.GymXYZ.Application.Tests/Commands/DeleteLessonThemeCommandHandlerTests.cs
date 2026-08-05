@@ -13,21 +13,21 @@ public class DeleteLessonThemeCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteThemeAndUnlinkLessons));
         var theme = new LessonTheme("Cardio");
         var coach = new Coach("John", "Doe");
-        var room = new Room("Studio A");
+        var location = new Location("Studio A");
         var lesson = new PrivateLesson
         {
             Name = "Lesson",
             Type = LessonType.Private,
             Theme = theme,
             Coach = coach,
-            Room = room,
+            Location = location,
             StartDate = DateTime.UtcNow.Date.AddHours(10),
             EndDate = DateTime.UtcNow.Date.AddHours(11)
         };
 
         dbContext.LessonThemes.Add(theme);
         dbContext.Coaches.Add(coach);
-        dbContext.Rooms.Add(room);
+        dbContext.Locations.Add(location);
         dbContext.PrivateLessons.Add(lesson);
         await dbContext.SaveChangesAsync();
 

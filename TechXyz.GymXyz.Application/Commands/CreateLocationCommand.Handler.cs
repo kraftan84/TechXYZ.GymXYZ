@@ -6,18 +6,18 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, int>
+public sealed class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, int>
 {
     private readonly IGymDbContext _dbContext;
-    private readonly IValidator<CreateRoomCommand> _validator;
+    private readonly IValidator<CreateLocationCommand> _validator;
 
-    public CreateRoomCommandHandler(IGymDbContext dbContext, IValidator<CreateRoomCommand> validator)
+    public CreateLocationCommandHandler(IGymDbContext dbContext, IValidator<CreateLocationCommand> validator)
     {
         _dbContext = dbContext;
         _validator = validator;
     }
 
-    public async Task<int> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateLocationCommand request, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
@@ -29,11 +29,11 @@ public sealed class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand
             throw new ValidationException("Site not found.");
         }
 
-        var room = new Room(request.Name.Trim());
-        site.AddRoom(room);
+        var location = new Location(request.Name.Trim());
+        site.AddLocation(location);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return room.Id;
+        return location.Id;
     }
 }

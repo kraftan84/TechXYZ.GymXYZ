@@ -2,9 +2,9 @@ using FluentValidation;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class UpdateRoomCommandValidator : AbstractValidator<UpdateRoomCommand>
+public sealed class UpdateLocationCommandValidator : AbstractValidator<UpdateLocationCommand>
 {
-    public UpdateRoomCommandValidator()
+    public UpdateLocationCommandValidator()
     {
         RuleFor(command => command.Id).GreaterThan(0);
         RuleFor(command => command.Name).NotEmpty().MaximumLength(150);

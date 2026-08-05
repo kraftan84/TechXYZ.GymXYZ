@@ -5,13 +5,13 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
-public class CreateRoomCommandHandlerTests
+public class CreateLocationCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldCreateRoomInSite()
+    public async Task Handle_ShouldCreateLocationInSite()
     {
         var faker = TestInfrastructure.Faker();
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateRoomInSite));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldCreateLocationInSite));
 
         var site = new Site(faker.Address.City())
         {
@@ -26,13 +26,13 @@ public class CreateRoomCommandHandlerTests
         dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
-        var roomName = faker.Commerce.ProductName();
-        var roomId = await handler.Handle(new CreateRoomCommand($" {roomName} ", site.Id), CancellationToken.None);
+        var locationName = faker.Commerce.ProductName();
+        var locationId = await handler.Handle(new CreateLocationCommand($" {locationName} ", site.Id), CancellationToken.None);
 
-        roomId.ShouldBeGreaterThan(0);
-        dbContext.Rooms.Any(r => r.Id == roomId && r.Name == roomName).ShouldBeTrue();
+        locationId.ShouldBeGreaterThan(0);
+        dbContext.Locations.Any(r => r.Id == locationId && r.Name == locationName).ShouldBeTrue();
     }
 
     [Fact]
@@ -40,9 +40,9 @@ public class CreateRoomCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenSiteIdIsInvalid));
-        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 0), CancellationToken.None));
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(faker.Commerce.ProductName(), 0), CancellationToken.None));
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class CreateRoomCommandHandlerTests
     {
         var faker = TestInfrastructure.Faker();
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldThrowValidationException_WhenSiteDoesNotExist));
-        var handler = new CreateRoomCommandHandler(dbContext, new CreateRoomCommandValidator());
+        var handler = new CreateLocationCommandHandler(dbContext, new CreateLocationCommandValidator());
 
-        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateRoomCommand(faker.Commerce.ProductName(), 999), CancellationToken.None));
+        await Should.ThrowAsync<ValidationException>(() => handler.Handle(new CreateLocationCommand(faker.Commerce.ProductName(), 999), CancellationToken.None));
     }
 }

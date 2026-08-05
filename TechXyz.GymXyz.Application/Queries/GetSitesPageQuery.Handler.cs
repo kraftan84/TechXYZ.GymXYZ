@@ -5,23 +5,23 @@ using TechXyz.GymXyz.Application.Models;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
-public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery, RoomsPageDto?>
+public sealed class GetSitesPageQueryHandler : IRequestHandler<GetSitesPageQuery, SitesPageDto?>
 {
     private readonly IGymDbContext _dbContext;
 
-    public GetRoomsPageQueryHandler(IGymDbContext dbContext)
+    public GetSitesPageQueryHandler(IGymDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<RoomsPageDto?> Handle(GetRoomsPageQuery request, CancellationToken cancellationToken)
+    public async Task<SitesPageDto?> Handle(GetSitesPageQuery request, CancellationToken cancellationToken)
     {
         // For now, the first gym is treated as the default gym.
         var gym = await _dbContext.Gyms
             .AsNoTracking()
             .Where(candidate => candidate.IsActive)
             .Include(candidate => candidate.Sites!)
-            .ThenInclude(site => site.Rooms)
+            .ThenInclude(site => site.Locations)
             .Include(candidate => candidate.Sites!)
             .ThenInclude(site => site.Address)
             .OrderBy(gym => gym.Id)
@@ -35,7 +35,7 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
         var mappedSites = gym.Sites?
             .Where(site => site.IsActive)
             .OrderBy(site => site.Name)
-            .Select(site => new SiteWithRoomsDto(
+            .Select(site => new SiteWithLocationsDto(
                 site.Id,
                 site.Name,
                 site.Address == null
@@ -45,28 +45,28 @@ public sealed class GetRoomsPageQueryHandler : IRequestHandler<GetRoomsPageQuery
                         site.Address.ZipCode,
                         site.Address.City,
                         site.Address.Country),
-                site.Rooms?
-                    .Where(room => room.IsActive)
-                    .OrderBy(room => room.Name)
-                    .Select(room => new RoomDto(room.Id, room.Name))
+                site.Locations?
+                    .Where(location => location.IsActive)
+                    .OrderBy(location => location.Name)
+                    .Select(location => new LocationOptionDto(location.Id, location.Name))
                     .ToList() ?? []))
             .ToList() ?? [];
 
-        var mappedRooms = mappedSites
-            .SelectMany(site => site.Rooms
-                .Select(room => new RoomWithSiteDto(
-                    room.Id,
-                    room.Name,
+        var mappedLocations = mappedSites
+            .SelectMany(site => site.Locations
+                .Select(location => new LocationWithSiteDto(
+                    location.Id,
+                    location.Name,
                     site.Id,
                     site.Name)))
-            .OrderBy(room => room.Name)
+            .OrderBy(location => location.Name)
             .ToList();
 
-        var page = new RoomsPageDto(
+        var page = new SitesPageDto(
             gym.Id,
             gym.Name,
             mappedSites,
-            mappedRooms);
+            mappedLocations);
 
         return page;
     }

@@ -40,7 +40,7 @@ else
 {
     <CourseDrawer Model="_editModel"
                   Disciplines="_disciplines"
-                  Rooms="_rooms"
+                  Locations="_locations"
                   Coaches="_coaches"
                   IsNew="true"
                   IsSolo="@IsSolo"
@@ -55,7 +55,7 @@ else
 
     private CourseTemplatesPageDto _page = CourseTemplatesPageDto.Empty;
     private IReadOnlyList<DisciplineDto> _disciplines = [];
-    private IReadOnlyList<RoomDto> _rooms = [];
+    private IReadOnlyList<LocationOptionDto> _locations = [];
     private IReadOnlyList<CoachListItemDto> _coaches = [];
 
     private string? _search;
@@ -123,7 +123,7 @@ else
         await UserFeedback.ExecuteAsync(async () =>
         {
             _disciplines = await Sender.Send(new GetDisciplinesQuery());
-            _rooms = await Sender.Send(new GetRoomsQuery());
+            _locations = await Sender.Send(new GetLocationOptionsQuery());
             _coaches = (await Sender.Send(new GetCoachesQuery())).Items;
         }, "charger les référentiels");
     }
@@ -152,7 +152,7 @@ else
                 _editModel.Capacity,
                 _editModel.Level,
                 _editModel.Intensity,
-                _editModel.DefaultRoomId,
+                _editModel.DefaultLocationId,
                 _editModel.Price,
                 _editModel.Description,
                 _editModel.IconKey,

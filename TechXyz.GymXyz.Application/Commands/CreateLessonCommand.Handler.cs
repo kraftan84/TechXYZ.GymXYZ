@@ -23,12 +23,12 @@ public sealed class CreateLessonCommandHandler : IRequestHandler<CreateLessonCom
 
         var coach = await _dbContext.Coaches
             .FirstOrDefaultAsync(candidate => candidate.Id == request.CoachId && candidate.IsActive, cancellationToken);
-        var room = await _dbContext.Rooms
-            .FirstOrDefaultAsync(candidate => candidate.Id == request.RoomId && candidate.IsActive, cancellationToken);
+        var location = await _dbContext.Locations
+            .FirstOrDefaultAsync(candidate => candidate.Id == request.LocationId && candidate.IsActive, cancellationToken);
 
-        if (coach is null || room is null)
+        if (coach is null || location is null)
         {
-            throw new ValidationException("Coach or room not found.");
+            throw new ValidationException("Coach or location not found.");
         }
 
         LessonTheme? theme = null;
@@ -48,14 +48,14 @@ public sealed class CreateLessonCommandHandler : IRequestHandler<CreateLessonCom
             lesson = new CollectiveLesson
             {
                 MaxParticipants = request.MaxParticipants ?? 1,
-                Rooms = [room]
+                Locations = [location]
             };
         }
         else
         {
             lesson = new PrivateLesson
             {
-                Room = room
+                Location = location
             };
         }
 

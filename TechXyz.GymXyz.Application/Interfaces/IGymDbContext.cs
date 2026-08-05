@@ -8,7 +8,7 @@ public interface IGymDbContext
     DbSet<Tenant> Tenants { get; }
     DbSet<Gym> Gyms { get; }
     DbSet<Site> Sites { get; }
-    DbSet<Room> Rooms { get; }
+    DbSet<Location> Locations { get; }
     DbSet<Lesson> Lessons { get; }
     DbSet<PrivateLesson> PrivateLessons { get; }
     DbSet<CollectiveLesson> CollectiveLessons { get; }

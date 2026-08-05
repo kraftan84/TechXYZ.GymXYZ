@@ -32,7 +32,7 @@ public class MemberDetailsPageQueryHandlerTests
             Name = "Private",
             Type = LessonType.Private,
             Coach = coach,
-            Room = new Room("Room A"),
+            Location = new Location("Location A"),
             Member = member,
             StartDate = DateTime.Today.AddDays(-2).AddHours(10),
             EndDate = DateTime.Today.AddDays(-2).AddHours(11)
@@ -42,7 +42,7 @@ public class MemberDetailsPageQueryHandlerTests
             Name = "Collective",
             Type = LessonType.Collective,
             Coach = coach,
-            Rooms = [new Room("Room B")],
+            Locations = [new Location("Location B")],
             Participants = [member],
             MaxParticipants = 20,
             StartDate = DateTime.Today.AddDays(2).AddHours(18),

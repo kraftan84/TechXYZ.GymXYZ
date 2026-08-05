@@ -4,9 +4,9 @@ using TechXyz.GymXyz.Domain.Common.Interfaces;
 namespace TechXyz.GymXyz.Domain.Entities;
 
 /// <summary>
-/// A postal address the gym operates from — the building, not a room inside it.
-/// Named <c>Location</c> until lot 4, where the data model gave that name to the
-/// venue a session is booked in.
+/// A postal address the gym operates from — the building itself, not one of the
+/// venues inside it. Named <c>Location</c> until lot 4, where the data model gave
+/// that name to the venue a session is booked in.
 /// </summary>
 public class Site : EntityBase<int>, ITenantScoped
 {
@@ -19,11 +19,11 @@ public class Site : EntityBase<int>, ITenantScoped
 
     public string Name { get; set; }
     public Address Address { get; set; }
-    public ICollection<Room>? Rooms { get; set; }
+    public ICollection<Location>? Locations { get; set; }
 
-    public void AddRoom(Room room)
+    public void AddLocation(Location location)
     {
-        Rooms ??= new List<Room>();
-        Rooms.Add(room);
+        Locations ??= new List<Location>();
+        Locations.Add(location);
     }
 }

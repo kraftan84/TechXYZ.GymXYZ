@@ -18,7 +18,7 @@ public sealed class GetLessonByIdQueryHandler : IRequestHandler<GetLessonByIdQue
     {
         var privateLesson = await _dbContext.PrivateLessons
             .AsNoTracking()
-            .Where(lesson => lesson.Id == request.Id && lesson.IsActive && lesson.Coach.IsActive && lesson.Room.IsActive)
+            .Where(lesson => lesson.Id == request.Id && lesson.IsActive && lesson.Coach.IsActive && lesson.Location.IsActive)
             .Select(lesson => new
             {
                 lesson.Id,
@@ -32,8 +32,8 @@ public sealed class GetLessonByIdQueryHandler : IRequestHandler<GetLessonByIdQue
                 CoachLastName = lesson.Coach.LastName,
                 lesson.StartDate,
                 lesson.EndDate,
-                RoomId = lesson.Room.Id,
-                RoomName = lesson.Room.Name
+                LocationId = lesson.Location.Id,
+                LocationName = lesson.Location.Name
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -51,7 +51,7 @@ public sealed class GetLessonByIdQueryHandler : IRequestHandler<GetLessonByIdQue
                 privateLesson.CoachLastName,
                 privateLesson.StartDate,
                 privateLesson.EndDate,
-                [new RoomDto(privateLesson.RoomId, privateLesson.RoomName)],
+                [new LocationOptionDto(privateLesson.LocationId, privateLesson.LocationName)],
                 null);
         }
 
@@ -70,10 +70,10 @@ public sealed class GetLessonByIdQueryHandler : IRequestHandler<GetLessonByIdQue
                 lesson.Coach.LastName,
                 lesson.StartDate,
                 lesson.EndDate,
-                lesson.Rooms
-                    .Where(room => room.IsActive)
-                    .OrderBy(room => room.Name)
-                    .Select(room => new RoomDto(room.Id, room.Name))
+                lesson.Locations
+                    .Where(location => location.IsActive)
+                    .OrderBy(location => location.Name)
+                    .Select(location => new LocationOptionDto(location.Id, location.Name))
                     .ToList(),
                 lesson.MaxParticipants))
             .FirstOrDefaultAsync(cancellationToken);

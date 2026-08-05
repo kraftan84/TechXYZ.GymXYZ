@@ -4,12 +4,12 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Members;
 
-public class RoomsPageQueryHandlerTests
+public class SitesPageQueryHandlerTests
 {
     [Fact]
-    public async Task Handle_ShouldReturnDefaultGymWithSitesAndRooms()
+    public async Task Handle_ShouldReturnDefaultGymWithSitesAndLocations()
     {
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnDefaultGymWithSitesAndRooms));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnDefaultGymWithSitesAndLocations));
 
         var defaultGym = new Gym("Default Gym") { Id = 1 };
         var secondGym = new Gym("Other Gym") { Id = 2 };
@@ -24,8 +24,8 @@ public class RoomsPageQueryHandlerTests
                 Country = "France"
             }
         };
-        site.AddRoom(new Room("Room A"));
-        site.AddRoom(new Room("Room Inactive") { IsActive = false });
+        site.AddLocation(new Location("Location A"));
+        site.AddLocation(new Location("Location Inactive") { IsActive = false });
 
         var inactiveSite = new Site("Inactive")
         {
@@ -45,14 +45,14 @@ public class RoomsPageQueryHandlerTests
         dbContext.Gyms.AddRange(defaultGym, secondGym);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetRoomsPageQueryHandler(dbContext);
+        var handler = new GetSitesPageQueryHandler(dbContext);
 
-        var result = await handler.Handle(new GetRoomsPageQuery(), CancellationToken.None);
+        var result = await handler.Handle(new GetSitesPageQuery(), CancellationToken.None);
 
         result.ShouldNotBeNull();
         result!.GymName.ShouldBe("Default Gym");
         result.Sites.Count.ShouldBe(1);
-        result.Rooms.Count.ShouldBe(1);
-        result.Rooms[0].SiteName.ShouldBe("Downtown");
+        result.Locations.Count.ShouldBe(1);
+        result.Locations[0].SiteName.ShouldBe("Downtown");
     }
 }

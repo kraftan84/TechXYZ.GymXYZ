@@ -326,7 +326,7 @@
                 StartDate = DateTime.Today.AddHours(9),
                 EndDate = DateTime.Today.AddHours(10),
                 MaxParticipants = 16,
-                Rooms = new List<Room> { new("Studio A") { Id = 1 } }
+                Locations = new List<Location> { new("Studio A") { Id = 1 } }
             },
             new PrivateLesson
             {
@@ -338,7 +338,7 @@
                 Coach = coaches[1],
                 StartDate = DateTime.Today.AddDays(1).AddHours(11),
                 EndDate = DateTime.Today.AddDays(1).AddHours(12),
-                Room = new Room("Studio B") { Id = 2 }
+                Location = new Location("Studio B") { Id = 2 }
             },
             new CollectiveLesson
             {
@@ -351,7 +351,7 @@
                 StartDate = DateTime.Today.AddDays(2).AddHours(18),
                 EndDate = DateTime.Today.AddDays(2).AddHours(19),
                 MaxParticipants = 20,
-                Rooms = new List<Room> { new("Salle Yoga") { Id = 3 } }
+                Locations = new List<Location> { new("Salle Yoga") { Id = 3 } }
             }
         ];
     }
@@ -502,8 +502,8 @@
     private Lesson BuildLessonFromModel(LessonEditModel model)
     {
         Lesson lesson = model.Type == LessonType.Collective
-            ? new CollectiveLesson { MaxParticipants = 16, Rooms = new List<Room>() }
-            : new PrivateLesson { Room = new Room("Studio") };
+            ? new CollectiveLesson { MaxParticipants = 16, Locations = new List<Location>() }
+            : new PrivateLesson { Location = new Location("Studio") };
 
         lesson.Id = NextLessonId();
         lesson.Name = model.Name;

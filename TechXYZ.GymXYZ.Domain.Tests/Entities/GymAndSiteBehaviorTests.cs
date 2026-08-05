@@ -49,17 +49,17 @@ public class GymAndSiteBehaviorTests
     }
 
     [Fact]
-    public void AddRoom_ShouldInitializeCollectionAndAppendRoom()
+    public void AddLocation_ShouldInitializeCollectionAndAppendLocation()
     {
         var faker = Faker();
         var site = new Site(faker.Address.City());
-        var room = new Room(faker.Commerce.ProductName());
+        var location = new Location(faker.Commerce.ProductName());
 
-        site.AddRoom(room);
+        site.AddLocation(location);
 
-        site.Rooms.ShouldNotBeNull();
-        site.Rooms.Count.ShouldBe(1);
-        site.Rooms.First().ShouldBeSameAs(room);
+        site.Locations.ShouldNotBeNull();
+        site.Locations.Count.ShouldBe(1);
+        site.Locations.First().ShouldBeSameAs(location);
     }
 
     private static Faker Faker() => new("en");
