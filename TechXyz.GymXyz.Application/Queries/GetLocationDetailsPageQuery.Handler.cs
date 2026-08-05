@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
+using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Queries;
 
@@ -65,6 +67,59 @@ public sealed class GetLocationDetailsPageQueryHandler
             return null;
         }
 
+        var now = DateTime.Now;
+        var today = now.Date;
+
+        var schedule = await _dbContext.Sessions
+            .AsNoTracking()
+            .Where(session =>
+                session.IsActive &&
+                session.LocationId == location.Id &&
+                session.StartsAt >= today &&
+                session.StartsAt < today.AddDays(1))
+            .OrderBy(session => session.StartsAt)
+            .Select(session => new
+            {
+                session.StartsAt,
+                CourseName = session.CourseTemplate!.Name,
+                CoachFirstName = session.Coach == null ? null : session.Coach.FirstName,
+                CoachLastName = session.Coach == null ? null : session.Coach.LastName,
+                session.Capacity,
+                session.Status,
+                Registered = session.Registrations!.Count(seat => seat.IsActive && !seat.IsWaitlisted)
+            })
+            .ToListAsync(cancellationToken);
+
+        var todaySessions = schedule
+            .Where(session => session.Status != SessionStatus.Cancelled)
+            .Select(session => new LocationSessionDto(
+                SessionLabels.Time(session.StartsAt),
+                session.CourseName,
+                session.CoachLastName is null
+                    ? null
+                    : $"{session.CoachFirstName} {session.CoachLastName}".Trim(),
+                session.Registered,
+                session.Capacity))
+            .ToList();
+
+        var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(now);
+        var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
+
+        var facts = (await SessionStatistics.LoadAsync(
+                _dbContext, trailingFrom, trailingTo > weekTo ? trailingTo : weekTo, cancellationToken))
+            .Where(fact => fact.LocationId == location.Id)
+            .ToList();
+
+        var weekFacts = facts.Where(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo).ToList();
+
+        var occupancy = facts.Count == 0
+            ? LocationOccupancyDto.Empty
+            : new LocationOccupancyDto(
+                SessionStatistics.FillRate(
+                    facts.Where(fact => fact.StartsAt >= trailingFrom && fact.StartsAt < trailingTo)),
+                weekFacts.Count,
+                SessionStatistics.DailyRates(weekFacts));
+
         return new LocationDetailsPageDto(
             location.Id,
             location.Name,
@@ -84,9 +139,7 @@ public sealed class GetLocationDetailsPageQueryHandler
             location.FallbackLocationName,
             location.Address,
             location.Equipment,
-            // The day's schedule and the weekly heatmap are read from sessions,
-            // which the planning produces at lot 5.
-            [],
-            LocationOccupancyDto.Empty);
+            todaySessions,
+            occupancy);
     }
 }

@@ -1,0 +1,151 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+
+@* Desktop planning: toolbar, filter chips, school-calendar banner, week grid.
+   Presentation only — every piece of state and every action comes from
+   Planning.razor.
+
+   The prototype makes « Diffuser » the primary button of this screen and opens
+   a modal offering push, e-mail and a public link. None of the three exists
+   before the notifications lot, and the hand-off defers the feature itself to
+   lot 10, so the button is rendered disabled with a tooltip that says when it
+   arrives. « Nouveau cours » takes the accent, which is what the toolbar spec
+   asks for anyway. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Planning" Subtitle="@PlanningFilters.RangeLabel(WeekStart)">
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnPreviousWeek" title="Semaine précédente"
+                  aria-label="Semaine précédente">
+        <GxIcon Name="@GxIconPaths.ChevronLeft" Size="16"/>
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnToday">Aujourd'hui</FluentButton>
+    <FluentButton Appearance="Appearance.Outline" @onclick="OnNextWeek" title="Semaine suivante"
+                  aria-label="Semaine suivante">
+        <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Outline" Disabled="true"
+                  title="Disponible avec les notifications.">
+        <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
+        Diffuser
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Nouveau cours
+    </FluentButton>
+</PageHead>
+
+<div class="gx-filters">
+    @if (!IsSolo)
+    {
+        <button type="button"
+                class="gx-fchip @(Filters.CoachId is null ? "on" : null)"
+                aria-pressed="@(Filters.CoachId is null)"
+                @onclick="() => OnCoachChanged.InvokeAsync(null)">
+            <GxIcon Name="@GxIconPaths.Filter" Size="14"/>
+            Tous les coachs
+        </button>
+        @foreach (var coach in Coaches)
+        {
+            var isOn = Filters.CoachId == coach.Id;
+            <button type="button"
+                    class="gx-fchip @(isOn ? "on" : null)"
+                    aria-pressed="@isOn"
+                    @onclick="() => OnCoachChanged.InvokeAsync(coach.Id)">
+                @coach.FirstName
+            </button>
+        }
+    }
+
+    <button type="button"
+            class="gx-fchip @(Filters.LocationId is null ? "on" : null)"
+            aria-pressed="@(Filters.LocationId is null)"
+            @onclick="() => OnLocationChanged.InvokeAsync(null)">
+        Tous les lieux
+    </button>
+    @foreach (var location in Locations)
+    {
+        var isOn = Filters.LocationId == location.Id;
+        <button type="button"
+                class="gx-fchip @(isOn ? "on" : null)"
+                aria-pressed="@isOn"
+                @onclick="() => OnLocationChanged.InvokeAsync(location.Id)">
+            @location.Name
+        </button>
+    }
+
+    @foreach (var format in _formats)
+    {
+        var isOn = Filters.Format == format.Value;
+        <button type="button"
+                class="gx-fchip @(isOn ? "on" : null)"
+                aria-pressed="@isOn"
+                @onclick="() => OnFormatChanged.InvokeAsync(isOn ? null : format.Value)">
+            @format.Label
+        </button>
+    }
+
+    <span style="margin-left:auto;font-size:var(--text-xs);color:var(--text-muted);font-weight:600;
+                 display:inline-flex;align-items:center;gap:6px">
+        <GxIcon Name="@GxIconPaths.ArrowRight" Size="13"/>
+        Cliquez l'en-tête d'un jour pour le détail
+    </span>
+</div>
+
+<CalendarBanner Calendar="Calendar" WeekStart="WeekStart"/>
+
+<GxCard Padded="false" Class="gx-cal-wrap">
+    @if (Page.Sessions.Count == 0)
+    {
+        <EmptyState Icon="@GxIconPaths.Calendar"
+                    Title="Aucun cours cette semaine"
+                    Text="@EmptyText"/>
+    }
+    else
+    {
+        <PlanningWeekGrid Page="Page"
+                          WeekStart="WeekStart"
+                          Calendar="Calendar"
+                          Today="Today"
+                          OnOpenDay="OnOpenDay"
+                          OnOpenSession="OnOpenSession"/>
+    }
+</GxCard>
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Planning")
+    ];
+
+    private static readonly IReadOnlyList<(CourseFormat Value, string Label)> _formats =
+    [
+        (CourseFormat.Collective, "Collectif"),
+        (CourseFormat.Private, "Privé")
+    ];
+
+    [Parameter, EditorRequired] public WeekPlanningDto Page { get; set; } = WeekPlanningDto.Empty;
+    [Parameter, EditorRequired] public DateOnly WeekStart { get; set; }
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+    [Parameter, EditorRequired] public PlanningFilterState Filters { get; set; } = new();
+
+    [Parameter] public IReadOnlyList<CoachListItemDto> Coaches { get; set; } = [];
+    [Parameter] public IReadOnlyList<LocationListItemDto> Locations { get; set; } = [];
+    [Parameter] public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    [Parameter] public bool IsSolo { get; set; }
+
+    [Parameter] public EventCallback OnPreviousWeek { get; set; }
+    [Parameter] public EventCallback OnNextWeek { get; set; }
+    [Parameter] public EventCallback OnToday { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback<DateOnly> OnOpenDay { get; set; }
+    [Parameter] public EventCallback<PlanningSessionDto> OnOpenSession { get; set; }
+    [Parameter] public EventCallback<int?> OnCoachChanged { get; set; }
+    [Parameter] public EventCallback<int?> OnLocationChanged { get; set; }
+    [Parameter] public EventCallback<CourseFormat?> OnFormatChanged { get; set; }
+
+    /// <summary>An empty week is usually a filter, not an empty gym — say which.</summary>
+    private string EmptyText => Filters.IsFiltered
+        ? "Aucun cours ne correspond aux filtres sur cette semaine."
+        : "Programmez le premier cours de la semaine.";
+}

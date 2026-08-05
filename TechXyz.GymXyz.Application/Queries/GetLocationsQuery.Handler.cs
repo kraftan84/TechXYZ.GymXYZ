@@ -47,6 +47,35 @@ public sealed class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery
             .SelectLocationListItemDto()
             .ToListAsync(cancellationToken);
 
-        return new LocationsPageDto(items, studioCount, outdoorCount, homeCount);
+        var now = DateTime.Now;
+        var (trailingFrom, trailingTo) = SessionStatistics.TrailingWindow(now);
+        var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
+
+        // One window covers both figures: the trailing weeks contain the week in
+        // progress, so the slot count is a slice of the same rows.
+        var facts = await SessionStatistics.LoadAsync(
+            _dbContext, trailingFrom, trailingTo > weekTo ? trailingTo : weekTo, cancellationToken);
+
+        var byLocation = facts.GroupBy(fact => fact.LocationId).ToDictionary(group => group.Key, group => group.ToList());
+
+        var withFigures = items
+            .Select(item =>
+            {
+                if (!byLocation.TryGetValue(item.Id, out var venueFacts))
+                {
+                    return item;
+                }
+
+                return item with
+                {
+                    OccupancyRate = SessionStatistics.FillRate(
+                        venueFacts.Where(fact => fact.StartsAt >= trailingFrom && fact.StartsAt < trailingTo)),
+                    SessionsPerWeek = venueFacts
+                        .Count(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo)
+                };
+            })
+            .ToList();
+
+        return new LocationsPageDto(withFigures, studioCount, outdoorCount, homeCount);
     }
 }

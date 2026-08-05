@@ -1,0 +1,217 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+
+@* Book a course into the week, or move one already booked. The prototype draws
+   no drawer for this, so it follows the one lots 1 to 4 established.
+
+   A coach on leave is flagged here rather than refused by the command: the
+   hand-off calls it an alert, and stopping a manager from covering a gap would
+   be the wrong answer. *@
+
+<GxDrawer Title="@(IsNew ? "Nouveau cours" : "Modifier la séance")"
+          Subtitle="@Subtitle"
+          Icon="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Calendar)"
+          OnClose="OnCancel">
+    <ChildContent>
+        <div class="gx-seclab">Le cours</div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Cours"
+                          TOption="CourseTemplateListItemDto"
+                          Items="@Courses"
+                          OptionValue="@(course => course.Id.ToString())"
+                          OptionText="@(course => course.Name)"
+                          OptionSelected="@(course => course.Id == Model.CourseTemplateId)"
+                          SelectedOptionChanged="OnCourseChanged"
+                          style="width:100%"/>
+        </div>
+
+        @if (SelectedCourse is { } course)
+        {
+            <div class="gx-form-field">
+                <div style="font-size:var(--text-xs);color:var(--text-muted)">
+                    @course.DurationMinutes min · @GxFormats.Plural(course.Capacity, "place", "places")
+                    @if (course.IsPrivate)
+                    {
+                        <text> · séance individuelle</text>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="gx-seclab">Quand</div>
+        <div class="gx-form-row">
+            <FluentDatePicker Label="Jour" @bind-Value="DayValue" style="width:100%"/>
+            <FluentTimePicker Label="Heure" @bind-Value="TimeValue" style="width:100%"/>
+        </div>
+
+        @if (IsNew)
+        {
+            <div class="gx-form-field">
+                <FluentNumberField Label="Répéter (semaines)"
+                                   Min="@SessionRules.MinimumRecurrenceWeeks.ToString()"
+                                   Max="@SessionRules.MaximumRecurrenceWeeks.ToString()"
+                                   @bind-Value="Model.RecurrenceWeeks" style="width:100%"/>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                    1 crée une seule séance. Au-delà, le cours est répété chaque semaine et les
+                    séances restent liées.
+                </div>
+            </div>
+        }
+        else if (Model.IsRecurring)
+        {
+            <div class="gx-form-field">
+                <FluentSelect Label="Appliquer à"
+                              TOption="ScopeOption"
+                              Items="@_scopes"
+                              OptionValue="@(scope => scope.Value.ToString())"
+                              OptionText="@(scope => scope.Label)"
+                              OptionSelected="@(scope => scope.Value == Model.Scope)"
+                              SelectedOptionChanged="OnScopeChanged"
+                              style="width:100%"/>
+            </div>
+        }
+
+        <div class="gx-seclab">Où et avec qui</div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Lieu"
+                          TOption="LocationListItemDto"
+                          Items="@Locations"
+                          OptionValue="@(location => location.Id.ToString())"
+                          OptionText="@(location => location.Name)"
+                          OptionSelected="@(location => location.Id == Model.LocationId)"
+                          SelectedOptionChanged="OnLocationChanged"
+                          style="width:100%"/>
+        </div>
+        <div class="gx-form-field">
+            <FluentSelect Label="Coach"
+                          TOption="SelectOption"
+                          Items="@CoachOptions"
+                          OptionValue="@(option => option.Value)"
+                          OptionText="@(option => option.Label)"
+                          OptionSelected="@(option => option.Value == ValueOf(Model.CoachId))"
+                          SelectedOptionChanged="OnCoachChanged"
+                          style="width:100%"/>
+            @if (AwayCoach is { } away)
+            {
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;
+                            font-size:var(--text-xs);color:var(--warning-700)">
+                    <GxIcon Name="@GxIconPaths.Alert" Size="14"/>
+                    @away.FullName est en congé jusqu'au @GxFormats.ShortDate(away.AwayUntil!.Value).
+                </div>
+            }
+        </div>
+        <div class="gx-form-field">
+            <FluentNumberField Label="Capacité"
+                               Min="@SessionRules.MinimumCapacity.ToString()"
+                               Max="@SessionRules.MaximumCapacity.ToString()"
+                               @bind-Value="Model.Capacity" style="width:100%"/>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:6px">
+                Copiée du cours à la création. La modifier ici ne touche que cette séance.
+            </div>
+        </div>
+    </ChildContent>
+    <Footer>
+        @if (!IsNew && OnCancelSession.HasDelegate)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="OnCancelSession">
+                <GxIcon Slot="start" Name="@GxIconPaths.Close" Size="18"/>
+                Annuler la séance
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnCancel">Fermer</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" Disabled="@IsSaving" @onclick="OnSave">
+                <GxIcon Slot="start" Name="@(IsNew ? GxIconPaths.Plus : GxIconPaths.Check)" Size="18"/>
+                @(IsNew ? "Programmer" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    /// <summary>An empty choice, so the coach can be cleared for an open slot.</summary>
+    public sealed record SelectOption(string Value, string Label);
+
+    public sealed record ScopeOption(SessionEditScope Value, string Label);
+
+    private static readonly IReadOnlyList<ScopeOption> _scopes =
+    [
+        new(SessionEditScope.ThisOne, "Cette séance"),
+        new(SessionEditScope.ThisAndFollowing, "Cette séance et les suivantes")
+    ];
+
+    [Parameter, EditorRequired] public SessionEditModel Model { get; set; } = new();
+    [Parameter] public IReadOnlyList<CourseTemplateListItemDto> Courses { get; set; } = [];
+    [Parameter] public IReadOnlyList<LocationListItemDto> Locations { get; set; } = [];
+    [Parameter] public IReadOnlyList<CoachListItemDto> Coaches { get; set; } = [];
+
+    [Parameter] public bool IsNew { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Calls the session off. Absent when creating.</summary>
+    [Parameter] public EventCallback OnCancelSession { get; set; }
+
+    private string Subtitle => IsNew
+        ? "Programmer une séance"
+        : $"{PlanningFilters.LongDayLabel(DateOnly.FromDateTime(Model.Day))} · {Model.Time:HH\\:mm}";
+
+    private CourseTemplateListItemDto? SelectedCourse =>
+        Courses.FirstOrDefault(course => course.Id == Model.CourseTemplateId);
+
+    /// <summary>The picked coach, only while their leave covers the day chosen.</summary>
+    private CoachListItemDto? AwayCoach
+    {
+        get
+        {
+            var coach = Coaches.FirstOrDefault(candidate => candidate.Id == Model.CoachId);
+
+            return coach?.AwayUntil >= DateOnly.FromDateTime(Model.Day) ? coach : null;
+        }
+    }
+
+    private IReadOnlyList<SelectOption> CoachOptions =>
+    [
+        new(string.Empty, "Sans coach"),
+        .. Coaches.Select(coach => new SelectOption(coach.Id.ToString(), coach.FullName))
+    ];
+
+    /// <summary>The Fluent pickers bind a nullable DateTime; the model keeps a day and a time.</summary>
+    private DateTime? DayValue
+    {
+        get => Model.Day;
+        set => Model.Day = value ?? Model.Day;
+    }
+
+    private DateTime? TimeValue
+    {
+        get => Model.Day.Date.Add(Model.Time.ToTimeSpan());
+        set => Model.Time = value is { } moment ? TimeOnly.FromDateTime(moment) : Model.Time;
+    }
+
+    private static string ValueOf(int? id) => id?.ToString() ?? string.Empty;
+
+    private void OnCourseChanged(CourseTemplateListItemDto? course)
+    {
+        if (course is null)
+        {
+            return;
+        }
+
+        Model.CourseTemplateId = course.Id;
+
+        // The capacity follows the course as long as the user has not set their
+        // own, which is what makes the field a default rather than a copy.
+        Model.Capacity = course.Capacity;
+    }
+
+    private void OnLocationChanged(LocationListItemDto? location)
+        => Model.LocationId = location?.Id ?? Model.LocationId;
+
+    private void OnCoachChanged(SelectOption? option)
+        => Model.CoachId = int.TryParse(option?.Value, out var id) ? id : null;
+
+    private void OnScopeChanged(ScopeOption? option)
+        => Model.Scope = option?.Value ?? SessionEditScope.ThisOne;
+}

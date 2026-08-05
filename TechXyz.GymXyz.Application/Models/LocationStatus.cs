@@ -5,16 +5,18 @@ namespace TechXyz.GymXyz.Application.Models;
 /// stored — the prototype writes these as free text on each mock entry, but
 /// every one of them follows from something the record already knows.
 /// <para>
-/// Two of the prototype's five values are missing on purpose. "Forte demande"
-/// reads an occupancy rate, which is counted from sessions and arrives at lot 5;
-/// "Beau temps" reads a live forecast, which ships with the weather lot after
-/// lot 8. Neither is guessed meanwhile.
+/// One of the prototype's five values is still missing on purpose: "Beau temps"
+/// reads a live forecast, which ships with the weather lot after lot 8. It is
+/// not guessed meanwhile.
 /// </para>
 /// </summary>
 public enum LocationStatus
 {
     /// <summary>"Disponible" — a studio that takes bookings.</summary>
     Available,
+
+    /// <summary>"Forte demande" — the venue's sessions come back nearly full.</summary>
+    HighDemand,
 
     /// <summary>"Accès libre" — open during opening hours, nothing to book.</summary>
     OpenAccess,

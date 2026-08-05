@@ -1,0 +1,147 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+
+@* Mobile planning: a week of date chips, then the chosen day as a vertical
+   agenda. The grid does not survive a phone screen, so the prototype drops it
+   entirely rather than shrinking it. *@
+
+<div class="gx-m-screen">
+    <div style="padding:0 16px">
+        <div class="gx-m-greet" style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1">
+                <div class="hi">Planning</div>
+                <div class="sub">@PlanningFilters.RangeLabel(WeekStart)</div>
+            </div>
+            <button class="gx-m-iconbtn" aria-label="Semaine précédente" @onclick="OnPreviousWeek">
+                <GxIcon Name="@GxIconPaths.ChevronLeft" Size="20"/>
+            </button>
+            <button class="gx-m-iconbtn" aria-label="Semaine suivante" @onclick="OnNextWeek">
+                <GxIcon Name="@GxIconPaths.ChevronRight" Size="20"/>
+            </button>
+            <button class="gx-m-iconbtn" aria-label="Ajouter un cours" @onclick="OnCreate">
+                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+            </button>
+        </div>
+    </div>
+
+    <div class="gx-m-datebar gx-m-week7" style="margin-top:14px">
+        @for (var index = 0; index < 7; index++)
+        {
+            var day = WeekStart.AddDays(index);
+            var isOn = day == SelectedDay;
+            <div class="gx-m-datechip @(isOn ? "on" : null)"
+                 role="button"
+                 tabindex="0"
+                 aria-pressed="@isOn"
+                 aria-label="@PlanningFilters.LongDayLabel(day)"
+                 @onclick="() => OnSelectDay.InvokeAsync(day)"
+                 @onkeydown="args => OnDayKeyDown(args, day)">
+                <div class="dn">@PlanningFilters.DayLabels[index]</div>
+                <div class="nn">@day.Day</div>
+                @if (Page.On(day).Count > 0)
+                {
+                    <div class="dot"></div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (SelectedMark is { } mark)
+    {
+        <div class="gx-m-calbar" style="margin-top:12px">
+            <span class="zone">
+                <GxIcon Name="@GxIconPaths.Pin" Size="13"/>
+                Zone @Calendar.Zone
+            </span>
+            <span class="gx-m-calpill @CalendarFormats.MarkClass(mark.Kind)">
+                <GxIcon Name="@CalendarFormats.MarkIcon(mark.Kind)" Size="11"/>
+                @mark.Label
+            </span>
+        </div>
+    }
+
+    <div class="gx-m-sec" style="padding:0 16px;margin:18px 0 6px">
+        <span class="t">@PlanningFilters.LongDayLabel(SelectedDay) · @GxFormats.Plural(DaySessions.Count, "cours", "cours")</span>
+    </div>
+
+    @if (DaySessions.Count == 0)
+    {
+        <div class="gx-m-empty">
+            <div class="ic">
+                <GxIcon Name="@GxIconPaths.Calendar" Size="28"/>
+            </div>
+            <h3>Aucun cours</h3>
+            <p>Pas de cours programmé ce jour.</p>
+        </div>
+    }
+    else
+    {
+        <div class="gx-m-agenda">
+            @foreach (var session in DaySessions)
+            {
+                var full = session.IsFull;
+                var quiet = session.IsPrivate || session.IsCancelled;
+                <div class="gx-m-slot @(full ? "full" : quiet ? "priv" : null)">
+                    <div class="when">@GxFormats.Time(session.StartsAt)</div>
+                    <div class="track">
+                        <div class="gx-m-evcard @(full ? "full" : quiet ? "priv" : null)"
+                             role="button"
+                             tabindex="0"
+                             @onclick="() => OnOpenSession.InvokeAsync(session)"
+                             @onkeydown="args => OnSessionKeyDown(args, session)">
+                            <div class="top">
+                                <span class="nm" style="@(session.IsCancelled ? "text-decoration:line-through" : null)">
+                                    @session.CourseName
+                                </span>
+                                @if (session.IsCancelled)
+                                {
+                                    <GxChip Tone="GxTone.Neutral">Annulé</GxChip>
+                                }
+                                else if (session.IsPrivate)
+                                {
+                                    <GxChip Tone="GxTone.Neutral">Privé</GxChip>
+                                }
+                                else if (full)
+                                {
+                                    <GxChip Tone="GxTone.Danger">Complet</GxChip>
+                                }
+                            </div>
+                            <div class="meta">@PlanningFilters.AgendaMeta(session)</div>
+                            @if (!quiet)
+                            {
+                                <div class="foot">
+                                    <GxBar Percent="@session.FillRate()"
+                                           Tone="@PlanningFilters.FillTone(session)"
+                                           AriaLabel="@($"Remplissage : {session.FillRate()} %")"/>
+                                    <span class="cap">@session.FillRate()&nbsp;%</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public WeekPlanningDto Page { get; set; } = WeekPlanningDto.Empty;
+    [Parameter, EditorRequired] public DateOnly WeekStart { get; set; }
+    [Parameter, EditorRequired] public DateOnly SelectedDay { get; set; }
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+
+    [Parameter] public EventCallback OnPreviousWeek { get; set; }
+    [Parameter] public EventCallback OnNextWeek { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback<DateOnly> OnSelectDay { get; set; }
+    [Parameter] public EventCallback<PlanningSessionDto> OnOpenSession { get; set; }
+
+    private IReadOnlyList<PlanningSessionDto> DaySessions => Page.On(SelectedDay);
+
+    private SchoolDayMarkDto? SelectedMark => Calendar.MarkFor(SelectedDay);
+
+    private Task OnDayKeyDown(KeyboardEventArgs args, DateOnly day)
+        => args.Key is "Enter" or " " ? OnSelectDay.InvokeAsync(day) : Task.CompletedTask;
+
+    private Task OnSessionKeyDown(KeyboardEventArgs args, PlanningSessionDto session)
+        => args.Key is "Enter" or " " ? OnOpenSession.InvokeAsync(session) : Task.CompletedTask;
+}

@@ -110,16 +110,17 @@ public class CoachQueriesHandlerTests
     }
 
     [Fact]
-    public async Task GetCoaches_ShouldLeaveThePlanningFiguresUnset()
+    public async Task GetCoaches_ShouldLeaveTheFiguresUnset_WhenTheCoachRunsNothing()
     {
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetCoaches_ShouldLeaveThePlanningFiguresUnset));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetCoaches_ShouldLeaveTheFiguresUnset_WhenTheCoachRunsNothing));
         dbContext.Coaches.Add(new Coach("Nora", "Lemoine"));
         await dbContext.SaveChangesAsync();
 
         var handler = new GetCoachesQueryHandler(dbContext);
         var result = await handler.Handle(new GetCoachesQuery(), CancellationToken.None);
 
-        // Sessions land at lot 5: these read "—" on screen rather than a guess.
+        // A coach who runs no session has no figures: these read "—" on screen
+        // rather than a zero nobody can justify.
         result.Items[0].ClassesPerWeek.ShouldBeNull();
         result.Items[0].FillRate.ShouldBeNull();
     }

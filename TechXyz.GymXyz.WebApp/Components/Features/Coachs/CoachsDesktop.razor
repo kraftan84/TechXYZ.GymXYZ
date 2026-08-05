@@ -30,6 +30,17 @@
             @filter.Label · @GxFormats.Count(CountFor(filter.Status))
         </button>
     }
+
+    @* The prototype's last chip. It only means something now that a fill rate
+       exists to sort on. *@
+    <button type="button"
+            class="gx-fchip @(SortByFillRate ? "on" : null)"
+            style="margin-left:auto"
+            aria-pressed="@SortByFillRate"
+            @onclick="() => OnSortByFillRateChanged.InvokeAsync(!SortByFillRate)">
+        <GxIcon Name="@GxIconPaths.Filter" Size="14"/>
+        Trier : remplissage
+    </button>
 </div>
 
 @if (Page.Items.Count == 0)
@@ -96,9 +107,11 @@ else
     [Parameter, EditorRequired] public CoachesPageDto Page { get; set; } = CoachesPageDto.Empty;
     [Parameter] public string? Search { get; set; }
     [Parameter] public CoachStatus? Status { get; set; }
+    [Parameter] public bool SortByFillRate { get; set; }
 
     [Parameter] public EventCallback<string?> OnSearchChanged { get; set; }
     [Parameter] public EventCallback<CoachStatus?> OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<bool> OnSortByFillRateChanged { get; set; }
     [Parameter] public EventCallback<CoachListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
 

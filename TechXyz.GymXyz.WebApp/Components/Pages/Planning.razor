@@ -1,14 +1,270 @@
 @page "/planning"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Interfaces
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Planning
+@implements IDisposable
 
-@* The pre-hand-off /plannings screen ran on three lessons hard-coded in the
-   component, which the Session entity has just replaced. It is deleted rather
-   than rewired: the hand-off week grid takes its place in the next step, and a
-   mock that contradicts the database is worse than an honest gap. *@
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject ISchoolCalendarService SchoolCalendar
+@inject ITenantContext Tenant
+
+@* Owns the week being shown, the filters, the drawer and every query. The two
+   presentations below take parameters only.
+
+   The school calendar is fetched apart from the planning, on purpose: it comes
+   from two government APIs, and the grid has to render whether or not they
+   answer. The service swallows its own failures, so there is nothing to catch
+   here. *@
 
 <PageTitle>Planning</PageTitle>
 
-<PageHead Title="Planning" Subtitle="Voyez et remplissez la semaine."/>
+@if (Responsive.IsMobile)
+{
+    <PlanningMobile Page="_page"
+                    WeekStart="_weekStart"
+                    SelectedDay="_selectedDay"
+                    Calendar="_calendar"
+                    OnPreviousWeek="() => ShiftWeekAsync(-7)"
+                    OnNextWeek="() => ShiftWeekAsync(7)"
+                    OnCreate="() => OpenCreateDrawer(_selectedDay)"
+                    OnSelectDay="SelectDay"
+                    OnOpenSession="OpenSessionDrawer"/>
+}
+else
+{
+    <div class="gx-screen">
+        @if (_dayView is { } day)
+        {
+            <PlanningDayDesktop Day="day"
+                                Sessions="_page.On(day)"
+                                OnBack="() => _dayView = null"
+                                OnCreate="() => OpenCreateDrawer(day)"
+                                OnOpenSession="OpenSessionDrawer"/>
+        }
+        else
+        {
+            <PlanningDesktop Page="_page"
+                             WeekStart="_weekStart"
+                             Calendar="_calendar"
+                             Filters="_filters"
+                             Coaches="_coaches"
+                             Locations="_locations"
+                             IsSolo="@(_brand?.IsSolo ?? false)"
+                             OnPreviousWeek="() => ShiftWeekAsync(-7)"
+                             OnNextWeek="() => ShiftWeekAsync(7)"
+                             OnToday="GoToTodayAsync"
+                             OnCreate="() => OpenCreateDrawer(_weekStart)"
+                             OnOpenDay="day => _dayView = day"
+                             OnOpenSession="OpenSessionDrawer"
+                             OnCoachChanged="ApplyCoachAsync"
+                             OnLocationChanged="ApplyLocationAsync"
+                             OnFormatChanged="ApplyFormatAsync"/>
+        }
+    </div>
+}
 
-<EmptyState Icon="@GxIconPaths.Calendar"
-            Title="Bientôt la grille de la semaine"
-            Text="Le planning arrive avec l'écran de la semaine."/>
+@if (_isDrawerOpen)
+{
+    <SessionDrawer Model="_editModel"
+                   Courses="_courses"
+                   Locations="_locations"
+                   Coaches="_coaches"
+                   IsNew="@(_editModel.Id is null)"
+                   IsSaving="_isSaving"
+                   OnSave="SaveAsync"
+                   OnCancel="CloseDrawer"
+                   OnCancelSession="@(_editModel.Id is null ? default : EventCallback.Factory.Create(this, CancelSessionAsync))"/>
+}
+
+@code {
+    private WeekPlanningDto _page = WeekPlanningDto.Empty;
+    private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
+    private readonly PlanningFilterState _filters = new();
+
+    private DateOnly _weekStart = PlanningRules.MondayOf(DateOnly.FromDateTime(DateTime.Today));
+    private DateOnly _selectedDay = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly? _dayView;
+
+    private IReadOnlyList<CoachListItemDto> _coaches = [];
+    private IReadOnlyList<LocationListItemDto> _locations = [];
+    private IReadOnlyList<CourseTemplateListItemDto> _courses = [];
+
+    /// <summary>Read once: it carries whether the gym is a solo coach, and the postcode the school zone comes from.</summary>
+    private TenantBrandDto? _brand;
+
+    private bool _isDrawerOpen;
+    private bool _isSaving;
+    private SessionEditModel _editModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Responsive.Changed += OnResponsiveChanged;
+
+        await LoadReferencesAsync();
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// The pickers and the filter chips. Loaded once — a week of navigation does
+    /// not change the catalogue.
+    /// </summary>
+    private async Task LoadReferencesAsync()
+        => await UserFeedback.ExecuteAsync(async () =>
+        {
+            _coaches = (await Sender.Send(new GetCoachesQuery())).Items;
+            _locations = (await Sender.Send(new GetLocationsQuery())).Items;
+            _courses = (await Sender.Send(new GetCourseTemplatesQuery())).Items;
+            _brand = await Sender.Send(new GetTenantBrandQuery(Tenant.Slug));
+        }, "charger le catalogue");
+
+    private async Task RefreshAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _page = await Sender.Send(new GetWeekPlanningQuery(_weekStart)
+            {
+                CoachId = _filters.CoachId,
+                LocationId = _filters.LocationId,
+                Format = _filters.Format
+            });
+        }, "charger le planning");
+
+        await RefreshCalendarAsync();
+    }
+
+    private async Task RefreshCalendarAsync()
+        => _calendar = await SchoolCalendar.GetAsync(_brand?.ZipCode, _weekStart, _weekStart.AddDays(6));
+
+    private async Task ShiftWeekAsync(int days)
+    {
+        _weekStart = _weekStart.AddDays(days);
+        _dayView = null;
+
+        // Keep the same weekday selected on mobile, which is what the date bar
+        // looks like it does.
+        _selectedDay = _weekStart.AddDays((_selectedDay.DayNumber - PlanningRules.MondayOf(_selectedDay).DayNumber));
+
+        await RefreshAsync();
+    }
+
+    private async Task GoToTodayAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        _weekStart = PlanningRules.MondayOf(today);
+        _selectedDay = today;
+        _dayView = null;
+
+        await RefreshAsync();
+    }
+
+    private void SelectDay(DateOnly day) => _selectedDay = day;
+
+    private async Task ApplyCoachAsync(int? coachId)
+    {
+        _filters.CoachId = coachId;
+        await RefreshAsync();
+    }
+
+    private async Task ApplyLocationAsync(int? locationId)
+    {
+        _filters.LocationId = locationId;
+        await RefreshAsync();
+    }
+
+    private async Task ApplyFormatAsync(CourseFormat? format)
+    {
+        _filters.Format = format;
+        await RefreshAsync();
+    }
+
+    private void OpenCreateDrawer(DateOnly day)
+    {
+        var course = _courses.FirstOrDefault();
+
+        _editModel = SessionEditModel.ForCreate(
+            day,
+            course?.Id,
+            _filters.LocationId ?? _locations.FirstOrDefault()?.Id);
+        _editModel.Capacity = course?.Capacity;
+
+        _isDrawerOpen = true;
+    }
+
+    private void OpenSessionDrawer(PlanningSessionDto session)
+    {
+        _editModel = SessionEditModel.From(session);
+        _isDrawerOpen = true;
+    }
+
+    private void CloseDrawer()
+    {
+        _isDrawerOpen = false;
+        _isSaving = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+
+        var saved = await UserFeedback.ExecuteAsync(async () =>
+        {
+            if (_editModel.Id is { } id)
+            {
+                await Sender.Send(new UpdateSessionCommand(
+                    id,
+                    _editModel.LocationId,
+                    _editModel.StartsAt,
+                    _editModel.CoachId,
+                    _editModel.Capacity,
+                    _editModel.Scope));
+            }
+            else
+            {
+                await Sender.Send(new CreateSessionCommand(
+                    _editModel.CourseTemplateId,
+                    _editModel.LocationId,
+                    _editModel.StartsAt,
+                    _editModel.CoachId,
+                    _editModel.Capacity,
+                    _editModel.RecurrenceWeeks));
+            }
+        }, _editModel.Id is null ? "programmer le cours" : "modifier la séance",
+           _editModel.Id is null ? "Cours programmé." : "Séance modifiée.");
+
+        _isSaving = false;
+
+        if (saved)
+        {
+            CloseDrawer();
+            await RefreshAsync();
+        }
+    }
+
+    private async Task CancelSessionAsync()
+    {
+        if (_editModel.Id is not { } id)
+        {
+            return;
+        }
+
+        var cancelled = await UserFeedback.ExecuteAsync(
+            async () => await Sender.Send(new CancelSessionCommand(id, _editModel.CancellationReason, _editModel.Scope)),
+            "annuler la séance",
+            "Séance annulée.");
+
+        if (cancelled)
+        {
+            CloseDrawer();
+            await RefreshAsync();
+        }
+    }
+
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Responsive.Changed -= OnResponsiveChanged;
+}
