@@ -1,0 +1,148 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Presences
+
+@* Mobile Présences: three stats, then the four sections the prototype lists —
+   à pointer, taux par cours, déjà pointé, assiduité faible.
+
+   The list is deliberately the whole day's work in one scroll: this is the most
+   used screen of the product, in the gym, and hunting for a filter one-handed is
+   not what the moment allows. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet">
+        <div class="hi">Présences</div>
+        <div class="sub">@PresenceFilters.Subtitle(Overview)</div>
+    </div>
+
+    <div class="gx-m-pres-stat" style="margin-top:16px">
+        <div class="it">
+            <div class="v">@PresenceFilters.Rate(Overview.Kpis.AttendanceRate)</div>
+            <div class="l">Assiduité</div>
+        </div>
+        <div class="it">
+            <div class="v" style="color:var(--color-warning)">@Overview.Kpis.SheetsToPoint</div>
+            <div class="l">À pointer</div>
+        </div>
+        <div class="it">
+            <div class="v">@Overview.Kpis.PresentToday</div>
+            <div class="l">Présents</div>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">À pointer</span></div>
+    <div class="gx-m-card">
+        @if (Overview.ToPoint.Count == 0)
+        {
+            <div class="gx-m-note">Aucune feuille en attente. Tout est pointé.</div>
+        }
+        else
+        {
+            @foreach (var session in Overview.ToPoint)
+            {
+                @SessionRow(session)
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Taux par cours</span></div>
+    <div class="gx-m-card">
+        @if (Overview.CourseRates.Count == 0)
+        {
+            <div class="gx-m-note">Aucune feuille pointée sur la période.</div>
+        }
+        else
+        {
+            @foreach (var course in Overview.CourseRates)
+            {
+                <div class="gx-m-statbar">
+                    <span class="nm">@course.CourseName</span>
+                    <div style="flex:1">
+                        <GxBar Percent="course.Rate"
+                               Tone="@PresenceFilters.BarTone(course.Rate)"
+                               AriaLabel="@($"{course.CourseName} : {course.Rate} % de présence")"/>
+                    </div>
+                    <span class="pct">@course.Rate %</span>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Déjà pointé</span></div>
+    <div class="gx-m-card">
+        @if (Overview.Pointed.Count == 0)
+        {
+            <div class="gx-m-note">Aucune feuille validée pour l'instant.</div>
+        }
+        else
+        {
+            @foreach (var session in Overview.Pointed)
+            {
+                @SessionRow(session)
+            }
+        }
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Assiduité faible</span></div>
+    <div class="gx-m-card">
+        @if (Overview.ToChase.Count == 0)
+        {
+            <div class="gx-m-note">Personne à relancer. L'assiduité tient.</div>
+        }
+        else
+        {
+            @foreach (var member in Overview.ToChase)
+            {
+                <div class="gx-m-row" style="cursor:default">
+                    <GxAvatar Name="@member.FullName" Size="sm"/>
+                    <div class="main">
+                        <div class="nm">@member.FullName</div>
+                        <div class="meta">@PresenceFilters.ChaseMeta(member)</div>
+                    </div>
+                    <div class="trail">
+                        <GxChip Tone="GxTone.Danger">@member.Missed abs.</GxChip>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AttendanceOverviewDto Overview { get; set; } = AttendanceOverviewDto.Empty;
+    [Parameter, EditorRequired] public DateTime Now { get; set; }
+
+    [Parameter] public EventCallback<AttendanceSessionDto> OnOpenSheet { get; set; }
+
+    private RenderFragment SessionRow(AttendanceSessionDto session) =>
+        @<div class="gx-m-sess"
+              role="button"
+              tabindex="0"
+              aria-label="@($"Ouvrir la feuille de {session.CourseName}")"
+              @onclick="() => OnOpenSheet.InvokeAsync(session)"
+              @onkeydown="args => OnRowKeyDown(args, session)">
+            <span class="time">@GxFormats.Time(session.StartsAt)</span>
+            <div class="main">
+                <div class="nm">@session.CourseName</div>
+                <div class="meta">@PresenceFilters.Meta(session, withDay: true)</div>
+            </div>
+            @{
+                var state = PresenceFilters.StateOf(session, Now);
+            }
+            <div style="flex:none">
+                @if (state == PresenceState.Pointed)
+                {
+                    <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">
+                        @session.Attended/@session.Registered
+                    </GxChip>
+                }
+                else
+                {
+                    <GxChip Tone="@PresenceFilters.MobileTone(state)">
+                        @PresenceFilters.Label(state)
+                    </GxChip>
+                }
+            </div>
+        </div>;
+
+    private Task OnRowKeyDown(KeyboardEventArgs args, AttendanceSessionDto session)
+        => args.Key is "Enter" or " " ? OnOpenSheet.InvokeAsync(session) : Task.CompletedTask;
+}

@@ -3,11 +3,10 @@
 @* The day view, reached by clicking a day header. Chronological list on the
    left, what the day amounts to on the right.
 
-   The prototype puts a « Pointer » button on each slot and counts « présences
-   pointées » in the summary. Both read the attendance sheet, which is the next
-   lot — a control that marks nobody present would lie. « Aperçu membre du
-   jour » shows the member-facing view, which is later still. The waiting list
-   is real and stays. *@
+   The prototype's « Pointer » button and its « présences pointées » count are
+   drawn now that the attendance sheet exists. « Aperçu membre du jour » shows
+   the member-facing view, which is later still. The waiting list is real and
+   stays. *@
 
 <PageHead Title="@PlanningFilters.LongDayLabel(Day)" Subtitle="@PlanningFilters.DaySummary(Sessions)">
     <FluentButton Appearance="Appearance.Outline" @onclick="OnBack">
@@ -68,6 +67,30 @@
                                     @GxFormats.Plural(session.Waitlisted, "en attente", "en attente")
                                 </GxChip>
                             }
+
+                            @* Straight to the sheet, without going through the
+                               drawer: pointing a class is not editing it. Not
+                               offered on a class that has not run — there would
+                               be nothing to point. *@
+                            @if (!session.IsCancelled && (session.IsPointed || session.StartsAt <= Now))
+                            {
+                                <span style="margin-left:auto">
+                                    @if (session.IsPointed)
+                                    {
+                                        <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Pointé</GxChip>
+                                    }
+                                    else
+                                    {
+                                        <a class="gx-daypoint"
+                                           href="@($"/presences/{session.Id}")"
+                                           aria-label="@($"Pointer {session.CourseName}")"
+                                           @onclick:stopPropagation="true">
+                                            <GxIcon Name="@GxIconPaths.Check" Size="15"/>
+                                            Pointer
+                                        </a>
+                                    }
+                                </span>
+                            }
                         </div>
                         <div class="meta">@MetaFor(session)</div>
                         @if (!session.IsPrivate && !session.IsCancelled)
@@ -98,6 +121,10 @@
                 <b>@Registered / @Capacity</b>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
+                <span style="color:var(--text-muted)">Présences pointées</span>
+                <b>@Pointed / @Counted.Count()</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-sm)">
                 <span style="color:var(--text-muted)">Liste d'attente</span>
                 <b style="color:@(Waitlisted > 0 ? "var(--color-brand)" : "inherit")">
                     @GxFormats.Plural(Waitlisted, "membre", "membres")
@@ -111,6 +138,13 @@
     [Parameter, EditorRequired] public DateOnly Day { get; set; }
     [Parameter, EditorRequired] public IReadOnlyList<PlanningSessionDto> Sessions { get; set; } = [];
 
+    /// <summary>
+    /// Passed in rather than read here: whether a class has started decides
+    /// whether « Pointer » is drawn, and a clock that moved between two renders
+    /// would make the button flicker.
+    /// </summary>
+    [Parameter] public DateTime Now { get; set; } = DateTime.Now;
+
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
     [Parameter] public EventCallback<PlanningSessionDto> OnOpenSession { get; set; }
@@ -121,6 +155,9 @@
     private int Registered => Counted.Sum(session => session.Registered);
     private int Capacity => Counted.Sum(session => session.Capacity);
     private int Waitlisted => Counted.Sum(session => session.Waitlisted);
+
+    /// <summary>Sheets validated out of the classes that ran — the prototype's « présences pointées ».</summary>
+    private int Pointed => Counted.Count(session => session.IsPointed);
 
     private int? FillRate => PlanningRules.FillRate(Registered, Capacity);
 

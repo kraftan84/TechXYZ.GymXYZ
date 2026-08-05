@@ -17,9 +17,16 @@
         foreach (var item in items)
         {
             <NavLink class="gx-nav" href="@item.Href" ActiveClass="active"
-                     Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                     Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)"
+                     aria-label="@LabelFor(item)">
                 <GxIcon Name="@item.Icon" Size="19"/>
                 <span>@item.Label</span>
+                @* The same count the mobile tab badges, in the room the sidebar
+                   has for it. *@
+                @if (item.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count)
+                {
+                    <GxChip Tone="GxTone.Danger">@count</GxChip>
+                }
             </NavLink>
         }
     }
@@ -36,4 +43,12 @@
 
 @code {
     [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+
+    /// <summary>Sheets waiting to be pointed, or null for no chip at all.</summary>
+    [Parameter] public int? SheetsToPoint { get; set; }
+
+    private string LabelFor(GxNavItem item) =>
+        item.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count
+            ? $"{item.Label}, {GxFormats.Plural(count, "séance à pointer", "séances à pointer")}"
+            : item.Label;
 }

@@ -1,9 +1,222 @@
 @page "/presences"
+@page "/presences/{SessionId:int}"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.Domain.Entities
+@using TechXyz.GymXyz.WebApp.Components.Features.Presences
+@implements IDisposable
+
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader_
+@inject AttendanceBadgeService Badge
+@inject NavigationManager NavManager
+
+@* Owns the overview, the open sheet and every write. The four presentations
+   below take parameters only.
+
+   Writes are optimistic: the tap moves the row immediately and the command
+   follows. This is the most used screen of the product, worked in the gym on a
+   phone, and a round trip between the finger and the ink is what makes a
+   pointing screen feel broken. If the command is refused — a validated sheet
+   is the case that matters — the row goes back and the toast says why. *@
 
 <PageTitle>Présences</PageTitle>
 
-<PageHead Title="Présences" Subtitle="Pointez les séances du jour et suivez l'assiduité."/>
+@if (SessionId is not null)
+{
+    @if (Responsive.IsMobile)
+    {
+        <AttendanceSheetMobile Roster="_roster"
+                               Now="_now"
+                               IsBusy="_isBusy"
+                               OnMark="MarkAsync"
+                               OnMarkAllPresent="MarkAllPresentAsync"
+                               OnClose="CloseSheetAsync"
+                               OnReopen="ReopenSheetAsync"/>
+    }
+    else
+    {
+        <div class="gx-screen">
+            <AttendanceSheetDesktop Roster="_roster"
+                                    Now="_now"
+                                    IsBusy="_isBusy"
+                                    OnMark="MarkAsync"
+                                    OnMarkAllPresent="MarkAllPresentAsync"
+                                    OnClose="CloseSheetAsync"
+                                    OnReopen="ReopenSheetAsync"/>
+        </div>
+    }
+}
+else if (Responsive.IsMobile)
+{
+    <PresencesMobile Overview="_overview" Now="_now" OnOpenSheet="OpenSheet"/>
+}
+else
+{
+    <div class="gx-screen">
+        <PresencesDesktop Overview="_overview" Now="_now" OnOpenSheet="OpenSheet"/>
+    </div>
+}
 
-<EmptyState Icon="@GxIconPaths.Check"
-            Title="Bientôt le pointage"
-            Text="Les feuilles de présence arrivent au prochain lot."/>
+@code {
+    [Parameter] public int? SessionId { get; set; }
+
+    private AttendanceOverviewDto _overview = AttendanceOverviewDto.Empty;
+    private SessionRosterDto _roster = SessionRosterDto.Empty;
+
+    /// <summary>
+    /// Read once per load rather than at every render: "en cours" is derived
+    /// from it, and a value that moved between two renders would flicker the
+    /// chip.
+    /// </summary>
+    private DateTime _now = DateTime.Now;
+
+    private bool _isBusy;
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnResponsiveChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _now = DateTime.Now;
+
+        if (SessionId is { } id)
+        {
+            await LoadRosterAsync(id);
+            MobileHeader_.UseSubHeader(_roster.CourseName, BackToList);
+        }
+        else
+        {
+            MobileHeader_.UseRootHeader();
+            await LoadOverviewAsync();
+        }
+    }
+
+    private async Task LoadOverviewAsync()
+    {
+        await UserFeedback.ExecuteAsync(
+            async () => _overview = await Sender.Send(new GetAttendanceOverviewQuery()),
+            "charger les présences");
+
+        Badge.Set(_overview.Kpis.SheetsToPoint);
+    }
+
+    private async Task LoadRosterAsync(int sessionId)
+        => await UserFeedback.ExecuteAsync(
+            async () => _roster = await Sender.Send(new GetSessionRosterQuery(sessionId)),
+            "charger la feuille de présence");
+
+    private void OpenSheet(AttendanceSessionDto session)
+        => NavManager.NavigateTo($"/presences/{session.Id}");
+
+    private void BackToList() => NavManager.NavigateTo("/presences");
+
+    /// <summary>
+    /// One tap. The row moves first; the command follows and puts it back if the
+    /// server refuses.
+    /// </summary>
+    private async Task MarkAsync((RosterSeatDto Seat, AttendanceStatus Status) tap)
+    {
+        var (seat, status) = tap;
+
+        if (seat.Status == status)
+        {
+            return;
+        }
+
+        var previous = seat.Status;
+        var previousCheckIn = seat.CheckedInAt;
+        Apply(seat.RegistrationId, status, AttendanceRules.CheckInFor(status, DateTime.Now));
+
+        var succeeded = await UserFeedback.ExecuteAsync(
+            async () => await Sender.Send(new MarkAttendanceCommand(seat.RegistrationId, status)),
+            "pointer ce membre");
+
+        if (!succeeded)
+        {
+            Apply(seat.RegistrationId, previous, previousCheckIn);
+        }
+    }
+
+    private async Task MarkAllPresentAsync()
+    {
+        if (SessionId is not { } id)
+        {
+            return;
+        }
+
+        // Not applied optimistically: the whole sheet moving under the thumb is
+        // worth the round trip, and a rollback of twenty rows is exactly the
+        // flicker the optimistic path exists to avoid.
+        await RunAsync(
+            () => Sender.Send(new MarkWholeSheetCommand(id, AttendanceStatus.Present)),
+            "pointer toute la feuille");
+    }
+
+    private async Task CloseSheetAsync()
+    {
+        if (SessionId is { } id)
+        {
+            await RunAsync(
+                () => Sender.Send(new CloseAttendanceSheetCommand(id)),
+                "valider la feuille",
+                "Feuille de présence validée.");
+        }
+    }
+
+    private async Task ReopenSheetAsync()
+    {
+        if (SessionId is { } id)
+        {
+            await RunAsync(
+                () => Sender.Send(new ReopenAttendanceSheetCommand(id)),
+                "rouvrir la feuille",
+                "Feuille rouverte.");
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action, string description, string? success = null)
+    {
+        _isBusy = true;
+
+        await UserFeedback.ExecuteAsync(action, description, success);
+
+        _isBusy = false;
+
+        if (SessionId is { } id)
+        {
+            await LoadRosterAsync(id);
+        }
+    }
+
+    /// <summary>
+    /// Rewrites one seat of the roster held on screen. The DTO is a record, so
+    /// the list is rebuilt rather than mutated — which is also what tells Blazor
+    /// the row changed.
+    /// </summary>
+    private void Apply(int registrationId, AttendanceStatus status, DateTime? checkedInAt)
+    {
+        _roster = _roster with
+        {
+            Seats = [.. _roster.Seats.Select(seat => seat.RegistrationId == registrationId
+                ? seat with { Status = status, CheckedInAt = checkedInAt }
+                : seat)]
+        };
+
+        StateHasChanged();
+    }
+
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnResponsiveChanged;
+        MobileHeader_.UseRootHeader();
+    }
+}

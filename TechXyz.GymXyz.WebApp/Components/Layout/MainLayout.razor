@@ -8,6 +8,7 @@
 
 @inject ResponsiveModeService Responsive
 @inject MobileHeaderService MobileHeader_
+@inject AttendanceBadgeService Badge
 @inject IJSRuntime JsRuntime
 @inject PersistentComponentState ApplicationState
 @inject IHttpContextAccessor HttpContextAccessor
@@ -49,7 +50,7 @@
                 </ErrorBoundary>
             </main>
 
-            <MobileTabBar PlusActive="_plusOpen" OnPlus="TogglePlus"/>
+            <MobileTabBar PlusActive="_plusOpen" OnPlus="TogglePlus" SheetsToPoint="Badge.SheetsToPoint"/>
 
             @if (_plusOpen)
             {
@@ -60,7 +61,7 @@
     else
     {
         <div class="gx-app">
-            <Sidebar Brand="Brand"/>
+            <Sidebar Brand="Brand" SheetsToPoint="Badge.SheetsToPoint"/>
             <div class="gx-main">
                 <Topbar Brand="Brand" User="User"/>
                 <main class="gx-content">
@@ -116,6 +117,7 @@
         _persistingSubscription = ApplicationState.RegisterOnPersisting(PersistDeviceMode);
         Responsive.Changed += OnResponsiveChanged;
         MobileHeader_.Changed += OnMobileHeaderChanged;
+        Badge.Changed += OnBadgeChanged;
     }
 
     private Task PersistDeviceMode()
@@ -152,6 +154,8 @@
 
     private void OnMobileHeaderChanged() => InvokeAsync(StateHasChanged);
 
+    private void OnBadgeChanged() => InvokeAsync(StateHasChanged);
+
     private void TogglePlus() => _plusOpen = !_plusOpen;
 
     private void OpenPlus() => _plusOpen = true;
@@ -162,6 +166,7 @@
     {
         Responsive.Changed -= OnResponsiveChanged;
         MobileHeader_.Changed -= OnMobileHeaderChanged;
+        Badge.Changed -= OnBadgeChanged;
         _persistingSubscription.Dispose();
 
         if (_module is not null)

@@ -50,12 +50,23 @@ public sealed class GetAttendanceOverviewQueryHandler
             recentFrom,
             cancellationToken);
 
+        var toPoint = await LoadToPointAsync(today.AddDays(-ForgottenSheetDays), tomorrow, cancellationToken);
+
+        // Counted off the list itself rather than off the facts. The facts stop
+        // at "now" — that is what a rate is averaged over — so an evening class
+        // that has not started yet would be missing from the KPI while sitting
+        // in the list right underneath it, and the screen would show two answers
+        // to the same question.
+        var overdue = toPoint.Count(session => session.StartsAt.Date < today);
+
+        // Today's classes, for the two figures the prototype labels "aujourd'hui".
         var todaysFacts = recent.Where(fact => fact.StartsAt.Date == today).ToList();
 
         var kpis = new AttendanceKpisDto(
             SessionStatistics.AttendanceRate(recent),
             AttendanceDelta(recent, previous),
-            todaysFacts.Count(fact => !fact.IsPointed),
+            toPoint.Count,
+            overdue,
             todaysFacts.Sum(fact => fact.Attended),
             todaysFacts.Count,
             recent.Where(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo)
@@ -64,7 +75,7 @@ public sealed class GetAttendanceOverviewQueryHandler
         return new AttendanceOverviewDto(
             DateOnly.FromDateTime(today),
             kpis,
-            await LoadToPointAsync(today.AddDays(-ForgottenSheetDays), tomorrow, cancellationToken),
+            toPoint,
             await LoadPointedAsync(cancellationToken),
             await LoadCourseRatesAsync(recent, cancellationToken),
             await LoadToChaseAsync(recentFrom, recentTo, cancellationToken));

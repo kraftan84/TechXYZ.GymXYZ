@@ -52,6 +52,7 @@ builder.Services.AddScoped<ITenantContext>(provider => provider.GetRequiredServi
 builder.Services.AddScoped<ITenantResolver, TenantResolver>();
 builder.Services.AddScoped<ResponsiveModeService>();
 builder.Services.AddScoped<MobileHeaderService>();
+builder.Services.AddScoped<AttendanceBadgeService>();
 
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);

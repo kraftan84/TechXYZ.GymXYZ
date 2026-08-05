@@ -137,6 +137,48 @@ public class AttendanceQueryTests
     }
 
     /// <summary>
+    /// The KPI and the list underneath it answer the same question, so they have
+    /// to give the same number — including for a class that has not started yet.
+    /// Counting the KPI off the facts, which stop at "now", left an evening
+    /// session in the list and out of the tile.
+    /// </summary>
+    [Fact]
+    public async Task GetAttendanceOverview_ShouldCountTheSameSheetsAsTheListShows()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetAttendanceOverview_ShouldCountTheSameSheetsAsTheListShows));
+
+        SeedSession(dbContext, DateTime.Today.AddHours(7), pending: 6);
+        SeedSession(dbContext, DateTime.Today.AddHours(23), pending: 6);
+        await dbContext.SaveChangesAsync();
+
+        var result = await Overview(dbContext);
+
+        result.ToPoint.Count.ShouldBe(2);
+        result.Kpis.SheetsToPoint.ShouldBe(result.ToPoint.Count);
+        result.Kpis.SheetsOverdue.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// A sheet left open on an earlier day stays in front of whoever opens the
+    /// screen, and the tile says so rather than claiming it is today's work.
+    /// </summary>
+    [Fact]
+    public async Task GetAttendanceOverview_ShouldKeepAForgottenSheetInSight()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetAttendanceOverview_ShouldKeepAForgottenSheetInSight));
+
+        SeedSession(dbContext, Yesterday(18), pending: 8);
+        SeedSession(dbContext, Today(9), pending: 6);
+        await dbContext.SaveChangesAsync();
+
+        var result = await Overview(dbContext);
+
+        result.Kpis.SheetsToPoint.ShouldBe(2);
+        result.Kpis.SheetsOverdue.ShouldBe(1);
+        result.Kpis.ToPointCaption.ShouldBe("dont 1 en retard");
+    }
+
+    /// <summary>
     /// A cancelled class never had a sheet, so it is in neither list and counts
     /// towards nothing.
     /// </summary>
