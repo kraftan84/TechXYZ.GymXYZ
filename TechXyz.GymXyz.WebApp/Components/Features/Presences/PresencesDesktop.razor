@@ -1,0 +1,226 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Presences
+
+@* Desktop Présences: four KPI, then the sheets on the left and the assiduité on
+   the right. Presentation only — every piece of state and every action comes
+   from Presences.razor.
+
+   « Borne de pointage » is the prototype's primary button and the tip in its
+   footer advertises the same thing. There is no kiosk, no QR reader and no
+   member-facing app to scan into, so neither is rendered — the reasoning that
+   dropped « Diffuser » at lot 5 and the welcome-e-mail switch at lot 1.
+
+   « Relancer » and « Relancer tout le monde » send a message, and the channel
+   arrives at lot 8. They are drawn disabled with a tooltip rather than removed:
+   unlike the kiosk, they are coming, and the card is about them. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Présences" Subtitle="@PresenceFilters.Subtitle(Overview)"/>
+
+<div class="gx-grid4" style="margin-bottom:18px">
+    <Kpi Label="Taux de présence"
+         Value="@PresenceFilters.Rate(Overview.Kpis.AttendanceRate)"
+         Delta="@DeltaLabel"
+         DeltaIcon="@(DeltaLabel is null ? null : GxIconPaths.Trend)"
+         Tone="@(Overview.Kpis.AttendanceDeltaPoints >= 0 ? GxTone.Success : GxTone.Danger)"
+         Spark="true"/>
+    <Kpi Label="Séances à pointer"
+         Value="@GxFormats.Count(Overview.Kpis.SheetsToPoint)"
+         Sub="@Overview.Kpis.ToPointCaption"/>
+    <Kpi Label="Présents du jour"
+         Value="@GxFormats.Count(Overview.Kpis.PresentToday)"
+         Sub="@($"sur {GxFormats.Plural(Overview.Kpis.SessionsToday, "séance", "séances")}")"/>
+    <Kpi Label="No-shows"
+         Value="@GxFormats.Count(Overview.Kpis.NoShowsThisWeek)"
+         Sub="cette semaine"/>
+</div>
+
+<div class="gx-grid2" style="grid-template-columns:1.5fr 1fr;align-items:start">
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="@($"À pointer · {GxFormats.Date(Overview.Day)}")">
+                <GxChip Tone="GxTone.Brand">
+                    @GxFormats.Plural(Overview.ToPoint.Count, "séance", "séances")
+                </GxChip>
+            </CardHead>
+            <div style="padding:2px 18px 8px">
+                @if (Overview.ToPoint.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune feuille en attente. Tout est pointé.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var session in Overview.ToPoint)
+                    {
+                        @SessionRow(session)
+                    }
+                }
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Séances récentes"/>
+            <div style="padding:2px 18px 8px">
+                @if (Overview.Pointed.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune feuille validée pour l'instant.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var session in Overview.Pointed)
+                    {
+                        @SessionRow(session)
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Taux par cours">
+                <span style="font-size:var(--text-2xs);color:var(--text-muted)">
+                    @SessionStatistics.RecentAttendanceDays derniers jours
+                </span>
+            </CardHead>
+            <div style="padding:8px 18px 14px">
+                @if (Overview.CourseRates.Count == 0)
+                {
+                    <div style="padding:8px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucune feuille pointée sur la période.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var course in Overview.CourseRates)
+                    {
+                        <div class="gx-statbar">
+                            <span class="nm">@course.CourseName</span>
+                            <div style="flex:1">
+                                <GxBar Percent="course.Rate"
+                                       Tone="@PresenceFilters.BarTone(course.Rate)"
+                                       AriaLabel="@($"{course.CourseName} : {course.Rate} % de présence")"/>
+                            </div>
+                            <span class="pct">@course.Rate %</span>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+
+        <GxCard Padded="false">
+            <CardHead Title="Absents à relancer">
+                <GxChip Tone="GxTone.Danger">@Overview.ToChase.Count</GxChip>
+            </CardHead>
+            <div style="padding:4px 18px 10px">
+                @if (Overview.ToChase.Count == 0)
+                {
+                    <div style="padding:8px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Personne à relancer. L'assiduité tient.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var member in Overview.ToChase)
+                    {
+                        <div class="gx-listrow">
+                            <GxAvatar Name="@member.FullName" Size="md"/>
+                            <div class="main">
+                                <div class="t">@member.FullName</div>
+                                <div class="s">@PresenceFilters.ChaseMeta(member)</div>
+                            </div>
+                            <FluentButton Appearance="Appearance.Stealth"
+                                          Disabled="true"
+                                          Title="@ChaseHint"
+                                          aria-label="@($"Relancer {member.FullName}")">
+                                <GxIcon Name="@GxIconPaths.Mail" Size="17"/>
+                            </FluentButton>
+                        </div>
+                    }
+                }
+            </div>
+            @if (Overview.ToChase.Count > 0)
+            {
+                <div style="padding:0 18px 16px">
+                    <FluentButton Appearance="Appearance.Outline"
+                                  Disabled="true"
+                                  Title="@ChaseHint"
+                                  style="width:100%">
+                        <GxIcon Slot="start" Name="@GxIconPaths.Send" Size="16"/>
+                        Relancer tout le monde
+                    </FluentButton>
+                </div>
+            }
+        </GxCard>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AttendanceOverviewDto Overview { get; set; } = AttendanceOverviewDto.Empty;
+    [Parameter, EditorRequired] public DateTime Now { get; set; }
+
+    [Parameter] public EventCallback<AttendanceSessionDto> OnOpenSheet { get; set; }
+
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Présences")
+    ];
+
+    private const string ChaseHint =
+        "La relance par message arrive avec les notifications.";
+
+    /// <summary>"+4 pts ce mois", or nothing when there is no month to compare with.</summary>
+    private string? DeltaLabel => Overview.Kpis.AttendanceDeltaPoints is { } delta
+        ? $"{(delta >= 0 ? "+" : "")}{delta} pts ce mois"
+        : null;
+
+    private RenderFragment SessionRow(AttendanceSessionDto session) =>
+        @<div class="gx-classrow click"
+              role="button"
+              tabindex="0"
+              @onclick="() => OnOpenSheet.InvokeAsync(session)"
+              @onkeydown="args => OnRowKeyDown(args, session)"
+              aria-label="@($"Ouvrir la feuille de {session.CourseName}")">
+            <span class="time">@GxFormats.Time(session.StartsAt)</span>
+            <div class="main">
+                <div class="nm">@session.CourseName</div>
+                <div class="meta">@PresenceFilters.Meta(session, withDay: true)</div>
+            </div>
+            @{
+                var state = PresenceFilters.StateOf(session, Now);
+            }
+            <div style="display:flex;align-items:center;gap:12px">
+                @if (state == PresenceState.Pointed)
+                {
+                    <div style="text-align:right">
+                        <div style="font-size:var(--text-sm);font-weight:var(--weight-bold);color:var(--text-strong);font-variant-numeric:tabular-nums">
+                            @PresenceFilters.Rate(session.AttendanceRate)
+                        </div>
+                        <div style="font-size:var(--text-2xs);color:var(--text-muted)">
+                            @PresenceFilters.Tally(session, state)
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <span style="font-size:var(--text-2xs);color:var(--text-muted)">
+                        @PresenceFilters.Tally(session, state)
+                    </span>
+                }
+                <GxChip Tone="@PresenceFilters.Tone(state)" Icon="@PresenceFilters.Icon(state)">
+                    @PresenceFilters.Label(state)
+                </GxChip>
+            </div>
+            <span style="color:var(--text-subtle);flex:none;display:inline-flex">
+                <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
+            </span>
+        </div>;
+
+    private Task OnRowKeyDown(KeyboardEventArgs args, AttendanceSessionDto session)
+        => args.Key is "Enter" or " " ? OnOpenSheet.InvokeAsync(session) : Task.CompletedTask;
+}

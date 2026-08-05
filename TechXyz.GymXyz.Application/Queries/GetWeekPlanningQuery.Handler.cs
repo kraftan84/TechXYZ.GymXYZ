@@ -67,7 +67,8 @@ public sealed class GetWeekPlanningQueryHandler : IRequestHandler<GetWeekPlannin
                 session.Capacity,
                 session.Status,
                 // What unlocks "this one and all the following" in the drawer.
-                session.SeriesId != null))
+                session.SeriesId != null,
+                session.AttendanceClosedAt))
             .ToListAsync(cancellationToken);
 
         return new WeekPlanningDto(weekStart, sessions);

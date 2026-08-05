@@ -1,0 +1,231 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Presences
+
+@* One attendance sheet on desktop: the heading, the band of four stats, and the
+   roster with its segmented control.
+
+   The prototype's footer tip advertises a QR kiosk members would point
+   themselves at. There is none, so it is not drawn — same reasoning as the
+   « Borne de pointage » button on the list.
+
+   A validated sheet is read-only: the controls go disabled and say why. The
+   handler refuses the write regardless, which is what actually enforces it. *@
+
+<Crumb Parts="@_crumb"/>
+
+<div class="gx-fiche-head">
+    <span class="gx-disc-ic big t-brand">
+        <GxIcon Name="@GxIconPaths.Check" Size="28"/>
+    </span>
+    <div class="info">
+        <div class="name-row">
+            <span class="name">@Roster.CourseName</span>
+            <GxChip Tone="@PresenceFilters.Tone(State)" Icon="@PresenceFilters.Icon(State)">
+                @PresenceFilters.Label(State)
+            </GxChip>
+        </div>
+        <div class="contact">@Heading</div>
+    </div>
+
+    @if (Roster.IsClosed)
+    {
+        @if (Roster.CanReopen)
+        {
+            <FluentButton Appearance="Appearance.Outline" Disabled="@IsBusy" @onclick="OnReopen">
+                <GxIcon Slot="start" Name="@GxIconPaths.History" Size="18"/>
+                Rouvrir la feuille
+            </FluentButton>
+        }
+        else
+        {
+            <span style="font-size:var(--text-xs);color:var(--text-muted);max-width:280px;text-align:right">
+                @AttendanceRules.SheetClosed
+            </span>
+        }
+    }
+    else
+    {
+        <FluentButton Appearance="Appearance.Outline" Disabled="@IsBusy" @onclick="OnMarkAllPresent">
+            <GxIcon Slot="start" Name="@GxIconPaths.UserCheck" Size="18"/>
+            Tout présent
+        </FluentButton>
+        <FluentButton Appearance="Appearance.Accent"
+                      Disabled="@(IsBusy || !Roster.CanClose(Now))"
+                      Title="@(Roster.CanClose(Now) ? null : AttendanceRules.SessionNotStarted)"
+                      @onclick="OnClose">
+            <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
+            Valider la feuille
+        </FluentButton>
+    }
+</div>
+
+<div class="gx-pres-summary">
+    <div class="gx-pres-stat">
+        <div class="ic present"><GxIcon Name="@GxIconPaths.Check" Size="20"/></div>
+        <div>
+            <div class="v">@Roster.Present</div>
+            <div class="l">Présents</div>
+        </div>
+    </div>
+    <div class="gx-pres-stat">
+        <div class="ic late"><GxIcon Name="@GxIconPaths.Clock" Size="20"/></div>
+        <div>
+            <div class="v">@Roster.Late</div>
+            <div class="l">Retards</div>
+        </div>
+    </div>
+    <div class="gx-pres-stat">
+        <div class="ic absent"><GxIcon Name="@GxIconPaths.Minus" Size="20"/></div>
+        <div>
+            <div class="v">@Roster.Absent</div>
+            <div class="l">Absents</div>
+        </div>
+    </div>
+    <div class="gx-pres-stat">
+        <div class="ic pending"><GxIcon Name="@GxIconPaths.Percent" Size="20"/></div>
+        <div>
+            <div class="v">@PresenceFilters.Rate(Roster.AttendanceRate)</div>
+            <div class="l">Taux de présence</div>
+        </div>
+    </div>
+</div>
+
+<GxCard Padded="false">
+    <CardHead Title="Feuille de présence">
+        @if (Roster.Pending > 0)
+        {
+            <span style="font-size:var(--text-xs);color:var(--text-muted)">
+                @Roster.Pending à pointer
+            </span>
+        }
+        else
+        {
+            <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Complète</GxChip>
+        }
+    </CardHead>
+
+    @if (Roster.Registered.Count == 0)
+    {
+        <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+            Personne d'inscrit sur cette séance.
+        </div>
+    }
+    else
+    {
+        @foreach (var seat in Roster.Registered)
+        {
+            <div class="gx-roster @(seat.Status == AttendanceStatus.Absent ? "is-absent" : null)">
+                <GxAvatar Name="@seat.FullName" Size="md"/>
+                <div class="main">
+                    <div class="nm">@seat.FullName</div>
+                    <div class="pl">@(seat.PlanLabel ?? "—")</div>
+                </div>
+                <div class="gx-seg" role="group" aria-label="@($"Pointage de {seat.FullName}")">
+                    @foreach (var choice in AttendanceLabels.Choices)
+                    {
+                        var isOn = seat.Status == choice;
+                        @* aria-pressed is spelled out rather than bound to the
+                           bool: Blazor renders a bool as a boolean attribute —
+                           present-and-empty, or absent — and ARIA wants the
+                           words "true" and "false". *@
+                        <button type="button"
+                                class="@(isOn ? $"on {ChoiceClass(choice)}" : null)"
+                                aria-pressed="@(isOn ? "true" : "false")"
+                                disabled="@(IsBusy || Roster.IsClosed)"
+                                title="@(Roster.IsClosed ? AttendanceRules.SheetClosed : null)"
+                                @onclick="() => OnMark.InvokeAsync((seat, choice))">
+                            <GxIcon Name="@AttendanceLabels.Icon(choice)" Size="15"/>
+                            @AttendanceLabels.Label(choice)
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</GxCard>
+
+@if (Waiting.Count > 0)
+{
+    <GxCard Padded="false">
+        <CardHead Title="Liste d'attente">
+            <GxChip Tone="GxTone.Neutral">@Waiting.Count</GxChip>
+        </CardHead>
+        @foreach (var seat in Waiting)
+        {
+            <div class="gx-roster">
+                <GxAvatar Name="@seat.FullName" Size="md"/>
+                <div class="main">
+                    <div class="nm">@seat.FullName</div>
+                    <div class="pl">En attente d'une place — rien à pointer</div>
+                </div>
+            </div>
+        }
+    </GxCard>
+}
+
+@if (Roster.AttendanceReopenedBy is { } reopenedBy)
+{
+    <div style="margin-top:14px;font-size:var(--text-xs);color:var(--text-muted)">
+        Feuille rouverte par @reopenedBy@(Roster.AttendanceReopenedAt is { } at ? $" le {GxFormats.DayAndTime(at)}" : "").
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public SessionRosterDto Roster { get; set; } = SessionRosterDto.Empty;
+    [Parameter, EditorRequired] public DateTime Now { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+
+    [Parameter] public EventCallback<(RosterSeatDto Seat, AttendanceStatus Status)> OnMark { get; set; }
+    [Parameter] public EventCallback OnMarkAllPresent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnReopen { get; set; }
+
+    private IReadOnlyList<Crumb.Part> _crumb = [];
+
+    protected override void OnParametersSet()
+    {
+        _crumb =
+        [
+            new("Accueil", "/"),
+            new("Présences", "/presences"),
+            new(Roster.CourseName)
+        ];
+    }
+
+    private PresenceState State => Roster.IsClosed
+        ? PresenceState.Pointed
+        : Roster.IsLive(Now) ? PresenceState.Live : PresenceState.ToPoint;
+
+    private IReadOnlyList<RosterSeatDto> Waiting =>
+        Roster.Seats.Where(seat => seat.IsWaitlisted).ToList();
+
+    /// <summary>"Aujourd'hui · 18:30 · Studio C · Léa Fontaine · 12 inscrits".</summary>
+    private string Heading
+    {
+        get
+        {
+            var parts = new List<string>
+            {
+                PresenceFilters.DayLabel(Roster.StartsAt),
+                GxFormats.Time(Roster.StartsAt),
+                Roster.LocationName
+            };
+
+            if (Roster.CoachFullName is { } coach)
+            {
+                parts.Add(coach);
+            }
+
+            parts.Add(GxFormats.Plural(Roster.Registered.Count, "inscrit", "inscrits"));
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>The segmented control tints itself from the verdict, not the tone enum.</summary>
+    private static string ChoiceClass(AttendanceStatus status) => status switch
+    {
+        AttendanceStatus.Present => "present",
+        AttendanceStatus.Late => "late",
+        _ => "absent"
+    };
+}

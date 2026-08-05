@@ -1,0 +1,138 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Presences
+
+@* One attendance sheet on a phone. This is the screen 01-LOTS.md calls the most
+   used of the product, in the gym, sometimes one-handed — so the segmented
+   control is 44px, not the 34x32 the hand-off stylesheet ships, and the action
+   bar stays under the thumb rather than at the end of the scroll.
+
+   The bar is the prototype's .gx-m-stickyfoot. In the prototype the roster
+   replaces the whole screen, tab bar included; our shell keeps the tab bar on
+   every sub-screen, so the bar is lifted above it — see gx-extras.css. *@
+
+@* Not "gx-m-sheet": mobile.css already owns that name for the "Plus" bottom
+   sheet, and it is position:absolute — borrowing it silently froze this
+   screen's scroll and put the bottom of the roster out of reach. *@
+<div class="gx-m-screen gx-m-attendance">
+    <div class="gx-m-flex" style="gap:13px;padding:4px 2px 14px">
+        <span class="gx-m-ic lg t-brand">
+            <GxIcon Name="@GxIconPaths.Check" Size="26"/>
+        </span>
+        <div class="gx-m-grow">
+            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-strong)">
+                @Roster.CourseName
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                @PresenceFilters.DayLabel(Roster.StartsAt) · @GxFormats.Time(Roster.StartsAt) · @Roster.LocationName
+            </div>
+            @if (Roster.CoachFullName is { } coach)
+            {
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:1px">@coach</div>
+            }
+        </div>
+    </div>
+
+    <div class="gx-m-card">
+        <div class="gx-m-card-h">
+            <span class="t">Feuille de présence</span>
+            <span class="r">@GxFormats.Plural(Roster.Registered.Count, "inscrit", "inscrits")</span>
+        </div>
+
+        @if (Roster.Registered.Count == 0)
+        {
+            <div class="gx-m-note">Personne d'inscrit sur cette séance.</div>
+        }
+        else
+        {
+            @foreach (var seat in Roster.Registered)
+            {
+                <div class="gx-m-roster @(seat.Status == AttendanceStatus.Absent ? "absent" : null)">
+                    <GxAvatar Name="@seat.FullName" Size="sm"/>
+                    <div class="main">
+                        <div class="nm">@seat.FullName</div>
+                        <div class="pl">@(seat.PlanLabel ?? "—")</div>
+                    </div>
+                    <div class="gx-m-seg" role="group" aria-label="@($"Pointage de {seat.FullName}")">
+                        @foreach (var choice in AttendanceLabels.Choices)
+                        {
+                            var isOn = seat.Status == choice;
+                            <button type="button"
+                                    class="@(isOn ? $"on {ChoiceClass(choice)}" : null)"
+                                    aria-pressed="@(isOn ? "true" : "false")"
+                                    aria-label="@AttendanceLabels.Label(choice)"
+                                    disabled="@(IsBusy || Roster.IsClosed)"
+                                    @onclick="() => OnMark.InvokeAsync((seat, choice))">
+                                <GxIcon Name="@AttendanceLabels.Icon(choice)" Size="17"/>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @if (Roster.IsClosed)
+    {
+        <div class="gx-m-note">@AttendanceRules.SheetClosed</div>
+    }
+    else
+    {
+        <div class="gx-m-note">
+            Pointez chaque membre : présent, en retard ou absent. Les absences répétées
+            remontent dans l'assiduité.
+        </div>
+    }
+</div>
+
+<div class="gx-m-stickyfoot">
+    <div class="info">
+        <b>@Roster.Attended/@Roster.Registered.Count</b> pointés
+    </div>
+
+    @if (Roster.IsClosed)
+    {
+        @if (Roster.CanReopen)
+        {
+            <button type="button" class="gx-m-cta ghost" style="width:auto;padding:0 22px;height:46px"
+                    disabled="@IsBusy" @onclick="OnReopen">
+                <GxIcon Name="@GxIconPaths.History" Size="18"/>
+                Rouvrir
+            </button>
+        }
+        else
+        {
+            <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Validée</GxChip>
+        }
+    }
+    else
+    {
+        <button type="button" class="gx-m-cta ghost" style="width:auto;padding:0 16px;height:46px"
+                disabled="@IsBusy" @onclick="OnMarkAllPresent" aria-label="Tout présent">
+            <GxIcon Name="@GxIconPaths.UserCheck" Size="18"/>
+        </button>
+        <button type="button" class="gx-m-cta" style="width:auto;padding:0 22px;height:46px"
+                disabled="@(IsBusy || !Roster.CanClose(Now))"
+                title="@(Roster.CanClose(Now) ? null : AttendanceRules.SessionNotStarted)"
+                @onclick="OnClose">
+            <GxIcon Name="@GxIconPaths.Check" Size="18"/>
+            Valider
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SessionRosterDto Roster { get; set; } = SessionRosterDto.Empty;
+    [Parameter, EditorRequired] public DateTime Now { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+
+    [Parameter] public EventCallback<(RosterSeatDto Seat, AttendanceStatus Status)> OnMark { get; set; }
+    [Parameter] public EventCallback OnMarkAllPresent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnReopen { get; set; }
+
+    private static string ChoiceClass(AttendanceStatus status) => status switch
+    {
+        AttendanceStatus.Present => "present",
+        AttendanceStatus.Late => "late",
+        _ => "absent"
+    };
+}

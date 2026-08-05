@@ -26,11 +26,21 @@ public sealed record AttendanceKpisDto(
     int? AttendanceRate,
     int? AttendanceDeltaPoints,
     int SheetsToPoint,
+    int SheetsOverdue,
     int PresentToday,
     int SessionsToday,
     int NoShowsThisWeek)
 {
-    public static AttendanceKpisDto Empty { get; } = new(null, null, 0, 0, 0, 0);
+    public static AttendanceKpisDto Empty { get; } = new(null, null, 0, 0, 0, 0, 0);
+
+    /// <summary>
+    /// What sits under "Séances à pointer". The prototype writes "aujourd'hui",
+    /// which is true until a sheet has been left open from an earlier day — and
+    /// then saying so is the point of the tile.
+    /// </summary>
+    public string ToPointCaption => SheetsOverdue == 0
+        ? "aujourd'hui"
+        : $"dont {SheetsOverdue} en retard";
 }
 
 /// <summary>

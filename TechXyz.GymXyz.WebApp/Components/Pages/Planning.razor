@@ -42,6 +42,7 @@ else
         {
             <PlanningDayDesktop Day="day"
                                 Sessions="_page.On(day)"
+                                Now="DateTime.Now"
                                 OnBack="() => _dayView = null"
                                 OnCreate="() => OpenCreateDrawer(day)"
                                 OnOpenSession="OpenSessionDrawer"/>

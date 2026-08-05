@@ -43,8 +43,12 @@ public sealed record PlanningSessionDto(
     int Waitlisted,
     int Capacity,
     SessionStatus Status,
-    bool IsRecurring)
+    bool IsRecurring,
+    DateTime? AttendanceClosedAt)
 {
+    /// <summary>Its attendance sheet has been validated — what the day view counts.</summary>
+    public bool IsPointed => AttendanceClosedAt is not null;
+
     /// <summary>Monday is 0, which is the order the seven columns are drawn in.</summary>
     public int DayIndex => ((int)StartsAt.DayOfWeek + 6) % 7;
 

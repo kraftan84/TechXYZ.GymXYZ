@@ -46,7 +46,7 @@
     <button type="button"
             class="gx-fchip @(SortByPopularity ? "on" : null)"
             style="margin-left:auto"
-            aria-pressed="@SortByPopularity"
+            aria-pressed="@(SortByPopularity ? "true" : "false")"
             @onclick="() => OnSortByPopularityChanged.InvokeAsync(!SortByPopularity)">
         <GxIcon Name="@GxIconPaths.Filter" Size="14"/>
         Trier : popularité

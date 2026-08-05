@@ -372,7 +372,13 @@
 .gx-m-roster.absent .main .nm { color: var(--text-muted); }
 
 .gx-m-seg { display: inline-flex; background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); padding: 3px; gap: 2px; flex: none; }
-.gx-m-seg button { appearance: none; border: 0; background: transparent; font-family: inherit; cursor: pointer; width: 34px; height: 32px; border-radius: var(--radius-pill); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; }
+/* 44x44, not the 34x32 this file shipped with. 01-LOTS.md asks for >= 44px
+   targets on the attendance sheet, which is the most used screen of the product
+   and is worked one-handed in the gym; on that screen the doc is right and the
+   stylesheet was wrong. Same register as the focus ring already marked
+   mandatory (RGAA). */
+.gx-m-seg button { appearance: none; border: 0; background: transparent; font-family: inherit; cursor: pointer; width: 44px; height: 44px; border-radius: var(--radius-pill); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; }
+.gx-m-seg button:disabled { opacity: .45; cursor: default; }
 .gx-m-seg button svg { width: 17px; height: 17px; }
 .gx-m-seg button.on.present { background: var(--success-600); color: #fff; }
 .gx-m-seg button.on.late    { background: var(--warning-600); color: #fff; }

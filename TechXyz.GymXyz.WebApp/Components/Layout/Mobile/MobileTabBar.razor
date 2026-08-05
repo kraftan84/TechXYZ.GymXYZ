@@ -4,9 +4,16 @@
     @foreach (var tab in GxNavigation.MobileTabs)
     {
         <NavLink class="gx-m-tab" href="@tab.Href" ActiveClass="on"
-                 Match="@(tab.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+                 Match="@(tab.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)"
+                 aria-label="@LabelFor(tab)">
             <span class="ti">
                 <GxIcon Name="@tab.Icon" Size="24"/>
+                @* Sheets waiting to be pointed. 04-SCREENS-MOBILE.md asks for the
+                   counter here and .gx-m-tab .badge was already styled for it. *@
+                @if (tab.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count)
+                {
+                    <span class="badge" aria-hidden="true">@count</span>
+                }
             </span>
             <span class="lbl">@tab.Label</span>
         </NavLink>
@@ -22,4 +29,16 @@
 @code {
     [Parameter] public bool PlusActive { get; set; }
     [Parameter] public EventCallback OnPlus { get; set; }
+
+    /// <summary>Sheets waiting to be pointed, or null for no badge at all.</summary>
+    [Parameter] public int? SheetsToPoint { get; set; }
+
+    /// <summary>
+    /// The badge is a decoration; the count reaches a screen reader through the
+    /// link's own name instead.
+    /// </summary>
+    private string LabelFor(GxNavItem tab) =>
+        tab.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count
+            ? $"{tab.Label}, {GxFormats.Plural(count, "séance à pointer", "séances à pointer")}"
+            : tab.Label;
 }
