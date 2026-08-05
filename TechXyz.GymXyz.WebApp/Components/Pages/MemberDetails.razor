@@ -236,7 +236,7 @@ else
                 _member.Id,
                 input.StartDate,
                 input.EndDate,
-                input.LessonsTotal));
+                input.SessionsTotal));
 
             await RefreshAsync();
         }, "créer l'abonnement", "Abonnement créé.");
@@ -255,7 +255,7 @@ else
                 subscriptionId,
                 input.StartDate,
                 input.EndDate,
-                input.LessonsTotal));
+                input.SessionsTotal));
 
             if (!updated)
             {

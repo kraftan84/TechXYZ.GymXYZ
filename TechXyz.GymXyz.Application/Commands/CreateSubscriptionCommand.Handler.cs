@@ -33,7 +33,7 @@ public sealed class CreateSubscriptionCommandHandler : IRequestHandler<CreateSub
             Member = member,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
-            NumberOfLessons = request.NumberOfLessons
+            NumberOfSessions = request.NumberOfSessions
         };
 
         _dbContext.Subscriptions.Add(subscription);

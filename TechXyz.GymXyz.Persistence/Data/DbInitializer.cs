@@ -144,12 +144,22 @@ public static class DbInitializer
             coaches[coach.FirstName] = coach;
         }
 
-        foreach (var member in CreateDemoMembers())
+        // Ordered on purpose: the six people of the demo set come first, so they
+        // are the ones filling the sessions the screens open on.
+        var members = CreateDemoMembers()
+            .Concat(CreateSupportingMembers())
+            .ToList();
+
+        foreach (var member in members)
         {
             gym.AddMember(member);
         }
 
-        dbContext.CourseTemplates.AddRange(CreateCourseTemplates(disciplines, locations, coaches));
+        var courseTemplates = CreateCourseTemplates(disciplines, locations, coaches)
+            .ToDictionary(template => template.Name);
+        dbContext.CourseTemplates.AddRange(courseTemplates.Values);
+
+        dbContext.Sessions.AddRange(CreateSessions(courseTemplates, coaches, members));
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
@@ -160,9 +170,8 @@ public static class DbInitializer
     /// catalogue mixes: four studios, one outdoor spot and the member's home.
     /// <para>
     /// Occupancy, sessions per week, the day's schedule and the weekly heatmap
-    /// are absent on purpose: all four are counted from sessions, which the
-    /// planning produces at lot 5. So is the "Forte demande" chip Studio C wears
-    /// in the prototype — it reads an occupancy rate that does not exist yet.
+    /// are not stored on a venue: all four are counted from the sessions booked
+    /// in it, and so is the "Forte demande" chip Studio C wears in the prototype.
     /// </para>
     /// </summary>
     private static Dictionary<string, Location> CreateLocations()
@@ -303,8 +312,8 @@ public static class DbInitializer
     /// resolves here to the single closest discipline of the referential.
     /// <para>
     /// Sessions per week, average fill, regulars and the upcoming sessions are
-    /// deliberately absent: they are counted from past occurrences, which the
-    /// planning produces at lot 5.
+    /// not stored on a template: they are counted from its occurrences, seeded
+    /// by <see cref="CreateSessions"/>.
     /// </para>
     /// </summary>
     private static IEnumerable<CourseTemplate> CreateCourseTemplates(
@@ -403,9 +412,9 @@ public static class DbInitializer
     /// certifications and weekly availability the prototype shows. Joining dates
     /// are relative to today so the demo never goes stale.
     /// <para>
-    /// Léa reads "Disponible" here where the prototype says "Cours pleins":
-    /// that standing is computed from the fill rate of her sessions, which the
-    /// planning produces at lot 5.
+    /// No standing is written here. Léa reads "Cours pleins" in the prototype
+    /// and does so again here, but only because the sessions seeded for her fill
+    /// up — the value is computed, never stored.
     /// </para>
     /// </summary>
     private static IEnumerable<Coach> CreateDemoCoaches(IReadOnlyDictionary<string, Discipline> disciplines)
@@ -518,34 +527,85 @@ public static class DbInitializer
         yield return CreateMember(
             "Laetitia", "Moriceau", "laetitia.moriceau@gymxyz.fr", "06 12 34 56 78",
             joinedMonthsAgo: 27, today,
-            subscriptionStartsInDays: -12, subscriptionEndsInDays: 18, numberOfLessons: 0,
+            subscriptionStartsInDays: -12, subscriptionEndsInDays: 18, numberOfSessions: 0,
             notes: "Préfère les cours du matin. Vient surtout en début de semaine.");
 
         yield return CreateMember(
             "Camille", "Durand", "camille.durand@gymxyz.fr", "06 22 11 90 04",
             joinedMonthsAgo: 17, today,
-            subscriptionStartsInDays: -25, subscriptionEndsInDays: 5, numberOfLessons: 10);
+            subscriptionStartsInDays: -25, subscriptionEndsInDays: 5, numberOfSessions: 10);
 
         yield return CreateMember(
             "Lucas", "Martin", "lucas.martin@gymxyz.fr", "06 80 45 12 33",
             joinedMonthsAgo: 20, today,
-            subscriptionStartsInDays: -40, subscriptionEndsInDays: 50, numberOfLessons: 10);
+            subscriptionStartsInDays: -40, subscriptionEndsInDays: 50, numberOfSessions: 10);
 
         yield return CreateMember(
             "Amina", "Benali", "amina.benali@gymxyz.fr", "06 14 78 22 09",
             joinedMonthsAgo: 28, today,
-            subscriptionStartsInDays: -8, subscriptionEndsInDays: 22, numberOfLessons: 0);
+            subscriptionStartsInDays: -8, subscriptionEndsInDays: 22, numberOfSessions: 0);
 
         yield return CreateMember(
             "Théo", "Garnier", "theo.garnier@gymxyz.fr", "06 55 32 87 41",
             joinedMonthsAgo: 21, today,
-            subscriptionStartsInDays: -90, subscriptionEndsInDays: -25, numberOfLessons: 10);
+            subscriptionStartsInDays: -90, subscriptionEndsInDays: -25, numberOfSessions: 10);
 
         yield return CreateMember(
             "Sarah", "Cohen", "sarah.cohen@gymxyz.fr", "06 71 09 55 18",
             joinedMonthsAgo: 37, today,
-            subscriptionStartsInDays: -3, subscriptionEndsInDays: 27, numberOfLessons: 0);
+            subscriptionStartsInDays: -3, subscriptionEndsInDays: 27, numberOfSessions: 0);
     }
+
+    /// <summary>
+    /// The rest of the room. The prototype's occupancy figures — "14/20", a
+    /// Power Cycle at "24/24" — need more people than the six the screens tell a
+    /// story about, and every one of those figures is counted from real
+    /// registrations. So the demo set gains a supporting cast: a name, an active
+    /// subscription, nothing else. The prototype's own dashboard claims "112
+    /// actifs", so this errs on the small side rather than the large one.
+    /// </summary>
+    private static IEnumerable<Member> CreateSupportingMembers()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        string[][] people =
+        [
+            ["Chloé", "Perrin"], ["Maxime", "Roussel"], ["Inès", "Vasseur"], ["Julien", "Marchand"],
+            ["Émilie", "Barbier"], ["Antoine", "Leroy"], ["Manon", "Dumas"], ["Hugo", "Chevalier"],
+            ["Clara", "Renard"], ["Nathan", "Guerin"], ["Léna", "Masson"], ["Rayan", "Bertrand"],
+            ["Jade", "Fournier", ], ["Enzo", "Lambert"], ["Alice", "Girard"], ["Malik", "Traoré"],
+            ["Louise", "Dupuis"], ["Gabriel", "Meunier"], ["Zoé", "Blanchard"], ["Adam", "Colin"],
+            ["Éva", "Marty"], ["Tom", "Robin"], ["Nina", "Charpentier"], ["Yanis", "Aubert"],
+            ["Romane", "Poirier"], ["Ethan", "Baron"], ["Lola", "Rolland"], ["Sofiane", "Merle"],
+            ["Anaïs", "Deschamps"], ["Victor", "Pichon"]
+        ];
+
+        for (var index = 0; index < people.Length; index++)
+        {
+            var firstName = people[index][0];
+            var lastName = people[index][1];
+
+            // Spread over the year so the joining dates on the list are not all
+            // the same day, and alternate between a monthly plan and a punch card.
+            yield return CreateMember(
+                firstName,
+                lastName,
+                $"{Slug(firstName)}.{Slug(lastName)}@gymxyz.fr",
+                $"06 {30 + index:00} {11 + index:00} {40 + index:00} {index:00}",
+                joinedMonthsAgo: 2 + index % 22,
+                today,
+                subscriptionStartsInDays: -20 - index % 40,
+                subscriptionEndsInDays: 10 + index % 60,
+                numberOfSessions: index % 3 == 0 ? 10 : 0);
+        }
+    }
+
+    /// <summary>Accents out of an e-mail address, without a culture surprise.</summary>
+    private static string Slug(string name) =>
+        string.Concat(name.Normalize(System.Text.NormalizationForm.FormD)
+                .Where(character => char.GetUnicodeCategory(character)
+                    != System.Globalization.UnicodeCategory.NonSpacingMark))
+            .ToLowerInvariant();
 
     private static Member CreateMember(
         string firstName,
@@ -556,7 +616,7 @@ public static class DbInitializer
         DateOnly today,
         int subscriptionStartsInDays,
         int subscriptionEndsInDays,
-        int numberOfLessons,
+        int numberOfSessions,
         string? notes = null)
     {
         return new Member(firstName, lastName)
@@ -571,9 +631,145 @@ public static class DbInitializer
                 {
                     StartDate = today.AddDays(subscriptionStartsInDays),
                     EndDate = today.AddDays(subscriptionEndsInDays),
-                    NumberOfLessons = numberOfLessons
+                    NumberOfSessions = numberOfSessions
                 }
             ]
         };
     }
+
+    /// <summary>
+    /// One line of the demo week: a course, its coach, when it runs and how full
+    /// it is. The venue is not written here — a session runs in the studio its
+    /// course template proposes.
+    /// </summary>
+    private sealed record WeeklySlot(
+        string CourseName,
+        string CoachFirstName,
+        DayOfWeek Day,
+        int Hour,
+        int Minute,
+        int Occupancy);
+
+    /// <summary>
+    /// The demo week, taken from the coaches' weekly schedules in the prototype.
+    /// <para>
+    /// Only courses the catalogue actually holds are here. The prototype's
+    /// planning also names Mobility Reset, Strength Lab, Cross Circuit and Open
+    /// Gym, which its own course catalogue does not list — the mock is
+    /// hand-tuned, not generated, and a session is an occurrence of a catalogue
+    /// course. Inventing four templates would have added four rows to the Cours
+    /// screen that the prototype does not show.
+    /// </para>
+    /// <para>
+    /// The occupancy figures are what make the story on the other screens true:
+    /// Studio C comes out the busiest venue and wears "Forte demande", Léa is
+    /// the one coach whose sessions read "Cours pleins", and Power Cycle fills
+    /// up with a waiting list behind it.
+    /// </para>
+    /// </summary>
+    private static readonly WeeklySlot[] DemoWeek =
+    [
+        new("Strength Foundations", "Nora", DayOfWeek.Monday, 7, 15, 16),
+        new("Core Express", "Samir", DayOfWeek.Monday, 12, 30, 16),
+        new("Strength Foundations", "Karim", DayOfWeek.Monday, 17, 0, 15),
+        new("Power Cycle", "Léa", DayOfWeek.Monday, 18, 30, 24),
+        new("Yoga Restore", "Inès", DayOfWeek.Tuesday, 8, 0, 16),
+        new("Pilates Core", "Nora", DayOfWeek.Tuesday, 18, 0, 13),
+        new("Coaching Perso", "Samir", DayOfWeek.Wednesday, 11, 0, 1),
+        new("Power Cycle", "Léa", DayOfWeek.Wednesday, 12, 30, 22),
+        new("Boxing Fundamentals", "Théo", DayOfWeek.Wednesday, 19, 30, 11),
+        new("Yoga Restore", "Nora", DayOfWeek.Thursday, 17, 15, 14),
+        new("Coaching Perso", "Karim", DayOfWeek.Thursday, 18, 0, 1),
+        new("HIIT Blast", "Nora", DayOfWeek.Friday, 9, 0, 13),
+        new("Power Cycle", "Nora", DayOfWeek.Friday, 18, 0, 24),
+        new("Power Cycle", "Léa", DayOfWeek.Saturday, 10, 0, 23),
+        new("HIIT Blast", "Nora", DayOfWeek.Sunday, 9, 0, 9),
+        new("Yoga Restore", "Inès", DayOfWeek.Sunday, 10, 30, 18)
+    ];
+
+    /// <summary>Weeks of history the demo carries, so past figures have something to average.</summary>
+    private const int SeededWeeksBehind = 4;
+
+    /// <summary>Weeks ahead, so the planning can be navigated forward and members have courses to come.</summary>
+    private const int SeededWeeksAhead = 8;
+
+    /// <summary>Two names kept warm behind a full session, as the prototype describes Léa's cycling.</summary>
+    private const int WaitlistDepth = 2;
+
+    /// <summary>
+    /// Rolls the demo week out over the seeding horizon, one row per occurrence.
+    /// Every occurrence of the same slot shares a <c>SeriesId</c>, which is what
+    /// makes "this one and all the following" a single query later on.
+    /// <para>
+    /// The current week carries the prototype's figures exactly; the other weeks
+    /// wobble by a couple of seats so the averages are not a flat line. Members
+    /// are drawn from the pool at a fixed offset per slot, so the same faces come
+    /// back week after week — which is what makes "habitués" mean anything.
+    /// </para>
+    /// </summary>
+    private static IEnumerable<Session> CreateSessions(
+        IReadOnlyDictionary<string, CourseTemplate> courseTemplates,
+        IReadOnlyDictionary<string, Coach> coaches,
+        IReadOnlyList<Member> members)
+    {
+        var now = DateTime.Now;
+        var monday = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7));
+
+        for (var slotIndex = 0; slotIndex < DemoWeek.Length; slotIndex++)
+        {
+            var slot = DemoWeek[slotIndex];
+            var template = courseTemplates[slot.CourseName];
+            var seriesId = Guid.NewGuid();
+
+            for (var week = -SeededWeeksBehind; week <= SeededWeeksAhead; week++)
+            {
+                var dayOffset = ((int)slot.Day + 6) % 7;
+                var startsAt = monday
+                    .AddDays(week * 7 + dayOffset)
+                    .AddHours(slot.Hour)
+                    .AddMinutes(slot.Minute);
+
+                var occupancy = week == 0
+                    ? slot.Occupancy
+                    : Math.Clamp(slot.Occupancy + Wobble(week, slotIndex), 1, template.Capacity);
+
+                var session = new Session
+                {
+                    CourseTemplate = template,
+                    Coach = coaches[slot.CoachFirstName],
+                    Location = template.DefaultLocation!,
+                    StartsAt = startsAt,
+                    EndsAt = startsAt.AddMinutes(template.DurationMinutes),
+                    // Copied, not read through the template: editing the
+                    // catalogue must not rewrite what already happened.
+                    Capacity = template.Capacity,
+                    Status = startsAt < now ? SessionStatus.Done : SessionStatus.Scheduled,
+                    SeriesId = seriesId,
+                    Registrations = []
+                };
+
+                var seats = occupancy;
+                if (occupancy >= template.Capacity && template.Capacity > 1)
+                {
+                    seats += WaitlistDepth;
+                }
+
+                var offset = (slotIndex * 7 + week + members.Count) % members.Count;
+                for (var seat = 0; seat < seats; seat++)
+                {
+                    session.Registrations.Add(new Registration
+                    {
+                        Member = members[(offset + seat) % members.Count],
+                        RegisteredAt = startsAt.AddDays(-3),
+                        IsWaitlisted = seat >= occupancy
+                    });
+                }
+
+                yield return session;
+            }
+        }
+    }
+
+    /// <summary>Between -2 and +2 seats, decided by the week and the slot rather than by chance.</summary>
+    private static int Wobble(int week, int slotIndex) => ((week * 3 + slotIndex) % 5 + 5) % 5 - 2;
 }

@@ -30,7 +30,7 @@ public sealed class UpdateSubscriptionCommandHandler : IRequestHandler<UpdateSub
 
         subscription.StartDate = request.StartDate;
         subscription.EndDate = request.EndDate;
-        subscription.NumberOfLessons = request.NumberOfLessons;
+        subscription.NumberOfSessions = request.NumberOfSessions;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

@@ -11,5 +11,5 @@ public class Subscription : EntityBase<int>, ITenantScoped
     public DateOnly EndDate { get; set; }
     public DateTime? PaymentDate { get; set; }
     public Coach? CashedBy { get; set; }
-    public int NumberOfLessons { get; set; }
+    public int NumberOfSessions { get; set; }
 }

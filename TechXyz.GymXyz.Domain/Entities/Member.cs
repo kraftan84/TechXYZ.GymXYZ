@@ -16,6 +16,5 @@ public class Member : Person
     public string? Notes { get; set; }
 
     public ICollection<Subscription>? Subscriptions { get; set; }
-    public ICollection<PrivateLesson>? PrivateLessons { get; set; }
-    public ICollection<CollectiveLesson>? CollectiveLessons { get; set; }
+    public ICollection<Registration>? Registrations { get; set; }
 }

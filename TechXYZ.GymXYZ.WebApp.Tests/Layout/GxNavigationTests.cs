@@ -34,6 +34,18 @@ public class GxNavigationTests
         GxNavigation.MobileMore.ShouldContain(GxNavigation.Lieux);
     }
 
+    /// <summary>
+    /// Same story as /rooms: the pre-hand-off /plannings screen went with the
+    /// Lesson entities it was mocking, and both shells read the entry from here.
+    /// </summary>
+    [Fact]
+    public void Planning_ShouldPointAtTheHandOffScreen()
+    {
+        GxNavigation.Planning.Href.ShouldBe("/planning");
+        GxNavigation.Groups[0].Items.ShouldContain(GxNavigation.Planning);
+        GxNavigation.MobileTabs.ShouldContain(GxNavigation.Planning);
+    }
+
     [Fact]
     public void Visible_ShouldDropCoachs_FromTheMobilePlusSheet_ForASoloCoach()
     {

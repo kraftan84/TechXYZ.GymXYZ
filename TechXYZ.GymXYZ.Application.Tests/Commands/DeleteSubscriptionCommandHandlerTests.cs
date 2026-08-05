@@ -16,7 +16,7 @@ public class DeleteSubscriptionCommandHandlerTests
             Member = member,
             StartDate = DateOnly.FromDateTime(DateTime.Today),
             EndDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(1)),
-            NumberOfLessons = 10
+            NumberOfSessions = 10
         };
 
         dbContext.Members.Add(member);

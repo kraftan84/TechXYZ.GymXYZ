@@ -1,5 +1,3 @@
-using TechXyz.GymXyz.Domain.Entities;
-
 namespace TechXyz.GymXyz.Application.Models;
 
 public sealed record MemberDetailsPageDto(
@@ -15,8 +13,8 @@ public sealed record MemberDetailsPageDto(
     MemberStatus Status,
     MemberSubscriptionDto? CurrentSubscription,
     List<MemberSubscriptionDto> Subscriptions,
-    List<MemberLessonDto> UpcomingLessons,
-    List<MemberLessonDto> PastLessons,
+    List<MemberSessionDto> UpcomingSessions,
+    List<MemberSessionDto> PastSessions,
     List<MemberPaymentDto> Payments,
     MemberStatsDto Stats)
 {
@@ -28,7 +26,7 @@ public sealed record MemberDetailsPageDto(
 /// check-in and stay unset until lot 6 — they are shown as "—", never guessed.
 /// </summary>
 public sealed record MemberStatsDto(
-    int TotalLessons,
+    int TotalSessions,
     int? AttendanceRate,
     DateOnly? LastVisitOn);
 
@@ -36,8 +34,8 @@ public sealed record MemberSubscriptionDto(
     int Id,
     DateOnly StartDate,
     DateOnly EndDate,
-    int LessonsTotal,
-    int LessonsRemaining,
+    int SessionsTotal,
+    int SessionsRemaining,
     MemberSubscriptionStatus Status);
 
 public enum MemberSubscriptionStatus
@@ -54,13 +52,20 @@ public sealed record MemberPaymentDto(
     decimal Amount,
     string Status);
 
-public sealed record MemberLessonDto(
+/// <summary>
+/// One session the member has a seat on. There is no type to carry: a capacity
+/// of one is what makes it private, the same rule the catalogue and the planning
+/// use.
+/// </summary>
+public sealed record MemberSessionDto(
     int Id,
     string Name,
-    LessonType Type,
-    DateTime StartDate,
-    DateTime EndDate,
-    string CoachFirstName,
-    string CoachLastName,
+    DateTime StartsAt,
+    DateTime EndsAt,
+    string? CoachFirstName,
+    string? CoachLastName,
     int Capacity,
-    int RemainingSpots);
+    int RemainingSpots)
+{
+    public bool IsPrivate => Capacity == 1;
+}

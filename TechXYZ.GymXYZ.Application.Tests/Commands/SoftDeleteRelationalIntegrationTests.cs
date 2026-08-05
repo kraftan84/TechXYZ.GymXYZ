@@ -42,7 +42,7 @@ public class SoftDeleteRelationalIntegrationTests
     }
 
     [Fact]
-    public async Task DeleteCoach_ShouldSoftDeleteWithoutBreakingRequiredLessonRelation_OnSqlite()
+    public async Task DeleteCoach_ShouldSoftDeleteWithoutBreakingRequiredSessionRelation_OnSqlite()
     {
         var faker = TestInfrastructure.Faker();
         await using var scope = await RelationalTestInfrastructure.CreateSqliteDbContextScope();
@@ -66,14 +66,17 @@ public class SoftDeleteRelationalIntegrationTests
         dbContext.Sites.Add(site);
         await dbContext.SaveChangesAsync();
 
-        dbContext.PrivateLessons.Add(new PrivateLesson
+        dbContext.Sessions.Add(new Session
         {
-            Name = faker.Company.CatchPhrase(),
-            Type = LessonType.Private,
+            CourseTemplate = new CourseTemplate(faker.Company.CatchPhrase())
+            {
+                Discipline = new Discipline(faker.Commerce.Department())
+            },
             Coach = coach,
             Location = location,
-            StartDate = DateTime.UtcNow,
-            EndDate = DateTime.UtcNow.AddHours(1)
+            Capacity = 1,
+            StartsAt = DateTime.UtcNow,
+            EndsAt = DateTime.UtcNow.AddHours(1)
         });
         await dbContext.SaveChangesAsync();
 
@@ -82,6 +85,6 @@ public class SoftDeleteRelationalIntegrationTests
 
         deleted.ShouldBeTrue();
         dbContext.Coaches.Single(candidate => candidate.Id == coach.Id).IsActive.ShouldBeFalse();
-        dbContext.PrivateLessons.Count().ShouldBe(1);
+        dbContext.Sessions.Count().ShouldBe(1);
     }
 }

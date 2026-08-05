@@ -41,8 +41,7 @@ public class Coach : Person
 
     public ICollection<CoachDiscipline>? Disciplines { get; set; }
     public ICollection<CoachCertification>? Certifications { get; set; }
-    public ICollection<PrivateLesson>? PrivateLessons { get; set; }
-    public ICollection<CollectiveLesson>? CollectiveLessons { get; set; }
+    public ICollection<Session>? Sessions { get; set; }
 
     public void AddDiscipline(Discipline discipline, int rank)
     {

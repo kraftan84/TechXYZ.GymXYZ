@@ -5,8 +5,8 @@ namespace TechXyz.GymXyz.Domain.Entities;
 
 /// <summary>
 /// A course as the catalogue defines it, not as it happens: "Power Cycle, 45
-/// minutes, 24 places, Studio C". The dated occurrence is a different thing and
-/// arrives at lot 5 under the name Session.
+/// minutes, 24 places, Studio C". The dated occurrence is a different thing —
+/// see <see cref="Session"/>.
 /// </summary>
 public class CourseTemplate : EntityBase<int>, ITenantScoped
 {
