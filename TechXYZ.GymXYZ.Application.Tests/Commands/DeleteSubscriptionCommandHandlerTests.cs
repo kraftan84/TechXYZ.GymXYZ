@@ -11,14 +11,19 @@ public class DeleteSubscriptionCommandHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldSoftDeleteSubscription));
         var member = new Member("John", "Doe");
+        var plan = TestPlans.Pack();
         var subscription = new Subscription
         {
             Member = member,
-            StartDate = DateOnly.FromDateTime(DateTime.Today),
-            EndDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(1)),
-            NumberOfSessions = 10
+            Plan = plan,
+            StartedOn = DateOnly.FromDateTime(DateTime.Today),
+            EndsOn = DateOnly.FromDateTime(DateTime.Today.AddMonths(4)),
+            CreditsRemaining = 10,
+            CreditsTotal = 10,
+            PriceLabel = plan.FormatPriceLabel()
         };
 
+        dbContext.Plans.Add(plan);
         dbContext.Members.Add(member);
         dbContext.Subscriptions.Add(subscription);
         await dbContext.SaveChangesAsync();

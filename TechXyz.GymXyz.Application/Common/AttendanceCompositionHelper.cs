@@ -50,21 +50,25 @@ public static class AttendanceCompositionHelper
     }
 
     /// <summary>
-    /// Applies one verdict to one seat, arrival time included.
+    /// Applies one verdict to one seat: the status, the arrival time and the
+    /// credit that goes with them.
     /// <para>
     /// The time is cleared for an absence rather than left behind: "dernière
     /// venue" reads it, and a stale check-in would have the member showing up on
-    /// a day they were marked away.
+    /// a day they were marked away. The credit follows the same logic one step
+    /// further — see <see cref="CreditLedger"/>, which also holds the reason
+    /// pointing twice debits once.
     /// </para>
     /// </summary>
-    public static void Apply(Registration registration, AttendanceStatus status, DateTime now)
+    public static void Apply(
+        Registration registration,
+        AttendanceStatus status,
+        DateTime now,
+        CreditLedger ledger)
     {
         registration.Status = status;
         registration.CheckedInAt = AttendanceRules.CheckInFor(status, now);
 
-        // Lot 7 — a credit pack is debited here, once Subscription carries
-        // CreditsRemaining. Writing it against today's Subscription, which has
-        // none of PlanId, CreditsRemaining, AutoRenew or Status, would mean
-        // writing it twice.
+        ledger.Settle(registration, status);
     }
 }

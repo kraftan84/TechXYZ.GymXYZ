@@ -42,10 +42,18 @@ public sealed class MarkWholeSheetCommandHandler : IRequestHandler<MarkWholeShee
                 !registration.IsWaitlisted)
             .ToListAsync(cancellationToken);
 
+        // One load for the whole sheet rather than one per seat: a roster of
+        // twenty would otherwise be twenty round trips to settle the same packs.
+        var ledger = await CreditLedger.LoadAsync(
+            _dbContext,
+            seats,
+            DateOnly.FromDateTime(session.StartsAt),
+            cancellationToken);
+
         var now = DateTime.Now;
         foreach (var seat in seats)
         {
-            AttendanceCompositionHelper.Apply(seat, request.Status, now);
+            AttendanceCompositionHelper.Apply(seat, request.Status, now, ledger);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

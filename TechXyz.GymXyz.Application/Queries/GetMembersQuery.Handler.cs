@@ -67,11 +67,20 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Me
 
         return new MembersPageDto(
             items
-                .Select(item => item with
+                .Select(item =>
                 {
-                    Status = MemberStatusRules.Resolve(item.CurrentSubscriptionEndsOn, horizon),
-                    AttendanceRate = attendance.GetValueOrDefault(item.Id)?.Rate,
-                    LastVisitOn = attendance.GetValueOrDefault(item.Id)?.LastVisitOnDate
+                    var cover = SubscriptionStatusRules.Governing(item.Covers, today, horizon);
+
+                    return item with
+                    {
+                        Status = MemberStatusRules.Resolve(item.Covers, today, horizon),
+                        GoverningCover = cover,
+                        PlanLabel = cover?.PlanName,
+                        CreditsLabel = cover?.CreditsLabel,
+                        CreditsPercent = cover?.CreditsPercent,
+                        AttendanceRate = attendance.GetValueOrDefault(item.Id)?.Rate,
+                        LastVisitOn = attendance.GetValueOrDefault(item.Id)?.LastVisitOnDate
+                    };
                 })
                 .ToList(),
             totalCount,

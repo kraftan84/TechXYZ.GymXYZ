@@ -128,9 +128,19 @@ public static class QueryableProjectionExtensions
     }
 
     /// <summary>
-    /// Rows of the members table. <c>CurrentSubscriptionEndsOn</c> is the latest
-    /// end date among the subscriptions covering <paramref name="today"/> —
-    /// the single value the standing rule reads.
+    /// Rows of the members table, each with the subscriptions that have started —
+    /// the facts the standing rule reads.
+    /// <para>
+    /// The covers come out as a list rather than as one pre-picked row because
+    /// which one governs is a decision of <c>SubscriptionStatusRules</c>, and a
+    /// member holding a monthly plan and a pack at once has two. In practice
+    /// that is one or two rows apiece over a page of at most two hundred.
+    /// </para>
+    /// <para>
+    /// Subscriptions not yet started are left out on purpose: a renewal booked
+    /// for next month is not a cover today, and counting it would have the member
+    /// reading "Actif" on something that has not begun.
+    /// </para>
     /// </summary>
     public static IQueryable<MemberListItemDto> SelectMemberListItemDto(this IQueryable<Member> query, DateOnly today)
     {
@@ -142,11 +152,22 @@ public static class QueryableProjectionExtensions
             member.Phone,
             member.JoinedOn,
             member.Subscriptions!
-                .Where(subscription =>
-                    subscription.IsActive &&
-                    subscription.StartDate <= today &&
-                    subscription.EndDate >= today)
-                .Max(subscription => (DateOnly?)subscription.EndDate)));
+                .Where(subscription => subscription.IsActive && subscription.StartedOn <= today)
+                .OrderByDescending(subscription => subscription.EndsOn)
+                .Select(subscription => new SubscriptionCoverDto(
+                    subscription.Id,
+                    subscription.PlanId,
+                    subscription.Plan!.Name,
+                    subscription.Plan.Kind,
+                    subscription.StartedOn,
+                    subscription.EndsOn,
+                    subscription.CreditsRemaining,
+                    subscription.CreditsTotal,
+                    subscription.PriceLabel,
+                    subscription.AutoRenew,
+                    subscription.Payments!.Any(payment =>
+                        payment.IsActive && payment.Status != PaymentStatus.Collected)))
+                .ToList()));
     }
 
     public static IQueryable<MemberDto> SelectMemberDto(this IQueryable<Member> query, DateOnly today)
@@ -158,7 +179,7 @@ public static class QueryableProjectionExtensions
             member.Email,
             member.Phone,
             member.Subscriptions!.Any(subscription =>
-                subscription.StartDate <= today && subscription.EndDate >= today),
+                subscription.StartedOn <= today && subscription.EndsOn >= today),
             member.Address == null
                 ? null
                 : new AddressDto(

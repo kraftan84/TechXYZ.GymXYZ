@@ -32,27 +32,43 @@ public sealed record MemberStatsDto(
     int? AttendanceRate,
     DateOnly? LastVisitOn);
 
+/// <summary>
+/// One line of the member's subscription history — what they bought, when, and
+/// where it stands.
+/// </summary>
 public sealed record MemberSubscriptionDto(
     int Id,
-    DateOnly StartDate,
-    DateOnly EndDate,
-    int SessionsTotal,
-    int SessionsRemaining,
-    MemberSubscriptionStatus Status);
-
-public enum MemberSubscriptionStatus
+    int PlanId,
+    string PlanName,
+    PlanKind Kind,
+    DateOnly StartedOn,
+    DateOnly EndsOn,
+    int? CreditsRemaining,
+    int? CreditsTotal,
+    string PriceLabel,
+    bool AutoRenew,
+    SubscriptionStatus? Status)
 {
-    Active,
-    Paused,
-    Expired
+    /// <summary>
+    /// Null status means the cover has not begun: a renewal booked for after the
+    /// current one runs out. It has no standing yet, and saying it were "Actif"
+    /// would be a lie the history list tells about next month.
+    /// </summary>
+    public bool HasStarted => Status is not null;
+
+    public string CreditsLabel => Kind == PlanKind.CreditPack
+        ? $"{Math.Max(0, CreditsRemaining ?? 0)}/{CreditsTotal ?? 0}"
+        : "∞";
 }
 
-/// <summary>Placeholder shape for the payments card. Filled at lot 7.</summary>
+/// <summary>One line of the member's payments card.</summary>
 public sealed record MemberPaymentDto(
+    int Id,
     DateOnly Date,
     string Label,
     decimal Amount,
-    string Status);
+    PaymentMethod Method,
+    PaymentStatus Status);
 
 /// <summary>
 /// One session the member has a seat on. There is no type to carry: a capacity

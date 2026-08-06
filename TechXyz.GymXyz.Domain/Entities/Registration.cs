@@ -44,4 +44,21 @@ public class Registration : EntityBase<int>, ITenantScoped
     /// lie.
     /// </summary>
     public DateTime? CheckedInAt { get; set; }
+
+    /// <summary>
+    /// The credit pack this seat took an entry from, or null if it took none.
+    /// <para>
+    /// This stamp is the whole of the idempotence the model asks for: pointing a
+    /// pack debits once, and re-pointing the same seat finds the stamp already
+    /// set and does nothing. The natural key is the seat, not the tap — both
+    /// <c>MarkAttendanceCommand</c> and <c>MarkWholeSheetCommand</c> can run
+    /// twice over the same registration, and a counter that only happened to be
+    /// right would not survive either.
+    /// </para>
+    /// <para>
+    /// Clearing it gives the entry back: a seat corrected from present to absent
+    /// did not consume a session.
+    /// </para>
+    /// </summary>
+    public int? CreditDebitedFromSubscriptionId { get; set; }
 }

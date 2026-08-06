@@ -69,6 +69,61 @@ public class AttendanceQueryTests
         result.AttendanceRate.ShouldBe(75);
     }
 
+    /// <summary>
+    /// The plan column of the sheet, filled at lot 7. It prints the short form —
+    /// the prototype's "Illimité", "Carte 10" — because the column is narrow,
+    /// and "—" for a member with no cover: the sheet points everybody the same,
+    /// and whether they are paid up is the abonnements screen's business.
+    /// </summary>
+    [Fact]
+    public async Task GetSessionRoster_ShouldNameThePlanCoveringTheDayOfTheSheet()
+    {
+        await using var scope = await RelationalTestInfrastructure.CreateSqliteDbContextScope();
+        var dbContext = scope.DbContext;
+
+        var session = SeedSession(dbContext, Yesterday(18), pending: 3);
+        var pack = TestPlans.Pack();
+        dbContext.Plans.Add(pack);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var seats = session.Registrations!.ToList();
+
+        // One covered, one whose cover ran out before the session, one with none.
+        seats[0].Member!.Subscriptions =
+        [
+            new Subscription
+            {
+                Plan = pack,
+                StartedOn = today.AddDays(-30),
+                EndsOn = today.AddDays(30),
+                CreditsRemaining = 6,
+                CreditsTotal = 10,
+                PriceLabel = pack.FormatPriceLabel()
+            }
+        ];
+        seats[1].Member!.Subscriptions =
+        [
+            new Subscription
+            {
+                Plan = pack,
+                StartedOn = today.AddDays(-120),
+                EndsOn = today.AddDays(-40),
+                CreditsRemaining = 0,
+                CreditsTotal = 10,
+                PriceLabel = pack.FormatPriceLabel()
+            }
+        ];
+
+        await dbContext.SaveChangesAsync();
+
+        var result = await Roster(dbContext).Handle(new GetSessionRosterQuery(session.Id), CancellationToken.None);
+
+        var byMember = result.Seats.ToDictionary(seat => seat.MemberId, seat => seat.PlanLabel);
+        byMember[seats[0].MemberId].ShouldBe("Carte 10");
+        byMember[seats[1].MemberId].ShouldBeNull();
+        byMember[seats[2].MemberId].ShouldBeNull();
+    }
+
     [Fact]
     public async Task GetSessionRoster_ShouldKeepTheWaitingListOutOfTheTally()
     {

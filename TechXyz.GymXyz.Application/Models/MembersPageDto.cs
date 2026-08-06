@@ -25,20 +25,29 @@ public sealed record MemberListItemDto(
     string? Email,
     string? Phone,
     DateOnly JoinedOn,
-    DateOnly? CurrentSubscriptionEndsOn)
+    IReadOnlyList<SubscriptionCoverDto> Covers)
 {
     public string FullName => $"{FirstName} {LastName}";
 
     /// <summary>Set by the query handler from <c>MemberStatusRules</c>.</summary>
     public MemberStatus Status { get; init; }
 
-    /// <summary>Subscription plan name. Filled at lot 7 (Abonnements).</summary>
+    /// <summary>
+    /// The cover the standing and the two credit columns are read from — the
+    /// healthiest of <see cref="Covers"/>. Null for a member with none.
+    /// </summary>
+    public SubscriptionCoverDto? GoverningCover { get; init; }
+
+    /// <summary>Subscription plan name, from <see cref="GoverningCover"/>.</summary>
     public string? PlanLabel { get; init; }
 
-    /// <summary>Credits left, "3/10" or "∞". Filled at lot 7 (Abonnements).</summary>
+    /// <summary>Credits left, "3/10" or "∞".</summary>
     public string? CreditsLabel { get; init; }
 
-    /// <summary>Credit gauge, 0–100. Filled at lot 7 (Abonnements).</summary>
+    /// <summary>
+    /// The gauge, 0–100. Entries left on a pack, time left to run on a recurring
+    /// plan — both read as "how much is still mine".
+    /// </summary>
     public int? CreditsPercent { get; init; }
 
     /// <summary>
