@@ -1,0 +1,192 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* Mobile Administration — billing only.
+
+   The prototype's phone screen says so in its own header: it mirrors the desktop
+   Administration screen, and the white-label theme "lives in Tweaks, not
+   surfaced here". That is a deliberate exclusion, not an omission: choosing a
+   brand is a desk job with a preview beside it, and a two-inch theme grid would
+   be a worse version of a screen that already exists.
+
+   So there is no section list here and no sub-panel to open — the phone shows
+   the subscription, the card and the invoices, and nothing else.
+
+   The customer picker is kept, because a super-admin on a phone still has to say
+   whose invoices these are. It is a plain row list rather than the desktop's
+   swatch grid. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet">
+        <div class="hi">Administration</div>
+        <div class="sub">
+            @(IsLoaded ? $"Le compte {Selected.DisplayName} chez GymXYZ" : "Chargement…")
+        </div>
+    </div>
+
+    @if (Customers.Count > 1)
+    {
+        <div class="gx-m-sec"><span class="t">Client</span></div>
+        <div class="gx-m-card">
+            <div class="gx-m-rows">
+                @foreach (var customer in Customers)
+                {
+                    <button class="gx-m-row" @onclick="() => OnSelectCustomer.InvokeAsync(customer.Id)">
+                        <span class="gx-m-ic t-neutral" data-theme="@customer.ThemeKey"
+                              style="background:var(--color-primary)"></span>
+                        <span class="main">
+                            <span class="nm">@customer.DisplayName</span>
+                            <span class="meta">@GxFormats.Plural(customer.MemberCount, "membre", "membres")</span>
+                        </span>
+                        @if (customer.Id == Selected.Id)
+                        {
+                            <span class="chev"><GxIcon Name="@GxIconPaths.Check" Size="18"/></span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="gx-m-sec"><span class="t">Abonnement GymXYZ</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-flex" style="padding:16px;gap:14px;align-items:flex-start">
+            <span class="gx-m-ic t-brand lg"><GxIcon Name="@GxIconPaths.Zap" Size="26"/></span>
+            <div class="gx-m-grow">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:var(--text-md);font-weight:700;color:var(--text-strong)">
+                        @(Selected.GymPlan ?? "Aucune formule")
+                    </span>
+                    <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Actif</GxChip>
+                </div>
+                @if (Selected.PlanDescription is { } description)
+                {
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:3px">
+                        @description
+                    </div>
+                }
+            </div>
+            @if (Selected.PlanPrice is { } price)
+            {
+                <div style="flex:none;text-align:right">
+                    <div style="font-size:var(--text-2xl);font-weight:700;color:var(--text-strong);line-height:1">
+                        @GxFormats.Amount(price)
+                    </div>
+                    <div style="font-size:var(--text-2xs);color:var(--text-muted)">/ mois</div>
+                </div>
+            }
+        </div>
+
+        <div style="padding:0 16px 16px">
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:6px;font-weight:600">
+                <span>Membres actifs</span>
+                <b style="color:var(--text-strong)">
+                    @GxFormats.Count(Selected.MemberCount) / @CapLabel
+                </b>
+            </div>
+            @if (Selected.UsagePercent is { } percent)
+            {
+                <GxBar Percent="percent" AriaLabel="@($"{Selected.MemberCount} membres sur {CapLabel}")"/>
+            }
+            @if (Selected.PlanRenewalDate is { } renewal)
+            {
+                <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:var(--text-xs);color:var(--text-muted)">
+                    <GxIcon Name="@GxIconPaths.Refresh" Size="13"/>
+                    Renouvellement le @GxFormats.Date(renewal)
+                </div>
+            }
+        </div>
+    </div>
+
+    @* The prototype's « Changer de formule ». Disabled rather than dropped: the
+       phone reads this screen, it does not edit it — the desktop panel does. *@
+    <button class="gx-m-cta ghost" style="margin-top:12px" disabled
+            title="La formule se modifie depuis l'écran Administration sur ordinateur.">
+        <GxIcon Name="@GxIconPaths.Layers" Size="18"/>
+        Changer de formule
+    </button>
+
+    <div class="gx-m-sec"><span class="t">Moyen de paiement</span></div>
+    <div class="gx-m-card">
+        <div class="gx-m-flex" style="padding:16px;gap:14px">
+            <span class="gx-m-ic t-neutral"><GxIcon Name="@GxIconPaths.Card" Size="21"/></span>
+            <div class="gx-m-grow">
+                @if (Selected.PaymentBrand is { } brand && Selected.PaymentLast4 is { } last4)
+                {
+                    <div style="font-size:var(--text-sm);font-weight:700;color:var(--text-strong)">
+                        @brand ···· @last4
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                        Expire @Selected.PaymentExpiry
+                    </div>
+                }
+                else
+                {
+                    <div style="font-size:var(--text-sm);font-weight:700;color:var(--text-strong)">
+                        Aucun moyen de paiement
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="gx-m-sec"><span class="t">Factures</span></div>
+    <div class="gx-m-card">
+        @if (Selected.Invoices.Count == 0)
+        {
+            <div class="gx-m-note">Aucune facture pour ce client.</div>
+        }
+        else
+        {
+            <div class="gx-m-rows">
+                @foreach (var invoice in Selected.Invoices)
+                {
+                    <div class="gx-m-row" style="cursor:default">
+                        <span class="gx-m-ic t-neutral" style="width:36px;height:36px">
+                            <GxIcon Name="@GxIconPaths.File" Size="17"/>
+                        </span>
+                        <div class="main">
+                            <div class="nm">@invoice.Reference</div>
+                            <div class="meta">@GxFormats.Date(invoice.Date)</div>
+                        </div>
+                        <div class="trail">
+                            <span class="amt">@GxFormats.Amount(invoice.Amount)</span>
+                            <GxChip Tone="@InvoiceTone(invoice.Status)">@InvoiceLabel(invoice.Status)</GxChip>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="gx-m-note" style="text-align:center;margin-top:8px">
+        L'apparence et la marque se règlent sur ordinateur.
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TenantSummaryDto> Customers { get; set; } = [];
+    [Parameter, EditorRequired] public TenantDetailDto Selected { get; set; } = TenantDetailDto.None;
+
+    /// <summary>False while the first load is still in flight.</summary>
+    [Parameter] public bool IsLoaded { get; set; }
+
+    [Parameter] public EventCallback<int> OnSelectCustomer { get; set; }
+
+    private string CapLabel => Selected.PlanMemberCap is { } cap
+        ? GxFormats.Count(cap)
+        : "illimité";
+
+    private static GxTone InvoiceTone(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => GxTone.Success,
+        InvoiceStatus.Late => GxTone.Danger,
+        _ => GxTone.Warning
+    };
+
+    private static string InvoiceLabel(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => "Payée",
+        InvoiceStatus.Late => "En retard",
+        _ => "En attente"
+    };
+}

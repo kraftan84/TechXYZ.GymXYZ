@@ -1,6 +1,6 @@
-@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
-
-@* The bar under an editable panel. Sticks to the bottom of the viewport so a
+@* The bar under an editable panel. Shared rather than owned by Réglages since
+   lot 9: the Administration console edits a customer's brand and plan with the
+   same two states and the same wording. Sticks to the bottom of the viewport so a
    long panel can be scrolled without losing the way to save it — the class
    itself is the prototype's, the stickiness is a layout-only addition in
    gx-extras.css, as the hand-off rules allow.

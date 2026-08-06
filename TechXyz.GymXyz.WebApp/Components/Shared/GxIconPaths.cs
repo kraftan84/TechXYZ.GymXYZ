@@ -51,6 +51,14 @@ public static class GxIconPaths
     public const string Refresh = "refresh";
     public const string Wallet = "wallet";
 
+    // The paths below have been in the table since lot 1; lot 9 is the first
+    // screen to name them.
+    public const string Palette = "palette";
+    public const string Download = "download";
+    public const string Zap = "zap";
+    public const string Layers = "layers";
+    public const string File = "file";
+
     private static readonly Dictionary<string, string> Paths = new(StringComparer.OrdinalIgnoreCase)
     {
         ["home"] = """<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>""",

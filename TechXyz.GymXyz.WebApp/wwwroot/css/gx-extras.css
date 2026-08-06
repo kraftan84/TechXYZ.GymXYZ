@@ -356,3 +356,60 @@ button.gx-coach-card { width: 100%; text-align: left; color: inherit; }
   color: var(--text-muted);
   text-align: center;
 }
+
+/* ---------- Customer row (Administration) ----------
+   The console's client list. The prototype has no drawing for it — it only ever
+   shows one customer — so the row is assembled from pieces the hand-off does
+   have: a .gx-listrow, and the .sw swatch of a .gx-theme-card.
+
+   Layout only, as everywhere else: the swatch, the name and the caption all take
+   their colours from the tokens, and each row carries its own data-theme so the
+   swatch shows that customer's brand rather than the one being served. */
+.gx-customer-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.gx-customer-row .sw {
+  flex: none;
+  width: 34px;
+  display: flex;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(12, 34, 54, .08);
+}
+
+.gx-customer-row .sw i { height: 34px; flex: 1; }
+
+.gx-customer-row .main { flex: 1; min-width: 0; }
+
+.gx-customer-row .t {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-strong);
+}
+
+.gx-customer-row .s {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.gx-customer-row.on .t { color: var(--color-primary); }
+
+.gx-customer-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

@@ -1,74 +1,288 @@
 @* Reserved for the TechXYZ super-admin. Guarded by policy, not by hiding the link.
 
-   PR 1 of lot 9 lands the plumbing, not the screen: this is the plainest list
-   that lets the multi-customer seed and the impersonation round trip be
-   exercised at all. « Apparence & marque » and « Facturation » — the two panels
-   the prototype draws — arrive in PR 2, which replaces everything below the
-   heading with the real console. The query and the count behind it are already
-   the ones PR 2 will use. *@
+   Owns the customer list, which one is selected, both edit buffers and every
+   write. The two presentations take parameters only.
+
+   Each panel keeps its own buffer and its own save bar, as Réglages does: the
+   sections are tabs of one screen but they are not one form, and « Enregistrer »
+   under the brand must not quietly post a plan somebody was still reading.
+
+   Selecting another customer does drop the buffers, unlike Réglages — they
+   describe the customer that was selected, and carrying them across would offer
+   to save one client's baseline onto another. *@
 
 @page "/administration"
 @attribute [Authorize(Policy = GymPolicies.PlatformAdmin)]
+@implements IDisposable
 
 @using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Models
 @using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Administration
 
-@inject ISender Sender
+@inject IServiceScopeFactory ScopeFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
 
 <PageTitle>Administration</PageTitle>
 
-<PageHead Title="Administration" Subtitle="Clients GymXYZ, apparence & marque, facturation."/>
-
-@if (_customers.Count == 0)
+@if (Responsive.IsMobile)
 {
-    <EmptyState Icon="@GxIconPaths.Shield"
-                Title="Aucun client"
-                Text="Aucun client GymXYZ n'est enregistré."/>
+    <AdministrationMobile Customers="_customers"
+                          Selected="_selected"
+                          IsLoaded="_loaded"
+                          OnSelectCustomer="SelectCustomerAsync"/>
 }
 else
 {
-    <div class="gx-card">
-        <div style="padding:4px 18px 8px">
-            @foreach (var customer in _customers)
-            {
-                <div class="gx-listrow">
-                    <span class="gx-disc-ic t-brand" style="width:34px;height:34px">
-                        <GxIcon Name="@GxIconPaths.Building" Size="16"/>
-                    </span>
-                    <div class="main">
-                        <div class="t">@customer.DisplayName</div>
-                        <div class="s">
-                            @customer.MemberCount membres
-                            @if (customer.Where is { } where)
-                            {
-                                @(" · ")
-
-                                @where
-                            }
-                            @if (customer.GymPlan is { } plan)
-                            {
-                                @(" · ")
-
-                                @plan
-                            }
-                        </div>
-                    </div>
-                    <a class="gx-tab" href="@($"/account/client?client={customer.Id}")">Entrer</a>
-                </div>
-            }
-        </div>
+    <div class="gx-screen">
+        <AdministrationDesktop Customers="_customers"
+                               Selected="_selected"
+                               Section="_section"
+                               IsLoaded="_loaded"
+                               BrandingForm="_branding"
+                               PlanForm="_plan"
+                               IsDirty="IsDirty"
+                               IsSaved="IsSaved"
+                               OnSelectCustomer="SelectCustomerAsync"
+                               OnSelectSection="SelectSection"
+                               OnCreate="OpenCreateDrawer"
+                               OnSave="SaveAsync"
+                               OnCancel="Reset"
+                               OnTouch="Touch"/>
     </div>
+}
+
+@if (_creating)
+{
+    <NewTenantDrawer OnClose="CloseDrawer" OnSave="CreateAsync"/>
 }
 
 @code {
     private IReadOnlyList<TenantSummaryDto> _customers = [];
+    private TenantDetailDto _selected = TenantDetailDto.None;
 
-    protected override async Task OnInitializedAsync()
+    private AdministrationSection _section = AdministrationSection.Marque;
+
+    private BrandingForm _branding = new();
+    private PlanForm _plan = new();
+
+    private bool _creating;
+
+    /// <summary>
+    /// False until the first load has answered. Without it the list would say
+    /// « Aucun client GymXYZ pour l'instant » while it is still asking — an empty
+    /// state states a fact, and that one would not be true yet.
+    /// </summary>
+    private bool _loaded;
+
+    /// <summary>Which section's buffer differs from what was loaded.</summary>
+    private readonly HashSet<AdministrationSection> _dirty = [];
+    private readonly HashSet<AdministrationSection> _saved = [];
+
+    private bool IsDirty => _dirty.Contains(_section);
+    private bool IsSaved => _saved.Contains(_section);
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Reloads the list and keeps the selection on the same customer. Falls back
+    /// to the first one when there is no selection yet, or when the selected
+    /// customer has gone.
+    /// </summary>
+    private async Task RefreshAsync(int? select = null)
+    {
+        await UserFeedback.ExecuteAsync(
+            () => InConsoleScopeAsync(async sender =>
+            {
+                _customers = await sender.Send(new GetTenantsQuery());
+
+                var wanted = select
+                             ?? (_selected.Id != 0 ? _selected.Id : (int?)null)
+                             ?? _customers.FirstOrDefault()?.Id;
+
+                await LoadCustomerAsync(sender, wanted);
+            }), "charger les clients");
+
+        _loaded = true;
+    }
+
+    private async Task LoadCustomerAsync(ISender sender, int? tenantId)
+    {
+        _selected = tenantId is { } id
+            ? await sender.Send(new GetTenantDetailQuery(id)) ?? TenantDetailDto.None
+            : TenantDetailDto.None;
+
+        ResetBuffers();
+    }
+
+    /// <summary>
+    /// Rebuilds both edit buffers from what was just read, so « Annuler » always
+    /// goes back to what is stored rather than to what was on screen a moment ago.
+    /// </summary>
+    private void ResetBuffers()
+    {
+        _branding = BrandingForm.From(_selected);
+        _plan = PlanForm.From(_selected);
+        _dirty.Clear();
+    }
+
+    private async Task SelectCustomerAsync(int tenantId)
+    {
+        if (tenantId == _selected.Id)
+        {
+            return;
+        }
+
+        _saved.Clear();
+
+        await UserFeedback.ExecuteAsync(
+            () => InConsoleScopeAsync(sender => LoadCustomerAsync(sender, tenantId)),
+            "charger le client");
+    }
+
+    private void SelectSection(AdministrationSection section)
+    {
+        _section = section;
+        _saved.Remove(section);
+    }
+
+    private void Touch()
+    {
+        _dirty.Add(_section);
+        _saved.Remove(_section);
+    }
+
+    private void Reset()
+    {
+        ResetBuffers();
+        _saved.Clear();
+    }
+
+    private Task SaveAsync() => _section == AdministrationSection.Marque
+        ? SaveBrandingAsync()
+        : SavePlanAsync();
+
+    private async Task SaveBrandingAsync()
+    {
+        await UserFeedback.ExecuteAsync(
+            () => InConsoleScopeAsync(async sender =>
+            {
+                var saved = await sender.Send(_branding.ToCommand(_selected.Id));
+                if (!saved)
+                {
+                    throw ValidationFailures.Refuse(
+                        TenantFieldNames.Tenant, TenantRules.TenantNotFound);
+                }
+
+                await ReloadAfterSaveAsync(sender, AdministrationSection.Marque);
+            }), "enregistrer la marque",
+            "Marque enregistrée. Le client la verra à sa prochaine ouverture.");
+    }
+
+    private async Task SavePlanAsync()
+    {
+        await UserFeedback.ExecuteAsync(
+            () => InConsoleScopeAsync(async sender =>
+            {
+                var saved = await sender.Send(_plan.ToCommand(_selected.Id));
+                if (!saved)
+                {
+                    throw ValidationFailures.Refuse(
+                        TenantFieldNames.Tenant, TenantRules.TenantNotFound);
+                }
+
+                await ReloadAfterSaveAsync(sender, AdministrationSection.Facturation);
+            }), "enregistrer la formule", "Formule enregistrée.");
+    }
+
+    /// <summary>
+    /// Reads back what was stored rather than trusting the buffer: the handler
+    /// derives things the panel did not send — a wordmark cleared by switching
+    /// shape — and the screen has to show what was actually kept. The list is
+    /// re-read too, since the row carries the name and the plan.
+    /// </summary>
+    private async Task ReloadAfterSaveAsync(ISender sender, AdministrationSection section)
+    {
+        _customers = await sender.Send(new GetTenantsQuery());
+        await LoadCustomerAsync(sender, _selected.Id);
+
+        _saved.Add(section);
+    }
+
+    private void OpenCreateDrawer() => _creating = true;
+
+    private void CloseDrawer() => _creating = false;
+
+    private async Task CreateAsync(NewTenantForm form)
     {
         await UserFeedback.ExecuteAsync(async () =>
         {
-            _customers = await Sender.Send(new GetTenantsQuery());
-        }, "charger les clients");
+            var created = 0;
+            await InConsoleScopeAsync(async sender =>
+                created = await sender.Send(form.ToCommand()));
+
+            CloseDrawer();
+            _saved.Clear();
+
+            // Lands on the new customer with its brand panel open: creating one
+            // is the start of dressing it, not the end of anything.
+            _section = AdministrationSection.Marque;
+            await RefreshAsync(created);
+        }, "créer le client", "Client créé.");
+    }
+
+    private void OnShellChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Runs console work in a DI scope of its own, rather than on the circuit's.
+    /// <para>
+    /// Two reasons, and both hold on their own. The first is correctness of
+    /// scope: every other screen is served <i>as</i> a customer, this one is
+    /// served as none — it reads <c>Tenant</c> and <c>Invoice</c>, which sit
+    /// above the tenant filter, and counts through the one place that lifts it.
+    /// A fresh scope resolves no tenant, which is exactly right here and would
+    /// be wrong anywhere else.
+    /// </para>
+    /// <para>
+    /// The second is the shared <c>DbContext</c>. It is scoped to the circuit and
+    /// EF forbids two operations on one instance at once — the reason
+    /// <c>TenantResolver</c> already carries a semaphore against the layout. This
+    /// screen fires five queries a load, more than any other, and lost that race
+    /// often enough to land on « Impossible de charger les clients ». Its own
+    /// scope means its own context, and no race to lose.
+    /// </para>
+    /// <para>
+    /// The signed-in admin is carried across so audit stamping still names a
+    /// person: a fresh scope has no HttpContext and would write "system".
+    /// </para>
+    /// </summary>
+    private async Task InConsoleScopeAsync(Func<ISender, Task> work)
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        using var scope = ScopeFactory.CreateScope();
+
+        scope.ServiceProvider
+            .GetRequiredService<CurrentUserService>()
+            .SetCircuitUser(state.User);
+
+        await work(scope.ServiceProvider.GetRequiredService<ISender>());
+    }
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
     }
 }
