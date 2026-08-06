@@ -75,6 +75,39 @@ public class TenantFilterTests
     }
 
     [Fact]
+    public async Task Query_ShouldHideInvitations_OfAnotherTenant()
+    {
+        // An invitation is an e-mail address somebody handed the gym. Leaking
+        // one across customers leaks a person, not a row.
+        var databaseName = nameof(Query_ShouldHideInvitations_OfAnotherTenant);
+        var tenantContext = new TestTenantContext(1);
+
+        await using var dbContext = TestInfrastructure.CreateDbContext(databaseName, tenantContext);
+        dbContext.Invitations.Add(new Invitation
+        {
+            Email = "theo.garnier@gymxyz.fr",
+            RoleName = "Coach",
+            SentOn = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        using (tenantContext.UseTenant(2))
+        {
+            dbContext.Invitations.Add(new Invitation
+            {
+                Email = "quelquun@autre.fr",
+                RoleName = "Coach",
+                SentOn = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var invitations = await dbContext.Invitations.AsNoTracking().ToListAsync();
+
+        invitations.Select(invitation => invitation.Email).ShouldBe(["theo.garnier@gymxyz.fr"]);
+    }
+
+    [Fact]
     public async Task SaveChanges_ShouldStampTheAmbientTenant_OnNewEntities()
     {
         var databaseName = nameof(SaveChanges_ShouldStampTheAmbientTenant_OnNewEntities);

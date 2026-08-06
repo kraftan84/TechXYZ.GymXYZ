@@ -23,10 +23,10 @@ public sealed record CoachDetailsPageDto(
     public CoachStatus Status { get; init; }
 
     /// <summary>
-    /// True when the coach signs in with an Identity account. The account
-    /// itself cannot be read from here: <c>Application</c> does not see
-    /// <c>ApplicationUser</c>, and the directory abstraction that fixes it is
-    /// scheduled for lot 8.
+    /// True when the coach signs in with an Identity account. Read from
+    /// <c>Coach.UserId</c>, which is all this screen asks. Anything more about
+    /// the account — the role it holds, when it was last seen — goes through
+    /// <c>IUserDirectory</c>, which is what « Équipe &amp; accès » uses.
     /// </summary>
     public bool HasAccount { get; init; }
 }

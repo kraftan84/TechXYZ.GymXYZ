@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
@@ -34,6 +35,7 @@ public static class DbInitializer
                 await SeedRolesAsync(serviceProvider);
                 await SeedManagerAsync(serviceProvider, tenant);
                 await SeedGymAsync(dbContext, tenant);
+                await SeedAccessAsync(serviceProvider, dbContext, tenant);
             }
         }
     }
@@ -46,7 +48,6 @@ public static class DbInitializer
         {
             DisplayName = "GymXYZ",
             Baseline = "Salle de sport & coaching",
-            MarkKind = TenantMarkKind.Kettlebell,
             WordmarkPrefix = "GYM",
             WordmarkAccent = "XYZ",
             Email = "contact@gymxyz.fr",
@@ -102,6 +103,112 @@ public static class DbInitializer
         }
 
         await userManager.AddToRoleAsync(manager, GymRoles.GymManager);
+    }
+
+    /// <summary>
+    /// Who can sign in, as the Réglages hand-off draws it: part of the team and
+    /// part of the members hold an account, one collaborator and one member are
+    /// still waiting on their invitation, and the rest have never been asked.
+    /// <para>
+    /// Deliberately partial. A seed where everybody has an account would show
+    /// the « Équipe &amp; accès » panel in the one state it never has to handle.
+    /// </para>
+    /// </summary>
+    private static async Task SeedAccessAsync(
+        IServiceProvider serviceProvider,
+        GymDbContext dbContext,
+        Tenant tenant)
+    {
+        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var now = DateTime.UtcNow;
+
+        async Task<string> CreateAccountAsync(
+            string email,
+            string displayName,
+            string roleLabel,
+            string role,
+            int lastSeenHoursAgo)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                TenantId = tenant.Id,
+                DisplayName = displayName,
+                RoleLabel = roleLabel,
+                LastSeenAt = now.AddHours(-lastSeenHoursAgo)
+            };
+
+            var result = await userManager.CreateAsync(user, DemoPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Could not seed the demo account {email}: {errors}");
+            }
+
+            await userManager.AddToRoleAsync(user, role);
+            return user.Id;
+        }
+
+        // Three of the six coaches sign in; the other three have never been asked.
+        var coaches = await dbContext.Coaches.ToListAsync();
+
+        foreach (var (email, hoursAgo) in new[]
+                 {
+                     ("nora.lemoine@gymxyz.fr", 3),
+                     ("samir.elamrani@gymxyz.fr", 2),
+                     ("lea.fontaine@gymxyz.fr", 26)
+                 })
+        {
+            if (coaches.FirstOrDefault(coach => coach.Email == email) is not { } coach)
+                continue;
+
+            coach.UserId = await CreateAccountAsync(
+                email, $"{coach.FirstName} {coach.LastName}", coach.RoleLabel ?? "Coach",
+                GymRoles.Coach, hoursAgo);
+        }
+
+        // Four of the demo six have opened their espace, one is waiting on an
+        // invitation, and Théo has never been asked.
+        var members = await dbContext.Members.ToListAsync();
+
+        foreach (var (email, hoursAgo) in new[]
+                 {
+                     ("laetitia.moriceau@gymxyz.fr", 5),
+                     ("amina.benali@gymxyz.fr", 2),
+                     ("sarah.cohen@gymxyz.fr", 27),
+                     ("lucas.martin@gymxyz.fr", 96)
+                 })
+        {
+            if (members.FirstOrDefault(member => member.Email == email) is not { } member)
+                continue;
+
+            member.UserId = await CreateAccountAsync(
+                email, $"{member.FirstName} {member.LastName}", "Membre",
+                GymRoles.Member, hoursAgo);
+        }
+
+        var camille = members.FirstOrDefault(member => member.Email == "camille.durand@gymxyz.fr");
+
+        dbContext.Invitations.AddRange(
+            // A collaborator: Théo coaches here and has no account yet.
+            new Invitation
+            {
+                Email = "theo.garnier@gymxyz.fr",
+                RoleName = GymRoleNames.Coach,
+                SentOn = now.AddDays(-2)
+            },
+            // A member asked to open her espace.
+            new Invitation
+            {
+                Email = "camille.durand@gymxyz.fr",
+                RoleName = GymRoleNames.Member,
+                MemberId = camille?.Id,
+                SentOn = now.AddDays(-5)
+            });
+
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task SeedGymAsync(GymDbContext dbContext, Tenant tenant)

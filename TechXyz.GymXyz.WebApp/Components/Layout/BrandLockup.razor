@@ -1,17 +1,17 @@
 @* Brand mark + themed wordmark. The only place a customer's identity is read;
-   every colour still comes from the theme tokens. *@
+   every colour still comes from the theme tokens.
+
+   A customer without a logo file shows its name alone. The mark element is not
+   rendered at all in that case rather than left empty: .mark is a fixed 38px box
+   with a 10px gap, so an empty span would indent the wordmark by 48px. *@
 
 <div class="@(Mobile ? "gx-m-brand" : "gx-brand")">
-    <span class="mark @(Brand.CircleLogo ? "circle" : null)">
-        @if (Brand.MarkKind == TenantMarkKind.Kettlebell || MarkSource is null)
-        {
-            <KettlebellMark Size="@MarkSize"/>
-        }
-        else
-        {
+    @if (MarkSource is not null)
+    {
+        <span class="mark @(Brand.CircleLogo ? "circle" : null)">
             <img src="@MarkSource" alt="@Brand.DisplayName"/>
-        }
-    </span>
+        </span>
+    }
     <span class="@(Mobile ? "gx-m-wordmark" : "gx-wordmark")">
         @if (!string.IsNullOrWhiteSpace(Brand.WordmarkText))
         {
@@ -32,10 +32,15 @@
 
     [Parameter] public bool Mobile { get; set; }
 
-    private int MarkSize => Mobile ? 34 : 38;
+    private string? MarkSource
+    {
+        get
+        {
+            var source = OnDark && !string.IsNullOrWhiteSpace(Brand.LogoDarkPath)
+                ? Brand.LogoDarkPath
+                : Brand.LogoPath;
 
-    private string? MarkSource =>
-        OnDark && !string.IsNullOrWhiteSpace(Brand.LogoDarkPath)
-            ? Brand.LogoDarkPath
-            : Brand.LogoPath;
+            return string.IsNullOrWhiteSpace(source) ? null : source;
+        }
+    }
 }

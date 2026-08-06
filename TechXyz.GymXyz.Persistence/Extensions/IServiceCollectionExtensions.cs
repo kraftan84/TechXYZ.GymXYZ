@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Persistence.Contexts;
+using TechXyz.GymXyz.Persistence.Identity;
 
 namespace TechXyz.GymXyz.Persistence.Extensions;
 
@@ -14,6 +15,10 @@ public static class IServiceCollectionExtensions
     {
         services.AddDbContext(configuration, environment);
         services.AddScoped<IGymDbContext>(provider => provider.GetRequiredService<GymDbContext>());
+
+        // The accounts side of the same context. Declared in Application,
+        // implemented here because Identity types live on this side of the line.
+        services.AddScoped<IUserDirectory, UserDirectory>();
     }
 
     public static void AddDbContext(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)

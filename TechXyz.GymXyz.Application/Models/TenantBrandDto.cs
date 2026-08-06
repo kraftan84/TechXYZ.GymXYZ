@@ -12,7 +12,6 @@ public sealed record TenantBrandDto(
     string ThemeKey,
     string DisplayName,
     string? Baseline,
-    TenantMarkKind MarkKind,
     string? LogoPath,
     string? LogoDarkPath,
     bool CircleLogo,
