@@ -28,7 +28,10 @@
    row in the THEMES registry (app/data.js). Zero screen edits.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Dancing+Script:wght@600;700&display=swap');
+/* Anton and Dancing Script are self-hosted alongside Orbitron and
+   Montserrat — see techxyz/tokens/fonts.css. Nothing here may @import a
+   font CDN: it would hand every visitor's IP address to a third party
+   before the first paint, with no consent asked. */
 
 :root {
   --font-accent: "Orbitron", "Montserrat", sans-serif;

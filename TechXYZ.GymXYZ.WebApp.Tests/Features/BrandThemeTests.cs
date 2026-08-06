@@ -62,25 +62,6 @@ public class BrandThemeTests
         BrandTheme.For(null).Key.ShouldBe("techxyz");
     }
 
-    private static string ReadThemesStylesheet()
-    {
-        // Walks up from the test binaries to the repository, then across to the
-        // web app: the stylesheet is not copied to the output.
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null
-               && !File.Exists(Path.Combine(directory.FullName, "TechXyz.GymXyz.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        directory.ShouldNotBeNull("Could not find the repository root from the test binaries.");
-
-        var path = Path.Combine(
-            directory.FullName, "TechXyz.GymXyz.WebApp", "wwwroot", "css", "themes.css");
-
-        File.Exists(path).ShouldBeTrue($"themes.css not found at {path}.");
-
-        return File.ReadAllText(path);
-    }
+    private static string ReadThemesStylesheet() =>
+        RepositoryFiles.ReadWebAppFile("wwwroot", "css", "themes.css");
 }
