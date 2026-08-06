@@ -1,0 +1,113 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* The customers of GymXYZ, and which one the panels below are about.
+
+   The prototype has no drawing for this: it only ever shows one customer,
+   because changing brand there is a demo panel rather than a product function.
+   Built from gx-listrow and the theme swatch, which the hand-off does have, so
+   nothing new is invented — every row paints its own brand by carrying
+   data-theme, the same trick the theme cards use.
+
+   « Entrer » is the impersonation from PR 1. It is a link and not a button
+   because it leaves for a statically rendered page: re-signing the
+   authentication cookie needs a real HTTP response, which a circuit cannot give. *@
+
+<GxCard Padded="false">
+    <CardHead Title="@GxFormats.Plural(Customers.Count, "client", "clients")">
+        <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+            <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+            Nouveau client
+        </FluentButton>
+    </CardHead>
+
+    @if (!IsLoaded)
+    {
+        @* Not the empty state: an empty state says there are none, and while the
+           list is still being read that is not something anybody knows yet. *@
+        <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+            Chargement des clients…
+        </div>
+    }
+    else if (Customers.Count == 0)
+    {
+        <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+            Aucun client GymXYZ pour l'instant.
+        </div>
+    }
+    else
+    {
+        <div style="padding:4px 18px 8px" role="radiogroup" aria-label="Clients GymXYZ">
+            @foreach (var customer in Customers)
+            {
+                var selected = customer.Id == SelectedId;
+
+                <div class="gx-listrow">
+                    <button type="button" role="radio"
+                            aria-checked="@(selected ? "true" : "false")"
+                            class="gx-customer-row @(selected ? "on" : null)"
+                            @onclick="() => OnSelect.InvokeAsync(customer.Id)">
+                        @* The ramp step, not --color-primary — see MarquePanel for
+                           why a nested data-theme cannot move the semantic token. *@
+                        <span class="sw" data-theme="@customer.ThemeKey" aria-hidden="true">
+                            <i style="background:var(--azure-600)"></i>
+                            <i style="background:var(--gx-sb-bg)"></i>
+                        </span>
+                        <span class="main">
+                            <span class="t">@customer.DisplayName</span>
+                            <span class="s">@Summary(customer)</span>
+                        </span>
+                    </button>
+
+                    @if (customer.UsagePercent is { } percent)
+                    {
+                        <GxBar Percent="percent" Width="90px"
+                               AriaLabel="@($"{customer.MemberCount} membres sur {customer.PlanMemberCap}")"/>
+                    }
+
+                    @if (selected)
+                    {
+                        <GxChip Tone="GxTone.Brand" Icon="@GxIconPaths.Check">Sélectionné</GxChip>
+                    }
+
+                    <a class="gx-tab" href="@($"/account/client?client={customer.Id}")">
+                        <GxIcon Name="@GxIconPaths.ArrowRight" Size="16"/>
+                        <span>Entrer</span>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+</GxCard>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TenantSummaryDto> Customers { get; set; } = [];
+    [Parameter] public int SelectedId { get; set; }
+
+    /// <summary>False while the first load is still in flight.</summary>
+    [Parameter] public bool IsLoaded { get; set; }
+
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+
+    /// <summary>
+    /// "8 membres · Lyon 7ᵉ · GymXYZ Studio". Whichever of those a customer has —
+    /// an itinerant coach has an area and no town, and a customer can sit on no
+    /// plan at all.
+    /// </summary>
+    private static string Summary(TenantSummaryDto customer)
+    {
+        var parts = new List<string> { GxFormats.Plural(customer.MemberCount, "membre", "membres") };
+
+        if (customer.Where is { } where)
+        {
+            parts.Add(where);
+        }
+
+        if (customer.GymPlan is { } plan)
+        {
+            parts.Add(plan);
+        }
+
+        return string.Join(" · ", parts);
+    }
+}

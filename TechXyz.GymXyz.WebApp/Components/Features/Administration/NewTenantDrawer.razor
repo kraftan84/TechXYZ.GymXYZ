@@ -1,0 +1,142 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* Nouveau client — the three things a customer cannot exist without.
+
+   Address, logo and plan are not asked for here. A gym that signs up on the
+   phone has a name before it has a wordmark, and the two panels fill the rest
+   afterwards. *@
+
+<GxDrawer Title="Nouveau client"
+          Subtitle="Ouvrir un espace GymXYZ"
+          Icon="@GxIconPaths.Building"
+          OnClose="OnClose">
+    <ChildContent>
+        <div class="gx-seclab">Identité</div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Nom du client" Value="@_form.Name"
+                             ValueChanged="ChangeName" Immediate="true"
+                             Placeholder="Team Trainer's" style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Identifiant d'adresse" Value="@_form.Slug"
+                             ValueChanged="ChangeSlug" Immediate="true"
+                             Placeholder="teamtrainers" style="width:100%"/>
+            <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                @(_slugPreview).gymxyz.fr — minuscules, chiffres et tirets.
+            </div>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentCheckbox @bind-Value="_form.IsSolo"
+                            Label="Coach indépendante (la section Coachs disparaît de sa navigation)"/>
+        </div>
+
+        <div class="gx-seclab">Marque</div>
+
+        <div class="gx-theme-grid" style="padding:0" role="radiogroup" aria-label="Thème de marque">
+            @foreach (var theme in BrandTheme.All)
+            {
+                var selected = theme.Key == _form.ThemeKey;
+
+                <button type="button" role="radio"
+                        class="@("gx-theme-card" + (selected ? " on" : null))"
+                        aria-checked="@(selected ? "true" : "false")"
+                        @onclick="() => _form.ThemeKey = theme.Key">
+                    @* The ramp step, not --color-primary — see MarquePanel for
+                       why a nested data-theme cannot move the semantic token. *@
+                    <span class="sw" data-theme="@theme.Key">
+                        <i style="background:var(--azure-600)"></i>
+                        <i style="background:var(--gx-sb-bg)"></i>
+                    </span>
+                    <span class="tnm">
+                        @theme.Label
+                        @if (selected)
+                        {
+                            <span style="display:flex;color:var(--color-primary)">
+                                <GxIcon Name="@GxIconPaths.Check" Size="16"/>
+                            </span>
+                        }
+                    </span>
+                </button>
+            }
+        </div>
+
+        <div style="margin-top:12px;font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+            Le client s'ouvre sans marque : son nom s'affiche seul jusqu'à ce qu'il
+            fournisse un logo. Un thème nouveau se déclare dans <b>themes.css</b> —
+            une ligne ici, un bloc de tokens là, et rien d'autre à redéployer.
+        </div>
+    </ChildContent>
+    <Footer>
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+                Créer le client
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<NewTenantForm> OnSave { get; set; }
+
+    private readonly NewTenantForm _form = new();
+
+    /// <summary>True once the address has been typed rather than suggested.</summary>
+    private bool _slugEdited;
+
+    private string _slugPreview => string.IsNullOrWhiteSpace(_form.Slug) ? "client" : _form.Slug;
+
+    /// <summary>
+    /// Suggests the address from the name until somebody types one. « Team
+    /// Trainer's » becomes « teamtrainers » — the apostrophe and the space are
+    /// not things a host name can carry.
+    /// </summary>
+    private void ChangeName(string? value)
+    {
+        _form.Name = value ?? string.Empty;
+
+        if (!_slugEdited)
+        {
+            _form.Slug = SuggestSlug(_form.Name);
+        }
+    }
+
+    /// <summary>
+    /// Once the address is typed it stops following the name — renaming the
+    /// customer afterwards must not silently move where it is reached.
+    /// </summary>
+    private void ChangeSlug(string? value)
+    {
+        _slugEdited = true;
+        _form.Slug = value ?? string.Empty;
+    }
+
+    private static string SuggestSlug(string name)
+    {
+        var stripped = string.Concat(name
+            .Normalize(NormalizationForm.FormD)
+            .Where(character => CharUnicodeInfo.GetUnicodeCategory(character)
+                                != UnicodeCategory.NonSpacingMark));
+
+        var slug = new string(stripped
+            .ToLowerInvariant()
+            .Select(character => char.IsLetterOrDigit(character) ? character : '-')
+            .ToArray());
+
+        // Collapse the runs the substitution above leaves behind, then drop the
+        // hyphens a host label may not start or end with.
+        while (slug.Contains("--"))
+        {
+            slug = slug.Replace("--", "-");
+        }
+
+        return slug.Trim('-');
+    }
+
+    private Task SubmitAsync() => OnSave.InvokeAsync(_form);
+}

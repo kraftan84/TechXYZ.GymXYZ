@@ -1,0 +1,102 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* The TechXYZ console: the customers on top, then the two panels about the one
+   selected.
+
+   Same shell as ReglagesDesktop — gx-tabs / gx-tab, the tab strip the prototype
+   re-uses for section navigation. The customer list sits above the strip rather
+   than inside it: the sections switch what you are looking at, the list switches
+   who you are looking at, and putting both in one row would read as six tabs.
+
+   Presentation only: every piece of state and every write comes from
+   Administration.razor. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Administration" Subtitle="Clients GymXYZ, apparence & marque, facturation."/>
+
+<CustomerList Customers="Customers"
+              SelectedId="Selected.Id"
+              IsLoaded="IsLoaded"
+              OnSelect="OnSelectCustomer"
+              OnCreate="OnCreate"/>
+
+@if (Selected.Id != 0)
+{
+    <div class="gx-tabs" role="tablist" style="margin-top:18px">
+        @foreach (var section in Sections)
+        {
+            <button type="button" role="tab"
+                    class="@("gx-tab" + (section == Section ? " on" : null))"
+                    aria-selected="@(section == Section ? "true" : "false")"
+                    @onclick="() => OnSelectSection.InvokeAsync(section)">
+                <GxIcon Name="@Icon(section)" Size="17"/>
+                <span>@Title(section)</span>
+            </button>
+        }
+    </div>
+
+    @if (Section == AdministrationSection.Marque)
+    {
+        <MarquePanel Customer="Selected"
+                     Form="BrandingForm"
+                     IsDirty="IsDirty"
+                     IsSaved="IsSaved"
+                     OnSave="OnSave"
+                     OnCancel="OnCancel"
+                     OnTouch="OnTouch"/>
+    }
+    else
+    {
+        <FacturationPanel Customer="Selected"
+                          Form="PlanForm"
+                          IsDirty="IsDirty"
+                          IsSaved="IsSaved"
+                          OnSave="OnSave"
+                          OnCancel="OnCancel"
+                          OnTouch="OnTouch"/>
+    }
+}
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Administration")
+    ];
+
+    public static readonly AdministrationSection[] Sections =
+        [AdministrationSection.Marque, AdministrationSection.Facturation];
+
+    [Parameter, EditorRequired] public IReadOnlyList<TenantSummaryDto> Customers { get; set; } = [];
+    [Parameter, EditorRequired] public TenantDetailDto Selected { get; set; } = TenantDetailDto.None;
+    [Parameter] public AdministrationSection Section { get; set; }
+
+    /// <summary>False while the first load is still in flight.</summary>
+    [Parameter] public bool IsLoaded { get; set; }
+
+    [Parameter, EditorRequired] public BrandingForm BrandingForm { get; set; } = new();
+    [Parameter, EditorRequired] public PlanForm PlanForm { get; set; } = new();
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback<int> OnSelectCustomer { get; set; }
+    [Parameter] public EventCallback<AdministrationSection> OnSelectSection { get; set; }
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+
+    public static string Title(AdministrationSection section) => section switch
+    {
+        AdministrationSection.Marque => "Apparence & marque",
+        _ => "Facturation"
+    };
+
+    public static string Icon(AdministrationSection section) => section switch
+    {
+        AdministrationSection.Marque => GxIconPaths.Palette,
+        _ => GxIconPaths.Wallet
+    };
+}

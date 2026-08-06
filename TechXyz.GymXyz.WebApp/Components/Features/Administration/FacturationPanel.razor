@@ -1,0 +1,235 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* Facturation — what this customer pays TechXYZ.
+
+   Not to be confused with the Abonnements screen, which is a member paying the
+   gym. This is the other direction, one level up.
+
+   The prototype writes the hero as fixed copy on one customer. Here it reads the
+   selected one, and the gauge only appears when the plan is capped: "112 /
+   illimité" has nothing to fill, and drawing a bar at 42% under the word
+   "illimité" — as the mock-up does — would be showing a proportion of nothing. *@
+
+<div class="gx-set-panel">
+    <p class="gx-set-intro">
+        L'abonnement de @Customer.DisplayName à GymXYZ, ses factures et son moyen de
+        paiement. À ne pas confondre avec les encaissements de la salle, qui sont
+        l'argent de ses propres membres.
+    </p>
+
+    <GxCard Padded="false" Accent="true">
+        <CardHead Title="@($"Abonnement de {Customer.DisplayName}")">
+            <GxChip Tone="GxTone.Success" Icon="@GxIconPaths.Check">Actif</GxChip>
+        </CardHead>
+
+        <div class="gx-plan-hero">
+            <span class="gx-disc-ic big t-brand">
+                <GxIcon Name="@GxIconPaths.Zap" Size="24"/>
+            </span>
+            <div style="flex:1">
+                <div style="font-size:var(--text-lg);font-weight:var(--weight-bold);color:var(--text-strong)">
+                    @(Customer.GymPlan ?? "Aucune formule")
+                </div>
+                @if (Customer.PlanDescription is { } description)
+                {
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                        @description
+                    </div>
+                }
+                @if (Customer.PlanRenewalDate is { } renewal)
+                {
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:6px">
+                        <GxIcon Name="@GxIconPaths.Refresh" Size="13"/>
+                        Renouvellement le @GxFormats.Date(renewal)
+                    </div>
+                }
+            </div>
+            @if (Customer.PlanPrice is { } price)
+            {
+                <div style="text-align:right">
+                    <div class="price">@GxFormats.Amount(price)</div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted)">/ mois</div>
+                </div>
+            }
+        </div>
+
+        <div style="padding:0 20px 18px">
+            <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--text-muted);margin-bottom:6px;font-weight:var(--weight-semibold)">
+                <span>Membres actifs</span>
+                <b style="color:var(--text-strong)">
+                    @GxFormats.Count(Customer.MemberCount) / @CapLabel
+                </b>
+            </div>
+            @if (Customer.UsagePercent is { } percent)
+            {
+                <GxBar Percent="percent" Tone="@GaugeTone(percent)"
+                       AriaLabel="@($"{Customer.MemberCount} membres sur {CapLabel}")"/>
+            }
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Formule facturée"/>
+        <div class="gx-field-grid">
+            @* Wrapped: a Fluent field is a label plus an input, two siblings. *@
+            <div>
+                <FluentTextField Label="Nom de la formule" @bind-Value="Form.GymPlan"
+                                 @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                 Placeholder="GymXYZ Pro"/>
+            </div>
+            <div>
+                <FluentNumberField Label="Prix mensuel (€)" Min="0" Max="10000" Step="0.01"
+                                   @bind-Value="Form.PlanPrice" @bind-Value:after="Touch"
+                                   style="width:100%"/>
+            </div>
+            <div class="full">
+                <FluentTextField Label="Description" @bind-Value="Form.PlanDescription"
+                                 @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                 Placeholder="Engagement annuel · sans frais de mise en service"/>
+            </div>
+            <div>
+                <FluentDatePicker Label="Prochain renouvellement" Placeholder="jj/mm/aaaa"
+                                  @bind-Value="RenewalDate" @bind-Value:after="Touch"
+                                  style="width:100%"/>
+            </div>
+            <div>
+                <FluentNumberField Label="Plafond de membres" Min="1" Max="100000"
+                                   @bind-Value="Form.PlanMemberCap" @bind-Value:after="Touch"
+                                   style="width:100%" Placeholder="Vide = illimité"/>
+                <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                    Laissez vide pour un accès illimité.
+                </div>
+            </div>
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Moyen de paiement"/>
+        <div style="padding:16px 18px;display:flex;align-items:center;gap:14px">
+            <span class="gx-disc-ic t-neutral">
+                <GxIcon Name="@GxIconPaths.Card" Size="22"/>
+            </span>
+            <div style="flex:1">
+                @if (Customer.PaymentBrand is { } brand && Customer.PaymentLast4 is { } last4)
+                {
+                    <div style="font-size:var(--text-sm);font-weight:var(--weight-bold);color:var(--text-strong)">
+                        @brand •••• @last4
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                        Expire @Customer.PaymentExpiry
+                    </div>
+                }
+                else
+                {
+                    <div style="font-size:var(--text-sm);font-weight:var(--weight-bold);color:var(--text-strong)">
+                        Aucun moyen de paiement
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                        Ce client n'a pas encore de carte enregistrée.
+                    </div>
+                }
+            </div>
+            @* Disabled, and it stays that way until there is a payment provider:
+               a brand and four digits are what a provider reports back, never
+               something typed here. Nothing in the product must hold a card
+               number. Same treatment as the check-in kiosk at lot 6. *@
+            <FluentButton Appearance="Appearance.Outline" Size="ButtonSize.Small" Disabled="true"
+                          Title="La saisie d'une carte passera par un prestataire de paiement.">
+                Modifier
+            </FluentButton>
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Factures"/>
+        @if (Customer.Invoices.Count == 0)
+        {
+            <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+                Aucune facture pour ce client.
+            </div>
+        }
+        else
+        {
+            <div style="padding:4px 18px 8px">
+                @foreach (var invoice in Customer.Invoices)
+                {
+                    <div class="gx-listrow">
+                        <span class="gx-disc-ic t-neutral" style="width:34px;height:34px">
+                            <GxIcon Name="@GxIconPaths.File" Size="16"/>
+                        </span>
+                        <div class="main">
+                            <div class="t">@GxFormats.Amount(invoice.Amount) · @GxFormats.Date(invoice.Date)</div>
+                            <div class="s">@invoice.Reference</div>
+                        </div>
+                        <GxChip Tone="@InvoiceTone(invoice.Status)">@InvoiceLabel(invoice.Status)</GxChip>
+                        @* No document is generated yet, so there is nothing to
+                           hand over — the button says so rather than pretending. *@
+                        <FluentButton Appearance="Appearance.Stealth" Size="ButtonSize.Small"
+                                      Disabled="true" Title="Le PDF de facture arrive dans un lot ultérieur."
+                                      aria-label="@($"Télécharger {invoice.Reference}")">
+                            <GxIcon Name="@GxIconPaths.Download" Size="16"/>
+                        </FluentButton>
+                    </div>
+                }
+            </div>
+        }
+    </GxCard>
+
+    <SaveBar IsDirty="IsDirty" IsSaved="IsSaved"
+             UpToDateNote="La formule de ce client est à jour."
+             OnSave="OnSave" OnCancel="OnCancel"/>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TenantDetailDto Customer { get; set; } = TenantDetailDto.None;
+    [Parameter, EditorRequired] public PlanForm Form { get; set; } = new();
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+
+    private string CapLabel => Customer.PlanMemberCap is { } cap
+        ? GxFormats.Count(cap)
+        : "illimité";
+
+    /// <summary>
+    /// The picker speaks DateTime, the plan stores a plain day. Bridged here
+    /// rather than widening the form: a renewal has no hour, and letting one in
+    /// would put a timezone between the customer and its own due date.
+    /// </summary>
+    private DateTime? RenewalDate
+    {
+        get => Form.PlanRenewalDate?.ToDateTime(TimeOnly.MinValue);
+        set => Form.PlanRenewalDate = value is { } moment ? DateOnly.FromDateTime(moment) : null;
+    }
+
+    /// <summary>
+    /// The gauge warns before the plan is actually full: a customer at 90% of its
+    /// cap is a conversation to have, not a wall to hit.
+    /// </summary>
+    private static GxTone GaugeTone(int percent) => percent switch
+    {
+        >= 100 => GxTone.Danger,
+        >= 90 => GxTone.Warning,
+        _ => GxTone.Brand
+    };
+
+    private static GxTone InvoiceTone(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => GxTone.Success,
+        InvoiceStatus.Late => GxTone.Danger,
+        _ => GxTone.Warning
+    };
+
+    private static string InvoiceLabel(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Paid => "Payée",
+        InvoiceStatus.Late => "En retard",
+        _ => "En attente"
+    };
+
+    private Task Touch() => OnTouch.InvokeAsync();
+}

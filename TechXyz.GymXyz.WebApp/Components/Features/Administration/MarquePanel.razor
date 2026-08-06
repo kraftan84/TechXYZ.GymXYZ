@@ -1,0 +1,242 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Administration
+
+@* Apparence & marque, for the customer selected in the console.
+
+   The theme cards and the preview paint themselves by carrying data-theme on
+   their own element. themes.css declares each brand as a block of custom
+   properties under [data-theme="…"], so a nested element re-declares them for
+   its own subtree and every swatch reads the real tokens of the theme it
+   advertises. The prototype hardcodes two hex values a card; doing that here
+   would break the "var(--*) only, never a literal" rule and would drift the
+   first time a ramp is retuned.
+
+   The prototype's intro credits the Tweaks panel for switching brands live.
+   Tweaks is the prototype's demo device and does not exist in the product — the
+   sentence names this screen instead, which is the thing that actually does it. *@
+
+<div class="gx-set-panel">
+    <p class="gx-set-intro">
+        GymXYZ va plus loin que la marque blanche : chaque thème porte sa propre
+        <b>atmosphère</b> — accent, encre, fond, surfaces, ombres et registre de la
+        barre latérale (claire, sombre ou douce). Le thème choisi ici repeint
+        l'application de @Customer.DisplayName à sa prochaine ouverture, sans
+        redéploiement.
+    </p>
+
+    <GxCard Padded="false">
+        <CardHead Title="Thème de marque">
+            <GxChip Tone="GxTone.Brand" Icon="@GxIconPaths.Palette">
+                @BrandTheme.For(Form.ThemeKey).Label
+            </GxChip>
+        </CardHead>
+
+        <div class="gx-theme-grid" role="radiogroup" aria-label="Thème de marque">
+            @foreach (var theme in BrandTheme.All)
+            {
+                var selected = theme.Key == Form.ThemeKey;
+
+                <button type="button" role="radio"
+                        class="@("gx-theme-card" + (selected ? " on" : null))"
+                        aria-checked="@(selected ? "true" : "false")"
+                        @onclick="() => SelectTheme(theme.Key)">
+                    @* The swatch reads this theme's own tokens, not the one on
+                       screen — that is the whole point of the attribute here.
+
+                       The ramp step rather than --color-primary, and it matters:
+                       --color-primary is declared once on :root as
+                       var(--azure-600), so it inherits already resolved and a
+                       nested data-theme cannot move it. What a theme block does
+                       redeclare is the ramp itself, so the ramp is what a swatch
+                       has to read. Same reasoning for --ink-900 and --neutral-50
+                       in the preview below. *@
+                    <span class="sw" data-theme="@theme.Key">
+                        <i style="background:var(--azure-600)"></i>
+                        <i style="background:var(--gx-sb-bg)"></i>
+                    </span>
+                    <span class="tnm">
+                        @theme.Label
+                        @if (selected)
+                        {
+                            @* Wrapped rather than styled: GxIcon inherits
+                               currentColor and takes a Class, never a Style. *@
+                            <span style="display:flex;color:var(--color-primary)">
+                                <GxIcon Name="@GxIconPaths.Check" Size="16"/>
+                            </span>
+                        }
+                    </span>
+                    <span class="tsub">@theme.Description</span>
+                </button>
+            }
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Aperçu"/>
+        @* Scoped to the theme being chosen rather than the one being served, so
+           the preview shows what the customer will get, not what the admin sees. *@
+        <div data-theme="@Form.ThemeKey"
+             style="padding:20px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            @* On the sidebar's own surface, and with the sidebar's own asset.
+               The lockup takes its colours from the --gx-sb-* tokens because that
+               is where it lives: Team Trainer's wordmark is white, and previewing
+               it on a white card would show nothing at all. *@
+            <span style="display:inline-flex;padding:10px 14px;border-radius:var(--radius-md);background:var(--gx-sb-bg);border:1px solid var(--gx-sb-border)">
+                <BrandLockup Brand="Preview" OnDark="true"/>
+            </span>
+            <div class="gx-tokens" style="padding:0">
+                <div class="gx-token">
+                    <span class="dot" style="background:var(--azure-600)"></span>
+                    <span>
+                        <span class="k" style="display:block">Accent</span>
+                        <span class="v">Primaire</span>
+                    </span>
+                </div>
+                <div class="gx-token">
+                    <span class="dot" style="background:var(--ink-900)"></span>
+                    <span>
+                        <span class="k" style="display:block">Encre</span>
+                        <span class="v">Texte fort</span>
+                    </span>
+                </div>
+                <div class="gx-token">
+                    <span class="dot" style="background:var(--neutral-50)"></span>
+                    <span>
+                        <span class="k" style="display:block">Fond</span>
+                        <span class="v">Atmosphère</span>
+                    </span>
+                </div>
+                <div class="gx-token">
+                    <span class="dot" style="background:var(--gx-sb-bg)"></span>
+                    <span>
+                        <span class="k" style="display:block">Sidebar</span>
+                        <span class="v">Registre</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Nom & signature"/>
+        <div class="gx-field-grid">
+            @* Wrapped: a Fluent field is a label plus an input, two siblings —
+               unwrapped it would take two cells of the grid. *@
+            <div>
+                <FluentTextField Label="Nom affiché" @bind-Value="Form.DisplayName"
+                                 @bind-Value:after="Touch" Immediate="true" style="width:100%"/>
+            </div>
+            <div>
+                <FluentTextField Label="Baseline" @bind-Value="Form.Baseline"
+                                 @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                 Placeholder="Révélez-vous"/>
+            </div>
+        </div>
+
+        <div style="padding:0 18px 18px">
+            <FluentCheckbox @bind-Value="Form.SplitWordmark" @bind-Value:after="Touch"
+                            Label="Wordmark en deux temps (la seconde moitié prend l'accent)"/>
+        </div>
+
+        <div class="gx-field-grid">
+            @if (Form.SplitWordmark)
+            {
+                <div>
+                    <FluentTextField Label="Wordmark — début" @bind-Value="Form.WordmarkPrefix"
+                                     @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                     Placeholder="GYM"/>
+                </div>
+                <div>
+                    <FluentTextField Label="Wordmark — accent" @bind-Value="Form.WordmarkAccent"
+                                     @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                     Placeholder="XYZ"/>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <FluentTextField Label="Wordmark" @bind-Value="Form.WordmarkText"
+                                     @bind-Value:after="Touch" Immediate="true" style="width:100%"
+                                     Placeholder="@Form.DisplayName"/>
+                </div>
+            }
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Logo"/>
+        <div style="padding:18px;display:flex;align-items:center;gap:14px">
+            <span class="gx-disc-ic big t-brand">
+                <GxIcon Name="@GxIconPaths.Download" Size="24"/>
+            </span>
+            <div style="flex:1">
+                <div style="font-size:var(--text-sm);font-weight:var(--weight-bold);color:var(--text-strong)">
+                    Logo et favicon
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                    @if (Customer.HasLogo)
+                    {
+                        @("PNG ou SVG · fond transparent · 512 × 512 px recommandé")
+                    }
+                    else
+                    {
+                        @($"{Customer.DisplayName} n'a pas fourni de marque : son nom s'affiche seul.")
+                    }
+                </div>
+            </div>
+            @* Disabled, and said out loud: replacing a mark means receiving a
+               file, and nothing in the product uploads one yet. Same treatment as
+               the check-in kiosk at lot 6. *@
+            <FluentButton Appearance="Appearance.Outline" Disabled="true"
+                          Title="L'envoi de fichier arrive dans un lot ultérieur.">
+                Remplacer
+            </FluentButton>
+        </div>
+    </GxCard>
+
+    <SaveBar IsDirty="IsDirty" IsSaved="IsSaved"
+             UpToDateNote="La marque de ce client est à jour."
+             OnSave="OnSave" OnCancel="OnCancel"/>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TenantDetailDto Customer { get; set; } = TenantDetailDto.None;
+    [Parameter, EditorRequired] public BrandingForm Form { get; set; } = new();
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+
+    /// <summary>
+    /// The lockup as the buffer currently describes it, so the preview follows
+    /// what is being typed rather than what is stored.
+    /// </summary>
+    private TenantBrandDto Preview => new(
+        Customer.Id,
+        Customer.Slug,
+        Form.ThemeKey,
+        string.IsNullOrWhiteSpace(Form.DisplayName) ? Customer.DisplayName : Form.DisplayName,
+        Form.Baseline,
+        Customer.LogoPath,
+        Customer.LogoDarkPath,
+        Customer.CircleLogo,
+        Form.SplitWordmark ? null : Form.WordmarkText,
+        Form.SplitWordmark ? Form.WordmarkPrefix : null,
+        Form.SplitWordmark ? Form.WordmarkAccent : null,
+        Customer.IsSolo);
+
+    private async Task SelectTheme(string themeKey)
+    {
+        if (Form.ThemeKey == themeKey)
+        {
+            return;
+        }
+
+        Form.ThemeKey = themeKey;
+        await OnTouch.InvokeAsync();
+    }
+
+    private Task Touch() => OnTouch.InvokeAsync();
+}

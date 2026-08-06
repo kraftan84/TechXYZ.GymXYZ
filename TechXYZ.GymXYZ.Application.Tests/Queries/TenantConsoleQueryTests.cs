@@ -132,6 +132,79 @@ public class TenantConsoleQueryTests
         customers.Select(customer => customer.Slug).ShouldBe(["gymxyz"]);
     }
 
+    [Fact]
+    public async Task GetTenantDetail_ShouldReadTheBillingOfACustomerItIsNotServing()
+    {
+        // Served as GymXYZ, reading Team Trainer's — Tenant and Invoice both sit
+        // above the tenant filter so the console can do exactly this.
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(GetTenantDetail_ShouldReadTheBillingOfACustomerItIsNotServing),
+            new TestTenantContext(GymXyzId));
+
+        dbContext.Tenants.Add(new Tenant("Team Trainer's", "teamtrainers", "teamtrainers")
+        {
+            Id = TeamTrainersId,
+            GymPlan = "GymXYZ Studio",
+            PlanPrice = 49m,
+            PlanMemberCap = 150,
+            PaymentBrand = "Mastercard",
+            PaymentLast4 = "5417"
+        });
+
+        dbContext.Invoices.AddRange(
+            new Invoice
+            {
+                TenantId = TeamTrainersId, Reference = "GX-2024-002",
+                Date = new DateOnly(2024, 1, 1), Amount = 588m
+            },
+            new Invoice
+            {
+                TenantId = TeamTrainersId, Reference = "GX-2026-002",
+                Date = new DateOnly(2026, 1, 1), Amount = 588m
+            },
+            // Somebody else's invoice: it must not turn up on this customer.
+            new Invoice
+            {
+                TenantId = GymXyzId, Reference = "GX-2026-001",
+                Date = new DateOnly(2026, 1, 1), Amount = 948m
+            });
+
+        AddMembers(dbContext, TeamTrainersId, 30);
+        await dbContext.SaveChangesAsync();
+
+        var customer = await new GetTenantDetailQueryHandler(dbContext)
+            .Handle(new GetTenantDetailQuery(TeamTrainersId), CancellationToken.None);
+
+        customer.ShouldNotBeNull();
+        customer.DisplayName.ShouldBe("Team Trainer's");
+        customer.MemberCount.ShouldBe(30);
+        customer.PaymentLast4.ShouldBe("5417");
+
+        // Newest first, and only this customer's.
+        customer.Invoices.Select(invoice => invoice.Reference)
+            .ShouldBe(["GX-2026-002", "GX-2024-002"]);
+    }
+
+    [Fact]
+    public async Task GetTenantDetail_ShouldAnswerNothingForARetiredCustomer()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(GetTenantDetail_ShouldAnswerNothingForARetiredCustomer),
+            new TestTenantContext(GymXyzId));
+
+        dbContext.Tenants.Add(new Tenant("Partie", "partie", "techxyz")
+        {
+            Id = TeamTrainersId,
+            IsActive = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        var customer = await new GetTenantDetailQueryHandler(dbContext)
+            .Handle(new GetTenantDetailQuery(TeamTrainersId), CancellationToken.None);
+
+        customer.ShouldBeNull();
+    }
+
     [Theory]
     // An itinerant coach has an area and no town: the area is what shows.
     [InlineData(null, "Thonon et alentours", "Thonon et alentours")]
