@@ -53,4 +53,6 @@ public static class AttendanceRules
     public const string SessionNotFound = "Séance introuvable.";
 
     public const string RegistrationNotFound = "Inscription introuvable.";
+
+    public const string NobodyToChase = "Personne à relancer.";
 }

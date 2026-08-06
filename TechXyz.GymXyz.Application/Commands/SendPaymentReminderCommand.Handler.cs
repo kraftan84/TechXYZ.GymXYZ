@@ -8,20 +8,29 @@ using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class SendPaymentReminderCommandHandler : IRequestHandler<SendPaymentReminderCommand, bool>
+public sealed class SendPaymentReminderCommandHandler
+    : IRequestHandler<SendPaymentReminderCommand, NotificationOutcomeDto>
 {
     private readonly IGymDbContext _dbContext;
+    private readonly IEmailSender _emailSender;
+    private readonly ITenantContext _tenantContext;
     private readonly IValidator<SendPaymentReminderCommand> _validator;
 
     public SendPaymentReminderCommandHandler(
         IGymDbContext dbContext,
+        IEmailSender emailSender,
+        ITenantContext tenantContext,
         IValidator<SendPaymentReminderCommand> validator)
     {
         _dbContext = dbContext;
+        _emailSender = emailSender;
+        _tenantContext = tenantContext;
         _validator = validator;
     }
 
-    public async Task<bool> Handle(SendPaymentReminderCommand request, CancellationToken cancellationToken)
+    public async Task<NotificationOutcomeDto> Handle(
+        SendPaymentReminderCommand request,
+        CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
 
@@ -35,7 +44,7 @@ public sealed class SendPaymentReminderCommandHandler : IRequestHandler<SendPaym
 
         if (subscription?.Member is null || subscription.Plan is null || !subscription.Member.IsActive)
         {
-            return false;
+            return NotificationOutcomeDto.NotFound;
         }
 
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -69,9 +78,47 @@ public sealed class SendPaymentReminderCommandHandler : IRequestHandler<SendPaym
             throw ValidationFailures.Refuse(PlanFieldNames.Subscription, PaymentRules.NothingToChase);
         }
 
+        // Stamped and committed before anything leaves: the decision to chase is
+        // the gym's, and it survives a mail server that is not answering.
         subscription.LastReminderSentOn = today;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return true;
+        if (!await NotificationPolicy.AllowsEmailAsync(
+                _dbContext, NotificationKey.RenewalReminder, cancellationToken))
+        {
+            return NotificationOutcomeDto.Suppressed;
+        }
+
+        var member = subscription.Member;
+        if (string.IsNullOrWhiteSpace(member.Email))
+        {
+            // Nothing to send to. Not a failure of ours, and not something a
+            // retry would fix — the member's record is where that is fixed.
+            return NotificationOutcomeDto.SavedOnly;
+        }
+
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.Id == _tenantContext.Current, cancellationToken);
+
+        var message = NotificationMessages.RenewalReminder(
+            tenant?.DisplayName ?? string.Empty,
+            member.FirstName,
+            member.Email,
+            $"{member.FirstName} {member.LastName}",
+            subscription.Plan.Name,
+            subscription.EndsOn,
+            status == SubscriptionStatus.Late) with
+        {
+            FromName = tenant?.DisplayName,
+            ReplyToAddress = tenant?.Email,
+            ReplyToName = tenant?.DisplayName
+        };
+
+        var delivery = await _emailSender.SendAsync(message, cancellationToken);
+
+        return delivery.IsSent
+            ? NotificationOutcomeDto.Delivered(1, 0)
+            : NotificationOutcomeDto.Delivered(0, 1);
     }
 }

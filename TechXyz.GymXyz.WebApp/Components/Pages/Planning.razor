@@ -253,16 +253,33 @@ else
             return;
         }
 
-        var cancelled = await UserFeedback.ExecuteAsync(
-            async () => await Sender.Send(new CancelSessionCommand(id, _editModel.CancellationReason, _editModel.Scope)),
-            "annuler la séance",
-            "Séance annulée.");
+        NotificationOutcomeDto outcome = NotificationOutcomeDto.NotFound;
 
-        if (cancelled)
+        var cancelled = await UserFeedback.ExecuteAsync(
+            async () => outcome = await Sender.Send(
+                new CancelSessionCommand(id, _editModel.CancellationReason, _editModel.Scope)),
+            "annuler la séance");
+
+        if (!cancelled)
         {
-            CloseDrawer();
-            await RefreshAsync();
+            return;
         }
+
+        // The cancellation stands whatever the warnings did — say both rather
+        // than let a mail failure read as a cancellation that did not happen.
+        const string done = "Séance annulée.";
+
+        if (NotificationOutcomeLabels.Warning(outcome, done) is { } warning)
+        {
+            UserFeedback.ShowPartial(warning);
+        }
+        else
+        {
+            UserFeedback.ShowSuccess(NotificationOutcomeLabels.Success(outcome, done));
+        }
+
+        CloseDrawer();
+        await RefreshAsync();
     }
 
     private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
