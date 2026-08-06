@@ -1,9 +1,205 @@
 @page "/abonnements"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.Domain.Entities
+@using TechXyz.GymXyz.WebApp.Components.Features.Abonnements
+@implements IDisposable
+
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+
+@* Owns the overview, the open drawer and every write. The two presentations take
+   parameters only.
+
+   The filter chips sort rows the page already holds rather than going back to
+   the server: the whole suivi is one read, and « Actifs » to « En retard » is a
+   question about the same list. *@
 
 <PageTitle>Abonnements</PageTitle>
 
-<PageHead Title="Abonnements" Subtitle="Formules, suivi des abonnements et encaissements."/>
+@if (Responsive.IsMobile)
+{
+    <AbonnementsMobile Overview="_overview"
+                       Tab="_tab"
+                       Today="_today"
+                       OnSelectTab="SelectTab"
+                       OnEditPlan="OpenPlanDrawer"
+                       OnCollect="OpenPaymentDrawer"/>
+}
+else
+{
+    <div class="gx-screen">
+        <AbonnementsDesktop Overview="_overview"
+                            Rows="Rows"
+                            Status="_status"
+                            Today="_today"
+                            OnFilter="SelectFilter"
+                            OnEditPlan="OpenPlanDrawer"
+                            OnCollect="OpenPaymentDrawer"/>
+    </div>
+}
 
-<EmptyState Icon="@GxIconPaths.Card"
-            Title="Bientôt les abonnements"
-            Text="Les formules et les encaissements arrivent au prochain lot."/>
+@if (_drawer == DrawerMode.Plan)
+{
+    <PlanDrawer Plan="_editingPlan"
+                OnClose="CloseDrawer"
+                OnSave="SavePlanAsync"
+                OnDelete="RetirePlanAsync"/>
+}
+else if (_drawer == DrawerMode.Payment && _collecting is not null)
+{
+    <PaymentDrawer Row="_collecting"
+                   OnClose="CloseDrawer"
+                   OnSave="RecordPaymentAsync"/>
+}
+
+@code {
+    private enum DrawerMode
+    {
+        None,
+        Plan,
+        Payment
+    }
+
+    private readonly DateOnly _today = DateOnly.FromDateTime(DateTime.Today);
+
+    private SubscriptionOverviewDto _overview = SubscriptionOverviewDto.Empty;
+    private SubscriptionStatus? _status;
+    private AbonnementsTab _tab = AbonnementsTab.Suivi;
+    private DrawerMode _drawer = DrawerMode.None;
+    private PlanDto? _editingPlan;
+    private SubscriptionRowDto? _collecting;
+
+    private IReadOnlyList<SubscriptionRowDto> Rows =>
+        SubscriptionFilters.Apply(_overview.Subscriptions, _status);
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await UserFeedback.ExecuteAsync(
+            async () => _overview = await Sender.Send(new GetSubscriptionOverviewQuery()),
+            "charger les abonnements");
+    }
+
+    private void SelectFilter(SubscriptionStatus? status) => _status = status;
+
+    private void SelectTab(AbonnementsTab tab) => _tab = tab;
+
+    private void OpenPlanDrawer(PlanDto? plan)
+    {
+        _editingPlan = plan;
+        _drawer = DrawerMode.Plan;
+    }
+
+    private void OpenPaymentDrawer(SubscriptionRowDto row)
+    {
+        _collecting = row;
+        _drawer = DrawerMode.Payment;
+    }
+
+    private void CloseDrawer()
+    {
+        _drawer = DrawerMode.None;
+        _editingPlan = null;
+        _collecting = null;
+    }
+
+    private async Task SavePlanAsync(PlanDrawer.PlanForm form)
+    {
+        var isNew = _editingPlan is null;
+
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            if (_editingPlan is { } plan)
+            {
+                var updated = await Sender.Send(new UpdatePlanCommand(
+                    plan.Id,
+                    form.Name,
+                    form.ShortName,
+                    form.Price,
+                    form.ValidityMonths,
+                    form.CreditCount,
+                    form.Description,
+                    form.HasCommitment,
+                    form.IsFeatured));
+
+                if (!updated)
+                {
+                    throw ValidationFailures.Refuse(PlanFieldNames.Plan, PlanRules.PlanNotFound);
+                }
+            }
+            else
+            {
+                await Sender.Send(new CreatePlanCommand(
+                    form.Name,
+                    form.ShortName,
+                    form.Price,
+                    form.Kind,
+                    form.ValidityMonths,
+                    form.CreditCount,
+                    form.Description,
+                    form.HasCommitment));
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, isNew ? "créer la formule" : "modifier la formule",
+           isNew ? "Formule créée." : "Formule enregistrée.");
+    }
+
+    /// <summary>
+    /// Takes a formule off sale. The members already on it keep it — their
+    /// subscription carries its own price and entry count — but nobody new can
+    /// be sold it.
+    /// </summary>
+    private async Task RetirePlanAsync(int planId)
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var deleted = await Sender.Send(new DeletePlanCommand(planId));
+            if (!deleted)
+            {
+                throw ValidationFailures.Refuse(PlanFieldNames.Plan, PlanRules.PlanNotFound);
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "retirer la formule", "Formule retirée de la vente.");
+    }
+
+    private async Task RecordPaymentAsync(PaymentDrawer.PaymentInput input)
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new RecordPaymentCommand(
+                input.MemberId,
+                input.SubscriptionId,
+                input.Amount,
+                input.Method,
+                input.Date,
+                input.Status));
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "enregistrer l'encaissement", "Encaissement enregistré.");
+    }
+
+    private void OnShellChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
+    }
+}

@@ -65,6 +65,10 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
                 subscription.CreditsTotal,
                 subscription.PriceLabel,
                 subscription.AutoRenew,
+                subscription.Price,
+                subscription.Payments!
+                    .Where(payment => payment.IsActive && payment.Status == PaymentStatus.Collected)
+                    .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 subscription.Payments!.Any(payment =>
                     payment.IsActive && payment.Status != PaymentStatus.Collected)))
             .ToListAsync(cancellationToken);

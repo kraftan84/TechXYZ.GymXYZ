@@ -91,19 +91,30 @@ public static class SubscriptionStatusRules
                  (subscription.CreditsRemaining != null &&
                   subscription.CreditsRemaining <= ExpiringSoonAtOrBelowCredits)),
 
+            // Owing is two conditions, exactly as SubscriptionCoverDto states
+            // them: a payment recorded as failed, and a collected total that
+            // still falls short. Either alone would be wrong — a bounced debit
+            // settled in cash is paid, and a cover with no payment rows at all
+            // is not in arrears just because nobody recorded anything.
             SubscriptionStatus.Late => subscription =>
                 subscription.IsActive &&
                 subscription.StartedOn <= today &&
                 (subscription.EndsOn < today || subscription.CreditsRemaining <= 0) &&
                 subscription.Payments!.Any(payment =>
-                    payment.IsActive && payment.Status != PaymentStatus.Collected),
+                    payment.IsActive && payment.Status != PaymentStatus.Collected) &&
+                subscription.Payments!
+                    .Where(payment => payment.IsActive && payment.Status == PaymentStatus.Collected)
+                    .Sum(payment => (decimal?)payment.Amount).GetValueOrDefault() < subscription.Price,
 
             _ => subscription =>
                 subscription.IsActive &&
                 subscription.StartedOn <= today &&
                 (subscription.EndsOn < today || subscription.CreditsRemaining <= 0) &&
-                !subscription.Payments!.Any(payment =>
-                    payment.IsActive && payment.Status != PaymentStatus.Collected)
+                !(subscription.Payments!.Any(payment =>
+                      payment.IsActive && payment.Status != PaymentStatus.Collected) &&
+                  subscription.Payments!
+                      .Where(payment => payment.IsActive && payment.Status == PaymentStatus.Collected)
+                      .Sum(payment => (decimal?)payment.Amount).GetValueOrDefault() < subscription.Price)
         };
     }
 

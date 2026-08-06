@@ -61,5 +61,39 @@ public class Subscription : EntityBase<int>, ITenantScoped
     /// </summary>
     public string PriceLabel { get; set; } = string.Empty;
 
+    /// <summary>
+    /// What one period of this cover costs — 49 for a monthly plan, 490 for a
+    /// yearly one, 120 for a pack. This is the figure "180 € à encaisser" is a
+    /// sum of.
+    /// </summary>
+    public decimal Price { get; set; }
+
+    /// <summary>
+    /// The same money normalised to the month, and nought for a pack — a single
+    /// purchase is not a monthly revenue.
+    /// <para>
+    /// Stored rather than divided at read time because the MRR must not move
+    /// when a price does: <c>UpdatePlanCommand</c> can raise a formule tomorrow,
+    /// and reading the revenue through the plan would restate what every
+    /// existing subscriber has been contributing since the day they signed.
+    /// That is the same reason <see cref="PriceLabel"/> and
+    /// <see cref="CreditsTotal"/> are snapshots, applied to the one figure the
+    /// business actually steers on.
+    /// </para>
+    /// </summary>
+    public decimal MonthlyPrice { get; set; }
+
+    /// <summary>
+    /// When somebody last chased this cover for payment. Null means never.
+    /// <para>
+    /// Written by <c>SendPaymentReminderCommand</c>, which has no channel to
+    /// send down until messaging arrives at lot 8 — so for now it records the
+    /// intent and nothing leaves the building. Keeping the date means the
+    /// screen can say when the last chase went out instead of letting somebody
+    /// send four in a morning.
+    /// </para>
+    /// </summary>
+    public DateOnly? LastReminderSentOn { get; set; }
+
     public ICollection<Payment>? Payments { get; set; }
 }

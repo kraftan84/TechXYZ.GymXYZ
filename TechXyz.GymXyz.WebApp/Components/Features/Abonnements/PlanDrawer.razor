@@ -1,0 +1,160 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Abonnements
+
+@* Créer ou modifier une formule — the drawer's second mode in the prototype.
+
+   The nature (récurrent / carte) is only offered when creating. Changing it on a
+   plan already sold would leave every subscription on it consuming entries it
+   never had, or strand the gauges of the ones that do. A different nature is a
+   different offer, and the field says so rather than silently disappearing. *@
+
+<GxDrawer Title="@(IsNew ? "Nouvelle formule" : "Modifier la formule")"
+          Subtitle="@(IsNew ? "Créer une offre vendable" : Plan!.Name)"
+          Icon="@GxIconPaths.Card"
+          OnClose="OnClose">
+    <ChildContent>
+        <div class="gx-seclab">Offre</div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Nom de la formule" @bind-Value="_form.Name"
+                             Placeholder="Illimité mensuel" style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Nom court" @bind-Value="_form.ShortName"
+                             Placeholder="Illimité" style="width:100%"/>
+            <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                Ce que les feuilles de présence affichent, où la colonne est étroite.
+            </div>
+        </div>
+
+        @if (IsNew)
+        {
+            <div class="gx-form-field">
+                <FluentSelect Label="Nature" TOption="PlanKind"
+                              Items="_kinds"
+                              OptionValue="@(kind => kind.ToString())"
+                              OptionText="@(kind => kind == PlanKind.Recurring ? "Abonnement récurrent" : "Carte de séances")"
+                              @bind-SelectedOption="_form.Kind"
+                              style="width:100%"/>
+            </div>
+        }
+
+        <div class="gx-form-row">
+            <FluentNumberField Label="Prix (€)" Min="0" Step="1" @bind-Value="_form.Price" style="width:100%"/>
+            <FluentNumberField Label="@(_form.Kind == PlanKind.CreditPack ? "Validité (mois)" : "Facturé tous les (mois)")"
+                               Min="1" Max="60" @bind-Value="_form.ValidityMonths" style="width:100%"/>
+        </div>
+
+        @if (_form.Kind == PlanKind.CreditPack)
+        {
+            <div class="gx-form-field">
+                <FluentNumberField Label="Séances au carnet" Min="1" @bind-Value="_form.CreditCount"
+                                   style="width:100%"/>
+            </div>
+        }
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Description" @bind-Value="_form.Description"
+                             Placeholder="Ce que la formule inclut…" style="width:100%"/>
+        </div>
+
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:12px">
+            Sur la carte : <b>@Preview</b>
+        </div>
+
+        @if (_form.Kind == PlanKind.Recurring)
+        {
+            <div style="padding:6px 0">
+                <FluentSwitch @bind-Value="_form.HasCommitment">Engagement sur la durée</FluentSwitch>
+            </div>
+        }
+
+        <div style="padding:6px 0">
+            <FluentSwitch @bind-Value="_form.IsFeatured">Mettre en avant</FluentSwitch>
+        </div>
+
+        @if (!IsNew && Plan!.MemberCount > 0)
+        {
+            <div style="margin-top:12px;font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+                @GxFormats.Plural(Plan.MemberCount, "membre est couvert", "membres sont couverts")
+                par cette formule. Ce que vous changez ici s'applique aux
+                <b>prochaines</b> ventes : leur prix et leur carnet restent ceux
+                du jour où ils ont souscrit.
+            </div>
+        }
+    </ChildContent>
+    <Footer>
+        @if (!IsNew)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="() => OnDelete.InvokeAsync(Plan!.Id)">
+                <GxIcon Slot="start" Name="@GxIconPaths.Trash" Size="18"/>
+                Retirer de la vente
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
+                @(IsNew ? "Créer la formule" : "Enregistrer")
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    private static readonly PlanKind[] _kinds = [PlanKind.Recurring, PlanKind.CreditPack];
+
+    private PlanForm _form = new();
+
+    /// <summary>Null creates; a plan edits it.</summary>
+    [Parameter] public PlanDto? Plan { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<PlanForm> OnSave { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+
+    private bool IsNew => Plan is null;
+
+    /// <summary>
+    /// What the card will read once saved, shown while typing — the unit and the
+    /// engagement wording are both derived, and seeing "€ / an" appear when the
+    /// period reaches twelve is quicker than explaining the rule.
+    /// </summary>
+    private string Preview =>
+        $"{GxFormats.Number(_form.Price)} {PlanRules.UnitFor(_form.Kind, Math.Max(1, _form.ValidityMonths))}"
+        + $" · {PlanRules.BillingLabelFor(_form.Kind, _form.HasCommitment, Math.Max(1, _form.ValidityMonths))}";
+
+    protected override void OnParametersSet()
+    {
+        _form = Plan is { } plan
+            ? new PlanForm
+            {
+                Name = plan.Name,
+                ShortName = plan.ShortName,
+                Kind = plan.Kind,
+                Price = (int)Math.Round(plan.Price),
+                ValidityMonths = plan.ValidityMonths,
+                CreditCount = plan.CreditCount ?? 10,
+                Description = plan.Description,
+                HasCommitment = plan.BillingLabel.StartsWith("Engagement", StringComparison.OrdinalIgnoreCase),
+                IsFeatured = plan.IsFeatured
+            }
+            : new PlanForm();
+    }
+
+    private async Task SubmitAsync() => await OnSave.InvokeAsync(_form);
+
+    public sealed class PlanForm
+    {
+        public int? Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? ShortName { get; set; }
+        public PlanKind Kind { get; set; } = PlanKind.Recurring;
+        public int Price { get; set; } = 49;
+        public int ValidityMonths { get; set; } = 1;
+        public int CreditCount { get; set; } = 10;
+        public string? Description { get; set; }
+        public bool HasCommitment { get; set; }
+        public bool IsFeatured { get; set; }
+    }
+}

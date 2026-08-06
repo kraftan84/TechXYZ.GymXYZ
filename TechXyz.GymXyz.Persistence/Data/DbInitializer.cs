@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 using TechXyz.GymXyz.Persistence.Contexts;
@@ -779,7 +780,9 @@ public static class DbInitializer
                     CreditsRemaining = plan.IsCredited ? creditsRemaining ?? plan.CreditCount : null,
                     CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
                     AutoRenew = plan.Kind == PlanKind.Recurring && autoRenew,
-                    PriceLabel = plan.FormatPriceLabel()
+                    PriceLabel = plan.FormatPriceLabel(),
+                    Price = plan.Price,
+                    MonthlyPrice = SubscriptionFactory.MonthlyPriceOf(plan)
                 }
             ]
         };

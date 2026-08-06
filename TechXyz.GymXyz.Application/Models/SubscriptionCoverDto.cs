@@ -22,8 +22,24 @@ public sealed record SubscriptionCoverDto(
     int? CreditsTotal,
     string PriceLabel,
     bool AutoRenew,
-    bool HasOutstandingPayment)
+    decimal Price,
+    decimal CollectedAmount,
+    bool HasFailedPayment)
 {
+    /// <summary>
+    /// Whether money is still owed on this cover — what separates a subscription
+    /// that merely ended from one that is late.
+    /// <para>
+    /// Two conditions, and both are needed. A recorded failure alone is not
+    /// enough: a direct debit that bounced and was settled in cash at the desk
+    /// the same afternoon is paid, and a row that kept saying "En retard" after
+    /// the gym took the money would send somebody to chase it twice. A shortfall
+    /// alone is not enough either: most covers here have no payment rows at all,
+    /// and treating silence as debt would put half a demo database in arrears.
+    /// </para>
+    /// </summary>
+    public bool HasOutstandingPayment => HasFailedPayment && CollectedAmount < Price;
+
     /// <summary>
     /// What the credits column reads. A pack counts its entries; a recurring
     /// plan does not count access at all, and says so.
