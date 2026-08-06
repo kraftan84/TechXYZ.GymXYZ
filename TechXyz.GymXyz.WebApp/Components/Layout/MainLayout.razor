@@ -8,7 +8,7 @@
 
 @inject ResponsiveModeService Responsive
 @inject MobileHeaderService MobileHeader_
-@inject AttendanceBadgeService Badge
+@inject NavBadgeService Badge
 @inject IJSRuntime JsRuntime
 @inject PersistentComponentState ApplicationState
 @inject IHttpContextAccessor HttpContextAccessor
@@ -65,7 +65,9 @@
     else
     {
         <div class="gx-app">
-            <Sidebar Brand="Brand" SheetsToPoint="Badge.SheetsToPoint"/>
+            <Sidebar Brand="Brand"
+                     SheetsToPoint="Badge.SheetsToPoint"
+                     SubscriptionsToWatch="Badge.SubscriptionsToWatch"/>
             <div class="gx-main">
                 <ImpersonationBar CustomerName="@ImpersonatedCustomer"/>
                 <Topbar Brand="Brand" User="User"/>

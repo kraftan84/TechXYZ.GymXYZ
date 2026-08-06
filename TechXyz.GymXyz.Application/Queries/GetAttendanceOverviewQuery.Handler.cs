@@ -10,9 +10,6 @@ namespace TechXyz.GymXyz.Application.Queries;
 public sealed class GetAttendanceOverviewQueryHandler
     : IRequestHandler<GetAttendanceOverviewQuery, AttendanceOverviewDto>
 {
-    /// <summary>How far back a sheet left open still shows in "À pointer".</summary>
-    private const int ForgottenSheetDays = 7;
-
     /// <summary>How many validated sheets "Séances récentes" lists.</summary>
     private const int RecentSheetCount = 10;
 
@@ -35,7 +32,6 @@ public sealed class GetAttendanceOverviewQueryHandler
     {
         var now = DateTime.Now;
         var today = now.Date;
-        var tomorrow = today.AddDays(1);
 
         var (recentFrom, recentTo) = SessionStatistics.RecentAttendanceWindow(now);
         var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
@@ -50,7 +46,7 @@ public sealed class GetAttendanceOverviewQueryHandler
             recentFrom,
             cancellationToken);
 
-        var toPoint = await LoadToPointAsync(today.AddDays(-ForgottenSheetDays), tomorrow, cancellationToken);
+        var toPoint = await LoadToPointAsync(now, cancellationToken);
 
         // Counted off the list itself rather than off the facts. The facts stop
         // at "now" — that is what a rate is averaged over — so an evening class
@@ -97,19 +93,13 @@ public sealed class GetAttendanceOverviewQueryHandler
     }
 
     /// <summary>
-    /// Sheets still open. It reaches a week back rather than stopping at today so
-    /// a sheet somebody forgot on Friday is still in front of them on Monday
-    /// instead of quietly disappearing.
+    /// Sheets still open, over the window <see cref="AttendanceRules.OpenSheets"/>
+    /// defines — the same rows the Accueil counts for its alert and its badge.
     /// </summary>
     private async Task<IReadOnlyList<AttendanceSessionDto>> LoadToPointAsync(
-        DateTime from,
-        DateTime to,
+        DateTime now,
         CancellationToken cancellationToken) =>
-        await SessionsQuery()
-            .Where(session =>
-                session.AttendanceClosedAt == null &&
-                session.StartsAt >= from &&
-                session.StartsAt < to)
+        await AttendanceRules.OpenSheets(_dbContext, now)
             .OrderBy(session => session.StartsAt)
             .Select(Projection())
             .ToListAsync(cancellationToken);

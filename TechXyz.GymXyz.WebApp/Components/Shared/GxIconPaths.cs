@@ -48,6 +48,7 @@ public static class GxIconPaths
     public const string Sun = "sun";
     public const string Star = "star";
     public const string Share = "share";
+    public const string Eye = "eye";
     public const string Refresh = "refresh";
     public const string Wallet = "wallet";
 

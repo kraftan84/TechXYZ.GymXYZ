@@ -1,0 +1,202 @@
+@* Desktop Accueil: the week strip, today's classes and the alerts. Presentation
+   only — every figure and every navigation comes from Home.razor.
+
+   No KPI. The hand-off describes four, the prototype draws none, and the two
+   mockups agree with each other about the screen being planning-first.
+
+   « Diffuser le planning » and « Aperçu » render disabled with a reason on
+   them. Broadcasting really would need a seventh NotificationKey, a seventh
+   toggle in the lot 8 panel and a recipient list nobody has defined; showing a
+   button that silently does nothing would be worse than showing why. Same
+   treatment as the payment-card button at lot 9. *@
+
+<PageHead Title="@($"Bonjour {GreetingName}")"
+          Subtitle="Préparez la semaine et diffusez-la à vos membres.">
+    <FluentButton Appearance="Appearance.Outline" Disabled="true"
+                  Title="@DashboardFilters.PreviewDisabledReason">
+        <GxIcon Slot="start" Name="@GxIconPaths.Eye" Size="18"/>
+        Aperçu
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" Disabled="true"
+                  Title="@DashboardFilters.BroadcastDisabledReason">
+        <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
+        Diffuser le planning
+    </FluentButton>
+</PageHead>
+
+<div style="margin-bottom:18px">
+<GxCard Padded="false">
+    <CardHead Title="@DashboardFilters.RangeLabel(Dashboard.WeekStart)">
+        <span style="font-size:var(--text-xs);color:var(--text-muted)">
+            @DashboardFilters.WeekMeta(Dashboard, IsSolo)
+        </span>
+    </CardHead>
+    <div class="gx-card-pad">
+        <div class="gx-weekstrip">
+            @foreach (var day in Dashboard.Week)
+            {
+                var mark = Calendar.MarkFor(day.Date);
+
+                <div class="gx-day @(day.IsToday ? "on" : null) @DashboardFilters.DayMarkClass(Calendar, day.Date)"
+                     role="button"
+                     tabindex="0"
+                     @onclick="() => OnOpenDay.InvokeAsync(day.Date)"
+                     @onkeydown="args => OpenDayOnKey(args, day.Date)"
+                     aria-label="@AriaFor(day, mark)">
+                    <div class="dn">@DashboardFilters.DayName(day.Date)</div>
+                    <div class="nm">@day.Date.Day</div>
+                    <div class="ct">@GxFormats.Plural(day.SessionCount, "cours", "cours")</div>
+                    @if (mark is not null)
+                    {
+                        <span class="gx-day-mark @CalendarFormats.MarkClass(mark.Kind)" title="@mark.Label">
+                            <GxIcon Name="@CalendarFormats.MarkIcon(mark.Kind)" Size="11"/>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="gx-diffuse-foot">
+            <GxIcon Name="@GxIconPaths.Send" Size="15"/>
+            <span>@DashboardFilters.BroadcastFootnote</span>
+            <span style="margin-left:auto">
+                <FluentButton Appearance="Appearance.Stealth" Size="ButtonSize.Small"
+                              @onclick="() => OnOpenPlanning.InvokeAsync()">
+                    <GxIcon Slot="start" Name="@GxIconPaths.Calendar" Size="16"/>
+                    Ouvrir le planning
+                </FluentButton>
+            </span>
+        </div>
+    </div>
+</GxCard>
+</div>
+
+<div class="gx-grid2" style="grid-template-columns:1.4fr 1fr;align-items:start">
+    <GxCard Padded="false">
+        <CardHead Title="@DashboardFilters.TodayTitle(Dashboard)">
+            <span style="font-size:var(--text-xs);color:var(--text-muted)">
+                @GxFormats.Date(Dashboard.Today)
+            </span>
+        </CardHead>
+        <div style="padding:4px 18px 12px">
+            @if (!IsLoaded)
+            {
+                <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">Chargement…</div>
+            }
+            else if (Dashboard.TodayClasses.Count == 0)
+            {
+                <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">Aucun cours aujourd'hui.</div>
+            }
+            else
+            {
+                @foreach (var session in Dashboard.TodayClasses)
+                {
+                    <div class="gx-classrow click"
+                         role="button"
+                         tabindex="0"
+                         @onclick="() => OnOpenDay.InvokeAsync(Dashboard.Today)"
+                         @onkeydown="args => OpenDayOnKey(args, Dashboard.Today)"
+                         aria-label="@($"Ouvrir {session.CourseName} dans le planning")">
+                        <span class="time">@GxFormats.Time(session.StartsAt)</span>
+                        <div class="main">
+                            <div class="nm">@session.CourseName</div>
+                            <div class="meta">@session.Meta</div>
+                        </div>
+                        <div class="occ">
+                            @if (session.IsPrivate)
+                            {
+                                <div class="lab"><span>1 place</span></div>
+                            }
+                            else
+                            {
+                                <div class="lab">
+                                    <span>@session.Registered/@session.Capacity places</span>
+                                    <span style="color:var(--text-muted)">@session.FillPercent %</span>
+                                </div>
+                                <GxBar Percent="@(session.FillPercent ?? 0)"
+                                       Tone="@(session.IsFull ? GxTone.Danger : GxTone.Brand)"
+                                       AriaLabel="@($"{session.CourseName} : {session.Registered} inscrits sur {session.Capacity}")"/>
+                            }
+                        </div>
+                        <div style="width:78px;flex:none;display:flex;justify-content:flex-end">
+                            @if (session.IsPrivate)
+                            {
+                                <GxChip Tone="GxTone.Neutral">Privé</GxChip>
+                            }
+                            else if (session.IsFull)
+                            {
+                                <GxChip Tone="GxTone.Danger">Complet</GxChip>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="À surveiller"/>
+        <div style="padding:2px 18px 12px">
+            @if (!IsLoaded)
+            {
+                <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">Chargement…</div>
+            }
+            else if (_alerts.Count == 0)
+            {
+                <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">Rien à surveiller. Tout est à jour.</div>
+            }
+            else
+            {
+                @foreach (var alert in _alerts)
+                {
+                    <div class="gx-alert">
+                        <span class="ic" style="@DashboardFilters.AlertIconStyle(alert.Tone)">
+                            <GxIcon Name="@alert.Icon" Size="18"/>
+                        </span>
+                        <div class="main">
+                            <div class="t">@alert.Title</div>
+                            <div class="d">@alert.Detail</div>
+                        </div>
+                        <FluentButton Appearance="Appearance.Outline" Size="ButtonSize.Small"
+                                      @onclick="() => OnOpenSection.InvokeAsync(alert.Href)">
+                            @alert.Action
+                        </FluentButton>
+                    </div>
+                }
+            }
+        </div>
+    </GxCard>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DashboardDto Dashboard { get; set; } = DashboardDto.Empty;
+    [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+    [Parameter, EditorRequired] public bool IsLoaded { get; set; }
+    [Parameter, EditorRequired] public string GreetingName { get; set; } = string.Empty;
+
+    /// <summary>A solo coach has no team, so the week says "28 cours" and stops there.</summary>
+    [Parameter] public bool IsSolo { get; set; }
+
+    [Parameter] public EventCallback<DateOnly> OnOpenDay { get; set; }
+    [Parameter] public EventCallback OnOpenPlanning { get; set; }
+    [Parameter] public EventCallback<string> OnOpenSection { get; set; }
+
+    private IReadOnlyList<DashboardAlert> _alerts = [];
+
+    protected override void OnParametersSet() =>
+        _alerts = DashboardFilters.Alerts(Dashboard.Alerts);
+
+    private Task OpenDayOnKey(KeyboardEventArgs args, DateOnly day)
+        => args.Key is "Enter" or " " ? OnOpenDay.InvokeAsync(day) : Task.CompletedTask;
+
+    /// <summary>
+    /// The cell is three lines of shorthand; the link's own name spells them out
+    /// — and says what the mark means rather than leaving it to a tooltip.
+    /// </summary>
+    private static string AriaFor(DashboardDayDto day, SchoolDayMarkDto? mark)
+    {
+        var label = $"{PlanningFilters.LongDayLabel(day.Date)}, {GxFormats.Plural(day.SessionCount, "cours", "cours")}";
+
+        return mark is null ? label : $"{label}, {mark.Label}";
+    }
+}

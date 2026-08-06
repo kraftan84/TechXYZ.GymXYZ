@@ -83,6 +83,18 @@ else
 }
 
 @code {
+    /// <summary>
+    /// The day to open on, as the Accueil's week strip passes it —
+    /// <c>/planning?jour=2026-08-07</c>. Absent everywhere else, and then the
+    /// planning opens on today as it always has.
+    /// <para>
+    /// A string rather than a <c>DateOnly</c>: the binder would throw on a
+    /// hand-typed URL, and a malformed day is not worth an error screen when
+    /// "this week" is a perfectly good answer.
+    /// </para>
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "jour")] public string? Day { get; set; }
+
     private WeekPlanningDto _page = WeekPlanningDto.Empty;
     private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
     private readonly PlanningFilterState _filters = new();
@@ -106,8 +118,26 @@ else
     {
         Responsive.Changed += OnResponsiveChanged;
 
+        ApplyRequestedDay();
+
         await LoadReferencesAsync();
         await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Opens on the day the Accueil asked for, week and selection together —
+    /// arriving on the right week with the wrong day selected would be the same
+    /// bug wearing a hat. Anything unparseable is ignored: today stands.
+    /// </summary>
+    private void ApplyRequestedDay()
+    {
+        if (!DateOnly.TryParse(Day, GxFormats.Culture, out var day))
+        {
+            return;
+        }
+
+        _weekStart = PlanningRules.MondayOf(day);
+        _selectedDay = day;
     }
 
     /// <summary>
