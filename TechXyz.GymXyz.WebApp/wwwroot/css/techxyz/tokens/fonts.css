@@ -1,9 +1,16 @@
 /* ============================================================
    TechXYZ — Webfonts
-   Orbitron  → display / wordmark (geometric, technical)
-   Montserrat → UI + body (humanist geometric sans)
+   Orbitron       → display / wordmark, techxyz theme
+   Montserrat     → UI + body (humanist geometric sans), every theme
+   Anton          → display / wordmark, teamtrainers theme
+   Dancing Script → display / wordmark, leyssa theme
    Self-hosted woff2 (latin subset, full French accent coverage),
-   official Google Fonts production files. Variable weight axes.
+   official Google Fonts production files. Variable weight axes
+   except Anton, which ships a single weight.
+
+   ALL of them are served from this app — nothing is fetched from a
+   font CDN. See ../assets/fonts/README.md for provenance and the
+   OFL licence covering the five files.
    ============================================================ */
 
 @font-face {
@@ -30,5 +37,28 @@
   font-weight: 100 900;
   font-display: swap;
   src: url("../assets/fonts/Montserrat-Italic-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Anton has no weight axis: one cut at 400, which the teamtrainers theme
+   asks for as --display-weight 400. Declaring a range here would let the
+   browser synthesise a bolder face and thicken the wordmark. */
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Anton-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* One variable file covers the 600 and 700 the leyssa theme uses — the
+   same file Google was already serving for a wght@600;700 request. */
+@font-face {
+  font-family: "Dancing Script";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../assets/fonts/DancingScript-latin.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
