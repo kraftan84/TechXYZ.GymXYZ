@@ -13,6 +13,19 @@ public sealed class GetSubscriptionOverviewQueryHandler
     /// <summary>"Encaissements récents" is the last week, as the card's own caption says.</summary>
     public const int RecentPaymentDays = 7;
 
+    /// <summary>
+    /// How far back a lapsed cover still belongs on the suivi table.
+    /// <para>
+    /// The screen is a worklist: covers running, covers about to run out, and
+    /// covers that stopped recently enough that somebody should still be chasing
+    /// them. A subscription that ended last spring is history — it belongs to
+    /// the member's record, not to today's work — and now that every member
+    /// carries the chain of what they bought, reading all of it would bury the
+    /// dozen rows that matter under several hundred that do not.
+    /// </para>
+    /// </summary>
+    public const int LapsedCoverDays = 90;
+
     private readonly IGymDbContext _dbContext;
 
     public GetSubscriptionOverviewQueryHandler(IGymDbContext dbContext)
@@ -35,15 +48,17 @@ public sealed class GetSubscriptionOverviewQueryHandler
             .SelectPlanDto(today)
             .ToListAsync(cancellationToken);
 
-        // Every cover that has begun, lapsed ones included: "En retard" is a row
-        // of this table, and leaving expired covers out would empty the very
-        // filter the screen exists to work through.
+        // Covers that have begun and have not been over for long — lapsed ones
+        // included, because "En retard" is a row of this table and leaving
+        // expired covers out would empty the very filter the screen exists to
+        // work through.
         var rows = await _dbContext.Subscriptions
             .AsNoTracking()
             .Where(subscription =>
                 subscription.IsActive &&
                 subscription.Member!.IsActive &&
-                subscription.StartedOn <= today)
+                subscription.StartedOn <= today &&
+                subscription.EndsOn >= today.AddDays(-LapsedCoverDays))
             .OrderBy(subscription => subscription.EndsOn)
             .ThenBy(subscription => subscription.Member!.LastName)
             .Select(subscription => new SubscriptionRowDto(
@@ -76,11 +91,28 @@ public sealed class GetSubscriptionOverviewQueryHandler
                 SubscriptionStatus.Active))
             .ToListAsync(cancellationToken);
 
+        // One row per member, not one per subscription. A member who has renewed
+        // four times has four covers inside the window, and the suivi asks a
+        // question about people: where does this member stand today. Which of
+        // their covers answers that is the same "healthiest one" decision the
+        // members table makes, taken by the same rule.
         var resolved = rows
             .Select(row => row with
             {
                 Status = SubscriptionStatusRules.Resolve(row.Cover, today, horizon)
             })
+            .GroupBy(row => row.MemberId)
+            .Select(perMember =>
+            {
+                var governing = SubscriptionStatusRules.Governing(
+                    perMember.Select(row => row.Cover), today, horizon);
+
+                return governing is null
+                    ? perMember.First()
+                    : perMember.First(row => row.Cover.SubscriptionId == governing.SubscriptionId);
+            })
+            .OrderBy(row => row.Cover.EndsOn)
+            .ThenBy(row => row.LastName)
             .ToList();
 
         var payments = await _dbContext.Payments

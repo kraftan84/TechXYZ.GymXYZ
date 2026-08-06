@@ -121,6 +121,82 @@ public class SubscriptionOverviewQueryTests
     }
 
     [Fact]
+    public async Task Subscriptions_ShouldShowOneRowPerMember_NotOnePerRenewal()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(Subscriptions_ShouldShowOneRowPerMember_NotOnePerRenewal));
+
+        var monthly = TestPlans.Monthly();
+        dbContext.Plans.Add(monthly);
+
+        // A member who has renewed twice: three covers, one person. The suivi
+        // asks where the member stands, not what they have ever bought.
+        var member = new Member("Laetitia", "Moriceau");
+        dbContext.Members.Add(member);
+        foreach (var (starts, ends) in new[] { (-70, -41), (-40, -11), (-10, 20) })
+        {
+            dbContext.Subscriptions.Add(new Subscription
+            {
+                Member = member,
+                Plan = monthly,
+                StartedOn = Today.AddDays(starts),
+                EndsOn = Today.AddDays(ends),
+                PriceLabel = monthly.FormatPriceLabel(),
+                Price = monthly.Price,
+                MonthlyPrice = SubscriptionFactory.MonthlyPriceOf(monthly)
+            });
+        }
+        await dbContext.SaveChangesAsync();
+
+        var overview = await Handle(dbContext);
+
+        var row = overview.Subscriptions.ShouldHaveSingleItem();
+
+        // And the one shown is the cover in force, not the oldest still inside
+        // the window — the same "healthiest one" the members table picks.
+        row.Status.ShouldBe(SubscriptionStatus.Active);
+        row.Cover.EndsOn.ShouldBe(Today.AddDays(20));
+    }
+
+    [Fact]
+    public async Task Mrr_ShouldCompareAgainstTheCoversRunningAMonthAgo()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(Mrr_ShouldCompareAgainstTheCoversRunningAMonthAgo));
+
+        var monthly = TestPlans.Monthly();
+        dbContext.Plans.Add(monthly);
+
+        // One long-standing member, renewed so they were covered last month by
+        // the previous row — the whole reason the seed carries a history.
+        var loyal = new Member("Sarah", "Cohen");
+        dbContext.Members.Add(loyal);
+        foreach (var (starts, ends) in new[] { (-40, -11), (-10, 20) })
+        {
+            dbContext.Subscriptions.Add(new Subscription
+            {
+                Member = loyal, Plan = monthly,
+                StartedOn = Today.AddDays(starts), EndsOn = Today.AddDays(ends),
+                PriceLabel = monthly.FormatPriceLabel(),
+                Price = monthly.Price, MonthlyPrice = SubscriptionFactory.MonthlyPriceOf(monthly)
+            });
+        }
+
+        // And one who signed up a fortnight ago, so was paying nothing then.
+        Sell(dbContext, monthly, "Nouvelle", startsInDays: -14, endsInDays: 16);
+        await dbContext.SaveChangesAsync();
+
+        var kpis = (await Handle(dbContext)).Kpis;
+
+        // 98 today against 49 a month ago: the growth is the newcomer, and the
+        // member who merely renewed contributes nothing to the delta. Without
+        // the previous cover they would have counted as new too, and the figure
+        // would read +100 % every month for a gym that grew by one.
+        kpis.Mrr.ShouldBe(98m);
+        kpis.MrrDeltaPercent.ShouldBe(100);
+    }
+
+    [Fact]
     public async Task Subscriptions_ShouldLeaveOutACoverBookedForLater()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(
