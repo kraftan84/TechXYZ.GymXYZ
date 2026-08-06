@@ -236,11 +236,11 @@ public class SessionCommandHandlerTests
         var id = await createHandler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
 
-        var cancelHandler = new CancelSessionCommandHandler(dbContext, new CancelSessionCommandValidator());
+        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
         var cancelled = await cancelHandler.Handle(
             new CancelSessionCommand(id, "Coach malade"), CancellationToken.None);
 
-        cancelled.ShouldBeTrue();
+        cancelled.IsSaved.ShouldBeTrue();
         var session = dbContext.Sessions.Single(candidate => candidate.Id == id);
         session.Status.ShouldBe(SessionStatus.Cancelled);
         session.CancellationReason.ShouldBe("Coach malade");
@@ -266,7 +266,7 @@ public class SessionCommandHandlerTests
 
         var third = dbContext.Sessions.OrderBy(session => session.StartsAt).Skip(2).First();
 
-        var cancelHandler = new CancelSessionCommandHandler(dbContext, new CancelSessionCommandValidator());
+        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
         await cancelHandler.Handle(
             new CancelSessionCommand(third.Id, "Fermeture", SessionEditScope.ThisAndFollowing),
             CancellationToken.None);
@@ -288,11 +288,11 @@ public class SessionCommandHandlerTests
     public async Task Cancel_ShouldReturnFalse_WhenSessionNotFound()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Cancel_ShouldReturnFalse_WhenSessionNotFound));
-        var handler = new CancelSessionCommandHandler(dbContext, new CancelSessionCommandValidator());
+        var handler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
 
         var cancelled = await handler.Handle(new CancelSessionCommand(4321), CancellationToken.None);
 
-        cancelled.ShouldBeFalse();
+        cancelled.IsSaved.ShouldBeFalse();
     }
 
     private static async Task<(CourseTemplate Template, Location Location, Coach Coach)> SeedCatalogueAsync(

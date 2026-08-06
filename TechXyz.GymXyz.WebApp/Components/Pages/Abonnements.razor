@@ -53,7 +53,8 @@ else if (_drawer == DrawerMode.Payment && _collecting is not null)
 {
     <PaymentDrawer Row="_collecting"
                    OnClose="CloseDrawer"
-                   OnSave="RecordPaymentAsync"/>
+                   OnSave="RecordPaymentAsync"
+                   OnRemind="RemindAsync"/>
 }
 
 @code {
@@ -194,6 +195,48 @@ else if (_drawer == DrawerMode.Payment && _collecting is not null)
             CloseDrawer();
             await RefreshAsync();
         }, "enregistrer l'encaissement", "Encaissement enregistré.");
+    }
+
+    /// <summary>
+    /// Chases the member about an unsettled cover. The drawer stays open: the
+    /// row it shows now carries a relance date, and closing it would hide the
+    /// one thing that changed.
+    /// </summary>
+    private async Task RemindAsync(int subscriptionId)
+    {
+        NotificationOutcomeDto outcome = NotificationOutcomeDto.NotFound;
+
+        var ran = await UserFeedback.ExecuteAsync(
+            async () => outcome = await Sender.Send(new SendPaymentReminderCommand(subscriptionId)),
+            "envoyer la relance");
+
+        if (!ran)
+        {
+            return;
+        }
+
+        if (!outcome.IsSaved)
+        {
+            throw ValidationFailures.Refuse(PlanFieldNames.Subscription, PlanRules.PlanNotFound);
+        }
+
+        const string done = "Relance envoyée.";
+
+        if (NotificationOutcomeLabels.Warning(outcome, done) is { } warning)
+        {
+            UserFeedback.ShowPartial(warning);
+        }
+        else if (outcome.Sent == 0)
+        {
+            // Saved, nothing sent, nothing suppressed: the member has no address.
+            UserFeedback.ShowPartial("Relance enregistrée, mais ce membre n'a pas d'adresse e-mail.");
+        }
+        else
+        {
+            UserFeedback.ShowSuccess(done);
+        }
+
+        await RefreshAsync();
     }
 
     private void OnShellChanged() => InvokeAsync(StateHasChanged);

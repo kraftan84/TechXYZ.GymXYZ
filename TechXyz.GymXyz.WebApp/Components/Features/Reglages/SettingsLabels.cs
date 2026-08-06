@@ -48,8 +48,8 @@ public static class SettingsLabels
     /// than beside every row: six copies of the same caveat is noise.
     /// </summary>
     public const string SmsPending =
-        "Le SMS est enregistré mais pas encore envoyé : aucun opérateur n'est raccordé pour l'instant. "
-        + "Vos choix sont conservés et s'appliqueront dès qu'il le sera.";
+        "L'e-mail part réellement. Le SMS est enregistré mais pas encore envoyé : aucun opérateur "
+        + "n'est raccordé pour l'instant, et vos choix s'appliqueront dès qu'il le sera.";
 
     // ---- Team & access ------------------------------------------------------
 

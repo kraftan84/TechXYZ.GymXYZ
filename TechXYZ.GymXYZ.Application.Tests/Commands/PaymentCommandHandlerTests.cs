@@ -115,10 +115,9 @@ public class PaymentCommandHandlerTests
         var sent = await Remind(dbContext).Handle(
             new SendPaymentReminderCommand(cover.Id), CancellationToken.None);
 
-        sent.ShouldBeTrue();
+        sent.IsSaved.ShouldBeTrue();
 
-        // Nothing left the building — there is no channel until lot 8. What the
-        // command records is that somebody chased, and when.
+        // The stamp is what stops a second chase going out minutes later.
         cover.LastReminderSentOn.ShouldBe(Today);
     }
 
@@ -149,16 +148,85 @@ public class PaymentCommandHandlerTests
         await dbContext.SaveChangesAsync();
 
         (await Remind(dbContext).Handle(new SendPaymentReminderCommand(cover.Id), CancellationToken.None))
-            .ShouldBeTrue();
+            .IsSaved.ShouldBeTrue();
 
+        cover.LastReminderSentOn.ShouldBe(Today);
+    }
+
+    [Fact]
+    public async Task Reminder_ShouldWriteToTheMember()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Reminder_ShouldWriteToTheMember));
+        dbContext.Tenants.Add(new Tenant("GymXYZ", "gymxyz", "techxyz") { Email = "contact@gymxyz.fr" });
+        var cover = Seed(dbContext, startsInDays: -25, endsInDays: 3);
+        await dbContext.SaveChangesAsync();
+
+        var sender = new TestEmailSender();
+        var outcome = await Remind(dbContext, sender).Handle(
+            new SendPaymentReminderCommand(cover.Id), CancellationToken.None);
+
+        outcome.Sent.ShouldBe(1);
+        sender.Single.ToAddress.ShouldBe("laetitia@gymxyz.fr");
+        sender.Single.TextBody.ShouldContain("Laetitia");
+        sender.Single.ReplyToAddress.ShouldBe("contact@gymxyz.fr");
+    }
+
+    [Fact]
+    public async Task Reminder_ShouldKeepTheStamp_WhenTheGymTurnedRelancesOff()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(Reminder_ShouldKeepTheStamp_WhenTheGymTurnedRelancesOff));
+        dbContext.Tenants.Add(new Tenant("GymXYZ", "gymxyz", "techxyz"));
+        dbContext.NotificationSettings.Add(new NotificationSetting
+        {
+            Group = NotificationGroup.MembersAndSubscriptions,
+            Key = NotificationKey.RenewalReminder,
+            IsEnabled = false,
+            Channels = NotificationChannels.Email
+        });
+        var cover = Seed(dbContext, startsInDays: -25, endsInDays: 3);
+        await dbContext.SaveChangesAsync();
+
+        var sender = new TestEmailSender();
+        var outcome = await Remind(dbContext, sender).Handle(
+            new SendPaymentReminderCommand(cover.Id), CancellationToken.None);
+
+        // Suppressed is not a failure: the silence was asked for, and the screen
+        // says so rather than reporting an error nobody caused.
+        outcome.WasSuppressed.ShouldBeTrue();
+        outcome.HasFailures.ShouldBeFalse();
+        sender.Sent.ShouldBeEmpty();
+        cover.LastReminderSentOn.ShouldBe(Today);
+    }
+
+    [Fact]
+    public async Task Reminder_ShouldKeepTheStamp_WhenTheSendFails()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(Reminder_ShouldKeepTheStamp_WhenTheSendFails));
+        dbContext.Tenants.Add(new Tenant("GymXYZ", "gymxyz", "techxyz"));
+        var cover = Seed(dbContext, startsInDays: -25, endsInDays: 3);
+        await dbContext.SaveChangesAsync();
+
+        var outcome = await Remind(dbContext, new TestEmailSender(fails: true)).Handle(
+            new SendPaymentReminderCommand(cover.Id), CancellationToken.None);
+
+        // The decision to chase survives the channel: losing the stamp would
+        // have somebody send a second relance minutes later.
+        outcome.HasFailures.ShouldBeTrue();
         cover.LastReminderSentOn.ShouldBe(Today);
     }
 
     private static RecordPaymentCommandHandler Record(GymDbContext dbContext) =>
         new(dbContext, new RecordPaymentCommandValidator());
 
-    private static SendPaymentReminderCommandHandler Remind(GymDbContext dbContext) =>
-        new(dbContext, new SendPaymentReminderCommandValidator());
+    private static SendPaymentReminderCommandHandler Remind(
+        GymDbContext dbContext,
+        TestEmailSender? emailSender = null) =>
+        new(dbContext,
+            emailSender ?? new TestEmailSender(),
+            new TestTenantContext(TestInfrastructure.DefaultTenantId),
+            new SendPaymentReminderCommandValidator());
 
     private static Subscription Seed(
         GymDbContext dbContext,
@@ -168,7 +236,7 @@ public class PaymentCommandHandlerTests
         var plan = TestPlans.Monthly();
         var subscription = new Subscription
         {
-            Member = new Member("Laetitia", "Moriceau"),
+            Member = new Member("Laetitia", "Moriceau") { Email = "laetitia@gymxyz.fr" },
             Plan = plan,
             StartedOn = Today.AddDays(startsInDays),
             EndsOn = Today.AddDays(endsInDays),

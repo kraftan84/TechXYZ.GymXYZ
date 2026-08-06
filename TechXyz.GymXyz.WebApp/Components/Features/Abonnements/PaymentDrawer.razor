@@ -6,10 +6,11 @@
    meant to be in this lot: this records money that already changed hands at the
    desk, which is why the status is a field and « Rejeté » is one of its values.
 
-   The prototype's « Envoyer le reçu par e-mail » switch is not rendered. It sends
-   a message, and the channel arrives with the Réglages at lot 8 — the same
-   grounds as « Relancer » below, which is drawn but disabled. A switch that
-   silently sends nothing is worse than one that is not there. *@
+   « Relancer » below sends for real now. The prototype's « Envoyer le reçu par
+   e-mail » switch still is not rendered: a receipt is a fourth message, with a
+   template and a preference of its own that nothing in the hand-off describes,
+   and inventing them here would be inventing a feature. The channel it needs
+   exists — it is the wording and the switch that do not. *@
 
 <GxDrawer Title="Encaisser un paiement"
           Subtitle="@Subtitle"
@@ -53,13 +54,13 @@
         {
             <div class="gx-seclab" style="margin-top:18px">Relance</div>
             <div style="display:flex;align-items:center;gap:12px">
-                <FluentButton Appearance="Appearance.Outline" Disabled="true"
-                              Title="@PaymentRules.ReminderHasNoChannel">
+                <FluentButton Appearance="Appearance.Outline"
+                              @onclick="() => OnRemind.InvokeAsync(Row.SubscriptionId)">
                     <GxIcon Slot="start" Name="@GxIconPaths.Send" Size="18"/>
                     Relancer
                 </FluentButton>
                 <span style="font-size:var(--text-2xs);color:var(--text-muted);line-height:1.5">
-                    @PaymentRules.ReminderHasNoChannel
+                    Un e-mail part au membre, et la date de relance est enregistrée.
                 </span>
             </div>
             @if (Row.LastReminderSentOn is { } sent)
@@ -105,6 +106,9 @@
     [Parameter, EditorRequired] public SubscriptionRowDto Row { get; set; } = default!;
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<PaymentInput> OnSave { get; set; }
+
+    /// <summary>Chases the member about this cover. Lands on its own, not on « Enregistrer ».</summary>
+    [Parameter] public EventCallback<int> OnRemind { get; set; }
 
     private string Subtitle => $"{Row.FullName} · {Row.Cover.PlanName}";
 

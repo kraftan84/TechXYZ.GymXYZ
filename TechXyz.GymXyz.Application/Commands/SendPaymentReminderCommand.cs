@@ -1,25 +1,26 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Models;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
 /// <summary>
-/// Chases a member whose cover is unsettled.
+/// Chases a member whose cover is unsettled, and now actually sends.
 /// <para>
-/// <b>Nothing leaves the building yet.</b> Messaging — the channel, the
-/// templates, the per-notification switches — arrives with the Réglages at lot 8,
-/// and lot 6 already drew « Relancer » disabled on the absentees card for exactly
-/// this reason. The command lands now, records the intent and stamps
-/// <c>Subscription.LastReminderSentOn</c>; lot 8 gives it something to send down
-/// and the control stops being disabled. Until then the screen says so in a
-/// tooltip rather than offering a button that does nothing.
+/// The stamp on <c>Subscription.LastReminderSentOn</c> is what stops four chases
+/// going out in one morning, and what lets the row say when the last one went.
+/// It is written before the message leaves and kept whatever the send does: a
+/// relance that failed to reach a mail server was still a relance the gym
+/// decided to make, and losing the record would have somebody send a second one
+/// minutes later.
 /// </para>
 /// <para>
-/// The stamp is not bookkeeping for its own sake: it is what stops four chases
-/// going out in one morning once there is a channel, and what lets the row say
-/// when the last one went.
+/// The gym's « Relance avant échéance » switch is consulted first. Manual though
+/// this is, a customer that has turned member relances off has said something,
+/// and the answer comes back as <see cref="NotificationOutcomeDto.Suppressed"/>
+/// so the screen can say why rather than appear to have done nothing.
 /// </para>
 /// </summary>
-public sealed class SendPaymentReminderCommand : IRequest<bool>
+public sealed class SendPaymentReminderCommand : IRequest<NotificationOutcomeDto>
 {
     public SendPaymentReminderCommand(int subscriptionId)
     {

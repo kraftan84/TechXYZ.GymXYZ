@@ -36,3 +36,20 @@ dotnet test TechXyz.GymXyz.WebApp/TechXyz.GymXyz.WebApp.csproj
 ## Configuration
 - Application settings are provided through standard .NET configuration providers.
 - Environment-specific settings should be isolated in `appsettings.{Environment}.json`.
+
+### Outgoing e-mail
+Messages go out through Brevo's transactional API. **Nothing is sent unless
+`Email:ApiKey` is set** — without it a logging implementation takes over and
+writes each message to the log, so a development machine pointed at a copy of
+production cannot e-mail real members.
+
+The key never belongs in a checked-in file:
+
+```bash
+dotnet user-secrets set "Email:ApiKey" "<your-brevo-key>" --project TechXyz.GymXyz.WebApp
+```
+
+`Email:FromAddress` must be a domain verified with the provider. A customer's own
+address cannot be used there — a provider will not dispatch on behalf of a domain
+it cannot verify — so the gym's name leads the message and its address is the
+`Reply-To`.

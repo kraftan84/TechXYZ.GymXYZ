@@ -59,6 +59,12 @@ public sealed class UserFeedbackService : IUserFeedbackService
         _toastService.ShowSuccess(message);
     }
 
+    public void ShowPartial(string message)
+    {
+        _logger.LogWarning("Partial success reported to the user: {Message}", message);
+        _toastService.ShowWarning(message);
+    }
+
     private static string BuildValidationMessage(ValidationException exception, string actionDescription)
     {
         var messages = exception.Errors

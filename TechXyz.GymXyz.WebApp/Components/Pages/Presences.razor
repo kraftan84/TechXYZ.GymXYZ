@@ -58,7 +58,7 @@ else if (Responsive.IsMobile)
 else
 {
     <div class="gx-screen">
-        <PresencesDesktop Overview="_overview" Now="_now" OnOpenSheet="OpenSheet"/>
+        <PresencesDesktop Overview="_overview" Now="_now" OnOpenSheet="OpenSheet" OnChase="ChaseAsync"/>
     </div>
 }
 
@@ -114,6 +114,43 @@ else
 
     private void OpenSheet(AttendanceSessionDto session)
         => NavManager.NavigateTo($"/presences/{session.Id}");
+
+    /// <summary>
+    /// Chases the absentees the card lists — one from a row, all of them from
+    /// the footer. Nothing is written, so there is nothing to refresh: the only
+    /// thing to report is how many messages left.
+    /// </summary>
+    private async Task ChaseAsync(IReadOnlyList<int> memberIds)
+    {
+        NotificationOutcomeDto outcome = NotificationOutcomeDto.NotFound;
+
+        var ran = await UserFeedback.ExecuteAsync(
+            async () => outcome = await Sender.Send(new SendAbsenceReminderCommand(memberIds)),
+            "envoyer les relances");
+
+        if (!ran)
+        {
+            return;
+        }
+
+        if (!outcome.IsSaved)
+        {
+            // Every one of them turned out to have no address on file.
+            UserFeedback.ShowPartial("Aucune relance envoyée : ces membres n'ont pas d'adresse e-mail.");
+            return;
+        }
+
+        const string done = "Relances envoyées.";
+
+        if (NotificationOutcomeLabels.Warning(outcome, done) is { } warning)
+        {
+            UserFeedback.ShowPartial(warning);
+        }
+        else
+        {
+            UserFeedback.ShowSuccess(NotificationOutcomeLabels.Success(outcome, done));
+        }
+    }
 
     private void BackToList() => NavManager.NavigateTo("/presences");
 

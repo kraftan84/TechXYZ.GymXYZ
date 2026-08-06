@@ -9,9 +9,10 @@
    member-facing app to scan into, so neither is rendered — the reasoning that
    dropped « Diffuser » at lot 5 and the welcome-e-mail switch at lot 1.
 
-   « Relancer » and « Relancer tout le monde » send a message, and the channel
-   arrives at lot 8. They are drawn disabled with a tooltip rather than removed:
-   unlike the kiosk, they are coming, and the card is about them. *@
+   « Relancer » and « Relancer tout le monde » now send: one member from a row,
+   the whole card from the footer. They are not gated on a notification switch —
+   those describe messages the product sends by itself, and this one is somebody
+   looking at the card and clicking. *@
 
 <Crumb Parts="@_crumb"/>
 
@@ -134,9 +135,9 @@
                                 <div class="s">@PresenceFilters.ChaseMeta(member)</div>
                             </div>
                             <FluentButton Appearance="Appearance.Stealth"
-                                          Disabled="true"
-                                          Title="@ChaseHint"
-                                          aria-label="@($"Relancer {member.FullName}")">
+                                          Title="@($"Relancer {member.FullName}")"
+                                          aria-label="@($"Relancer {member.FullName}")"
+                                          @onclick="() => OnChase.InvokeAsync([member.MemberId])">
                                 <GxIcon Name="@GxIconPaths.Mail" Size="17"/>
                             </FluentButton>
                         </div>
@@ -147,9 +148,8 @@
             {
                 <div style="padding:0 18px 16px">
                     <FluentButton Appearance="Appearance.Outline"
-                                  Disabled="true"
-                                  Title="@ChaseHint"
-                                  style="width:100%">
+                                  style="width:100%"
+                                  @onclick="ChaseEveryoneAsync">
                         <GxIcon Slot="start" Name="@GxIconPaths.Send" Size="16"/>
                         Relancer tout le monde
                     </FluentButton>
@@ -165,14 +165,17 @@
 
     [Parameter] public EventCallback<AttendanceSessionDto> OnOpenSheet { get; set; }
 
+    /// <summary>The members to chase. One id from a row, the whole card from the footer.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<int>> OnChase { get; set; }
+
     private static readonly IReadOnlyList<Crumb.Part> _crumb =
     [
         new("Accueil", "/"),
         new("Présences")
     ];
 
-    private const string ChaseHint =
-        "La relance par message arrive avec les notifications.";
+    private Task ChaseEveryoneAsync() =>
+        OnChase.InvokeAsync(Overview.ToChase.Select(member => member.MemberId).ToList());
 
     /// <summary>"+4 pts ce mois", or nothing when there is no month to compare with.</summary>
     private string? DeltaLabel => Overview.Kpis.AttendanceDeltaPoints is { } delta

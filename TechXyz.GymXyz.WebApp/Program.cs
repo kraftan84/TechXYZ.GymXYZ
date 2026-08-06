@@ -33,6 +33,27 @@ builder.Services.AddHttpClient(SchoolCalendarService.HttpClientName, client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("GymXYZ/1.0");
 });
 builder.Services.AddScoped<ISchoolCalendarService, SchoolCalendarService>();
+
+// Outgoing mail. Which implementation is registered depends on whether a key is
+// configured: without one nothing leaves, so a development machine pointed at a
+// copy of production cannot e-mail real members.
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddHttpClient(BrevoEmailSender.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+
+var hasEmailProvider = !string.IsNullOrWhiteSpace(builder.Configuration[$"{EmailOptions.SectionName}:ApiKey"]);
+
+if (hasEmailProvider)
+{
+    builder.Services.AddScoped<IEmailSender, BrevoEmailSender>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
+}
 builder.Services.AddDataGridEntityFrameworkAdapter();
 
 builder.Services.AddHttpContextAccessor();
@@ -92,6 +113,14 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+// Said out loud at startup: "why did no member get the cancellation e-mail" is
+// otherwise answered by reading the configuration of a running server.
+app.Logger.LogInformation(
+    hasEmailProvider
+        ? "Outgoing e-mail: Brevo, sending from {From}."
+        : "Outgoing e-mail: no provider configured — messages are written to the log and not sent.",
+    builder.Configuration[$"{EmailOptions.SectionName}:FromAddress"]);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
