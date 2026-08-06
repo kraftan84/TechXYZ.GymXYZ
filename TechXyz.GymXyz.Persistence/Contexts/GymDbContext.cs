@@ -42,6 +42,7 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<Address> Addresses =>  Set<Address>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -239,6 +240,28 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             .HasOne(certification => certification.Coach)
             .WithMany(coach => coach.Certifications)
             .HasForeignKey(certification => certification.CoachId);
+
+        modelBuilder.Entity<Invitation>(x =>
+        {
+            // Optional: inviting a collaborator names an address the gym holds
+            // no member record for.
+            x.HasOne(invitation => invitation.Member)
+                .WithMany()
+                .HasForeignKey(invitation => invitation.MemberId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // "Has this address already been asked" runs before every invite,
+            // and the pending list reads the same column.
+            x.HasIndex(invitation => invitation.Email);
+
+            // The comptes membres segment asks the question the other way round:
+            // which of these members is waiting on an invitation.
+            x.HasIndex(invitation => invitation.MemberId);
+        });
+
+        modelBuilder.Entity<Member>()
+            .HasIndex(member => member.UserId);
 
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Slug)

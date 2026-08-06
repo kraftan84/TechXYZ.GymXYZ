@@ -38,9 +38,11 @@ public class Tenant : EntityBase<int>
 
     // ---- Brand lockup -------------------------------------------------------
 
-    public TenantMarkKind MarkKind { get; set; } = TenantMarkKind.Kettlebell;
-
-    /// <summary>Mark asset for light surfaces. Null when <see cref="MarkKind"/> is Kettlebell.</summary>
+    /// <summary>
+    /// Mark asset for light surfaces. Null for a customer that has not supplied
+    /// one — the lockup then shows the wordmark alone. There is no default mark:
+    /// GymXYZ's own would be a brand leak in a white-label product.
+    /// </summary>
     public string? LogoPath { get; set; }
 
     /// <summary>Mark asset for dark surfaces (dark sidebar themes).</summary>

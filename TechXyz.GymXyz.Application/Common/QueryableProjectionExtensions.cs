@@ -13,7 +13,6 @@ public static class QueryableProjectionExtensions
             tenant.ThemeKey,
             tenant.DisplayName,
             tenant.Baseline,
-            tenant.MarkKind,
             tenant.LogoPath,
             tenant.LogoDarkPath,
             tenant.CircleLogo,
