@@ -1,0 +1,204 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Équipe & accès: two segments behind gx-seg, as the prototype draws them —
+   who runs the gym, and how far the members have got with their own espace.
+
+   No save bar. Every action here lands on its own: inviting somebody, changing
+   what they can open, closing an account. Batching them behind « Enregistrer »
+   would let a revocation sit unsaved on screen while the person still has the
+   run of the place.
+
+   The scope under each name is read off the role, never stored — which is why
+   changing it is a role picker and not a set of checkboxes. *@
+
+<div class="gx-set-panel">
+    <div class="gx-pagehead" style="margin-bottom:0;align-items:center">
+        <p class="gx-set-intro" style="margin:0;flex:1">
+            Gérez qui peut se connecter : votre équipe côté gestion, et les membres
+            qui accèdent à leur espace personnel.
+        </p>
+        <div class="right">
+            <FluentButton Appearance="Appearance.Accent" @onclick="() => OnInvite.InvokeAsync(DefaultRole)">
+                <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+                @(Scope == TeamScope.Gestion ? "Inviter un collaborateur" : "Inviter un membre")
+            </FluentButton>
+        </div>
+    </div>
+
+    <div class="gx-seg" style="align-self:flex-start">
+        <button type="button" class="@(Scope == TeamScope.Gestion ? "on brand" : null)"
+                @onclick="() => SelectScope(TeamScope.Gestion)">
+            <GxIcon Name="@GxIconPaths.Users" Size="15"/>
+            Équipe de gestion
+        </button>
+        <button type="button" class="@(Scope == TeamScope.Membres ? "on brand" : null)"
+                @onclick="() => SelectScope(TeamScope.Membres)">
+            <GxIcon Name="@GxIconPaths.UserCheck" Size="15"/>
+            Comptes membres
+        </button>
+    </div>
+
+    @if (Scope == TeamScope.Gestion)
+    {
+        <GxCard Padded="false">
+            <CardHead Title="Équipe de gestion">
+                <GxChip Tone="GxTone.Neutral">@Access.Team.Count</GxChip>
+            </CardHead>
+
+            @if (Access.Team.Count == 0)
+            {
+                <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+                    Personne ne se connecte encore côté gestion.
+                </div>
+            }
+            else
+            {
+                @foreach (var person in Access.Team)
+                {
+                    <div class="gx-team-row">
+                        <GxAvatar Name="@person.DisplayName" Size="sm"/>
+                        <div class="info">
+                            <div class="nm">
+                                @person.DisplayName
+                                @if (person.IsCurrentUser)
+                                {
+                                    <GxChip Tone="GxTone.Neutral">Vous</GxChip>
+                                }
+                                @if (person.IsRevoked)
+                                {
+                                    <GxChip Tone="GxTone.Danger">Accès retiré</GxChip>
+                                }
+                            </div>
+                            <div class="ac">@person.AccessScope</div>
+                        </div>
+                        <GxChip Tone="@SettingsLabels.RoleTone(person.Role)">
+                            @SettingsLabels.RoleLabel(person.Role)
+                        </GxChip>
+                        <span class="last">Vu @SettingsLabels.LastSeen(person.LastSeenAt, Now)</span>
+                        <FluentButton Appearance="Appearance.Stealth" Title="Gérer l'accès"
+                                      @onclick="() => OnManage.InvokeAsync(person)">
+                            <GxIcon Name="@GxIconPaths.Settings" Size="16"/>
+                        </FluentButton>
+                    </div>
+                }
+            }
+        </GxCard>
+
+        @if (Access.Invitations.Count > 0)
+        {
+            <GxCard Padded="false">
+                <CardHead Title="Invitations en attente">
+                    <GxChip Tone="GxTone.Warning">@Access.Invitations.Count</GxChip>
+                </CardHead>
+
+                @foreach (var invitation in Access.Invitations)
+                {
+                    <div class="gx-team-row">
+                        <span class="gx-disc-ic t-neutral" style="width:36px;height:36px">
+                            <GxIcon Name="@GxIconPaths.Mail" Size="18"/>
+                        </span>
+                        <div class="info">
+                            <div class="nm">@invitation.Email</div>
+                            <div class="ac">Invité @SettingsLabels.LastSeen(invitation.SentOn, Now)</div>
+                        </div>
+                        <GxChip Tone="GxTone.Neutral">@SettingsLabels.RoleLabel(invitation.RoleName)</GxChip>
+                        <FluentButton Appearance="Appearance.Stealth"
+                                      Disabled="true"
+                                      Title="L'envoi d'e-mail arrive avec le canal de messagerie.">
+                            Renvoyer
+                        </FluentButton>
+                    </div>
+                }
+            </GxCard>
+        }
+    }
+    else
+    {
+        <div class="gx-grid3" style="margin-bottom:4px">
+            <Kpi Label="Comptes actifs"
+                 Value="@GxFormats.Count(Access.MemberAccess.WithAccount)"
+                 Sub="@($"sur {Access.MemberAccess.Total} membres")"/>
+            <Kpi Label="Invitations en attente"
+                 Value="@GxFormats.Count(Access.MemberAccess.Invited)"
+                 Sub="accès non encore activé"/>
+            <Kpi Label="Sans accès"
+                 Value="@GxFormats.Count(Access.MemberAccess.WithoutAccess)"
+                 Sub="aucun compte créé"/>
+        </div>
+
+        <GxCard Padded="false">
+            <CardHead Title="Accès à l'espace membre"/>
+
+            @if (Access.MemberAccounts.Count == 0)
+            {
+                <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+                    Aucun membre pour l'instant.
+                </div>
+            }
+            else
+            {
+                @foreach (var account in Access.MemberAccounts)
+                {
+                    <div class="gx-team-row">
+                        <GxAvatar Name="@account.FullName" Size="sm"/>
+                        <div class="info">
+                            <div class="nm">@account.FullName</div>
+                            <div class="ac">@MemberCaption(account)</div>
+                        </div>
+                        <GxChip Tone="@SettingsLabels.Tone(account.State)">
+                            @SettingsLabels.Label(account.State)
+                        </GxChip>
+                        <span class="last">
+                            @(account.State == MemberAccessState.Active
+                                ? $"Connecté {SettingsLabels.LastSeen(account.LastSeenAt, Now)}"
+                                : string.Empty)
+                        </span>
+                        @if (account.State == MemberAccessState.None)
+                        {
+                            <FluentButton Appearance="Appearance.Outline"
+                                          @onclick="() => OnInviteMember.InvokeAsync(account)">
+                                Inviter
+                            </FluentButton>
+                        }
+                        else
+                        {
+                            <FluentButton Appearance="Appearance.Stealth" Disabled="true"
+                                          Title="Le compte se gère depuis la fiche du membre.">
+                                <GxIcon Name="@GxIconPaths.Settings" Size="16"/>
+                            </FluentButton>
+                        }
+                    </div>
+                }
+            }
+        </GxCard>
+    }
+</div>
+
+@code {
+    /// <summary>Which half of the panel is showing.</summary>
+    public enum TeamScope
+    {
+        Gestion,
+        Membres
+    }
+
+    [Parameter, EditorRequired] public TeamAccessDto Access { get; set; } = TeamAccessDto.Empty;
+
+    [Parameter] public TeamScope Scope { get; set; } = TeamScope.Gestion;
+
+    /// <summary>Passed in so every row of one render reads the same "now".</summary>
+    [Parameter] public DateTime Now { get; set; } = DateTime.UtcNow;
+
+    [Parameter] public EventCallback<TeamScope> OnSelectScope { get; set; }
+    [Parameter] public EventCallback<string> OnInvite { get; set; }
+    [Parameter] public EventCallback<MemberAccountDto> OnInviteMember { get; set; }
+    [Parameter] public EventCallback<TeamMemberDto> OnManage { get; set; }
+
+    private string DefaultRole =>
+        Scope == TeamScope.Gestion ? GymRoleNames.Coach : GymRoleNames.Member;
+
+    private Task SelectScope(TeamScope scope) => OnSelectScope.InvokeAsync(scope);
+
+    private static string MemberCaption(MemberAccountDto account) =>
+        string.Join(" · ", new[] { account.Email, account.PlanName }.Where(part => !string.IsNullOrWhiteSpace(part)));
+}

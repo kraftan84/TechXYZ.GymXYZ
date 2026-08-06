@@ -1,0 +1,58 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* The bar under an editable panel. Sticks to the bottom of the viewport so a
+   long panel can be scrolled without losing the way to save it — the class
+   itself is the prototype's, the stickiness is a layout-only addition in
+   gx-extras.css, as the hand-off rules allow.
+
+   Two states, as the prototype draws them: what has changed and is waiting, or
+   « Modifications enregistrées » once it has landed. The saved note replaces the
+   dirty one rather than sitting beside it, so the bar never says both. *@
+
+<div class="gx-savebar gx-savebar-sticky">
+    @if (IsSaved)
+    {
+        <span class="note" style="color:var(--color-success)">
+            <GxIcon Name="@GxIconPaths.Check" Size="14"/>
+            Modifications enregistrées
+        </span>
+    }
+    else if (IsDirty)
+    {
+        <span class="note">
+            <GxIcon Name="@GxIconPaths.Alert" Size="14"/>
+            Modifications non enregistrées
+        </span>
+    }
+    else
+    {
+        <span class="note">
+            <GxIcon Name="@GxIconPaths.History" Size="14"/>
+            @UpToDateNote
+        </span>
+    }
+
+    <span class="sp"></span>
+
+    <FluentButton Appearance="Appearance.Stealth" Disabled="@(!IsDirty)" @onclick="OnCancel">
+        Annuler
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!IsDirty)" @onclick="OnSave">
+        <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
+        Enregistrer
+    </FluentButton>
+</div>
+
+@code {
+    /// <summary>Something has been typed and not yet saved.</summary>
+    [Parameter] public bool IsDirty { get; set; }
+
+    /// <summary>The last save landed, and nothing has been touched since.</summary>
+    [Parameter] public bool IsSaved { get; set; }
+
+    /// <summary>What the bar says when there is nothing to save.</summary>
+    [Parameter] public string UpToDateNote { get; set; } = "Tout est à jour.";
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

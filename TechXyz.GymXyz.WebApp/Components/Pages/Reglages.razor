@@ -1,9 +1,404 @@
 @page "/reglages"
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Interfaces
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Reglages
+@implements IDisposable
+
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject ISchoolCalendarService SchoolCalendar
+@inject NavigationManager Navigation
+@inject MobileHeaderService MobileHeader_
+
+@* Owns the four panels' state, the open drawer and every write. The two
+   presentations take parameters only.
+
+   Each panel keeps its own edit buffer and its own save bar: the sections are
+   tabs of one screen but they are not one form, and « Enregistrer » under
+   Identité must not quietly post the notification switches somebody was still
+   looking at. Switching section drops nothing — the buffers survive until the
+   page is left.
+
+   The calendrier scolaire is fetched apart from the settings, and follows the
+   postcode being typed rather than the one saved: the zone is what the postcode
+   decides, and watching it move is quicker than explaining the rule. *@
 
 <PageTitle>Réglages</PageTitle>
 
-<PageHead Title="Réglages" Subtitle="Identité de la salle, équipe, formules et notifications."/>
+@if (Responsive.IsMobile)
+{
+    <ReglagesMobile Settings="_settings"
+                    Panel="_mobilePanel"
+                    PaymentsForm="_payments"
+                    NotificationForms="_notifications"
+                    Plans="_plans"
+                    TeamScope="_teamScope"
+                    Now="_now"
+                    IsDirty="IsDirty"
+                    IsSaved="IsSaved"
+                    OnOpenPanel="OpenMobilePanel"
+                    OnSelectTeamScope="SelectTeamScope"
+                    OnSave="SaveAsync"
+                    OnCancel="Reset"
+                    OnTouch="Touch"/>
+}
+else
+{
+    <div class="gx-screen">
+        <ReglagesDesktop Settings="_settings"
+                         Section="_section"
+                         IdentityForm="_identity"
+                         PaymentsForm="_payments"
+                         NotificationForms="_notifications"
+                         Plans="_plans"
+                         Calendar="_calendar"
+                         TeamScope="_teamScope"
+                         Now="_now"
+                         IsDirty="IsDirty"
+                         IsSaved="IsSaved"
+                         OnSelectSection="SelectSection"
+                         OnSelectTeamScope="SelectTeamScope"
+                         OnSave="SaveAsync"
+                         OnCancel="Reset"
+                         OnTouch="Touch"
+                         OnInvite="OpenInviteDrawer"
+                         OnInviteMember="OpenMemberInviteDrawer"
+                         OnManageAccess="OpenAccessDrawer"
+                         OnManagePlans="GoToPlans"/>
+    </div>
+}
 
-<EmptyState Icon="@GxIconPaths.Settings"
-            Title="Bientôt les réglages"
-            Text="Le paramétrage de la salle arrive au prochain lot."/>
+@if (_drawer == DrawerMode.Invite)
+{
+    <InviteDrawer Email="_invitingMember?.Email"
+                  MemberName="@_invitingMember?.FullName"
+                  MemberId="_invitingMember?.MemberId"
+                  Role="_inviteRole"
+                  OnClose="CloseDrawer"
+                  OnSave="InviteAsync"/>
+}
+else if (_drawer == DrawerMode.Access && _managing is not null)
+{
+    <AccessDrawer Person="_managing"
+                  Now="_now"
+                  OnClose="CloseDrawer"
+                  OnSave="UpdateAccessAsync"
+                  OnRevoke="RevokeAsync"/>
+}
+
+@code {
+    private enum DrawerMode
+    {
+        None,
+        Invite,
+        Access
+    }
+
+    private GymSettingsPageDto _settings = GymSettingsPageDto.Empty;
+    private IReadOnlyList<PlanDto> _plans = [];
+    private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
+
+    private IdentityForm _identity = new();
+    private PaymentsForm _payments = new();
+    private List<NotificationForm> _notifications = [];
+
+    private ReglagesSection _section = ReglagesSection.Identite;
+    private ReglagesSection? _mobilePanel;
+    private EquipePanel.TeamScope _teamScope = EquipePanel.TeamScope.Gestion;
+
+    private DrawerMode _drawer = DrawerMode.None;
+    private TeamMemberDto? _managing;
+    private MemberAccountDto? _invitingMember;
+    private string _inviteRole = GymRoleNames.Coach;
+
+    private DateTime _now = DateTime.UtcNow;
+
+    /// <summary>Which section's buffer differs from what was loaded.</summary>
+    private readonly HashSet<ReglagesSection> _dirty = [];
+    private readonly HashSet<ReglagesSection> _saved = [];
+
+    private ReglagesSection CurrentSection => Responsive.IsMobile
+        ? _mobilePanel ?? ReglagesSection.Identite
+        : _section;
+
+    private bool IsDirty => _dirty.Contains(CurrentSection);
+    private bool IsSaved => _saved.Contains(CurrentSection);
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnShellChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _settings = await Sender.Send(new GetGymSettingsQuery());
+            _plans = await Sender.Send(new GetPlansQuery());
+            _now = DateTime.UtcNow;
+
+            ResetBuffers();
+        }, "charger les réglages");
+
+        await RefreshCalendarAsync();
+    }
+
+    /// <summary>
+    /// Rebuilds every edit buffer from what was just read. Called after a load
+    /// and after a save, so « Annuler » always goes back to what is stored
+    /// rather than to what was on screen a moment ago.
+    /// </summary>
+    private void ResetBuffers()
+    {
+        _identity = IdentityForm.From(_settings.Identity, _settings.OpeningHours);
+        _payments = PaymentsForm.From(_settings.Payments);
+        _notifications = _settings.Notifications.Select(NotificationForm.From).ToList();
+        _dirty.Clear();
+    }
+
+    private async Task RefreshCalendarAsync()
+    {
+        // The zone follows what is being typed. An itinerant customer has no
+        // postcode, and the card is not drawn for them at all.
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        _calendar = await SchoolCalendar.GetAsync(_identity.ZipCode, today, today.AddDays(6));
+    }
+
+    private void SelectSection(ReglagesSection section)
+    {
+        _section = section;
+        _saved.Remove(section);
+    }
+
+    private void OpenMobilePanel(ReglagesSection section)
+    {
+        _mobilePanel = section;
+        _saved.Remove(section);
+        SyncMobileHeader();
+    }
+
+    /// <summary>
+    /// A mobile sub-panel has no back affordance of its own — the shell's header
+    /// is the one place it lives, and the page has to say so. Without this the
+    /// only way out of a panel is the tab bar, which leaves the screen entirely.
+    /// </summary>
+    private void SyncMobileHeader()
+    {
+        if (_mobilePanel is { } panel)
+        {
+            MobileHeader_.UseSubHeader(ReglagesDesktop.Title(panel), CloseMobilePanel);
+        }
+        else
+        {
+            MobileHeader_.UseRootHeader();
+        }
+    }
+
+    private void CloseMobilePanel()
+    {
+        _mobilePanel = null;
+        MobileHeader_.UseRootHeader();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectTeamScope(EquipePanel.TeamScope scope) => _teamScope = scope;
+
+    private async Task Touch()
+    {
+        var section = CurrentSection;
+        _dirty.Add(section);
+        _saved.Remove(section);
+
+        if (section == ReglagesSection.Identite)
+        {
+            await RefreshCalendarAsync();
+        }
+    }
+
+    private void Reset()
+    {
+        ResetBuffers();
+        _saved.Clear();
+    }
+
+    private async Task SaveAsync()
+    {
+        var section = CurrentSection;
+
+        switch (section)
+        {
+            case ReglagesSection.Identite:
+                await SaveIdentityAsync();
+                break;
+
+            case ReglagesSection.Tarifs:
+                await SavePaymentsAsync();
+                break;
+
+            case ReglagesSection.Notifications:
+                await SaveNotificationsAsync();
+                break;
+        }
+    }
+
+    private async Task SaveIdentityAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var saved = await Sender.Send(_identity.ToCommand());
+            if (!saved)
+            {
+                throw ValidationFailures.Refuse(SettingsFieldNames.Name, SettingsRules.TenantNotFound);
+            }
+
+            await ReloadAfterSaveAsync(ReglagesSection.Identite);
+        }, "enregistrer l'identité", "Identité enregistrée.");
+    }
+
+    private async Task SavePaymentsAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(_payments.ToCommand());
+            await ReloadAfterSaveAsync(ReglagesSection.Tarifs);
+        }, "enregistrer les moyens de paiement", "Réglages de paiement enregistrés.");
+    }
+
+    private async Task SaveNotificationsAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            await Sender.Send(new UpdateNotificationSettingsCommand(
+                _notifications.Select(form => form.ToInput()).ToList()));
+
+            await ReloadAfterSaveAsync(ReglagesSection.Notifications);
+        }, "enregistrer les notifications", "Notifications enregistrées.");
+    }
+
+    /// <summary>
+    /// Reads back what was stored rather than trusting the buffer: the handler
+    /// derives things the panel did not send — the school zone, a cleared
+    /// address — and the screen has to show what was actually kept.
+    /// </summary>
+    private async Task ReloadAfterSaveAsync(ReglagesSection section)
+    {
+        _settings = await Sender.Send(new GetGymSettingsQuery());
+        _plans = await Sender.Send(new GetPlansQuery());
+        _now = DateTime.UtcNow;
+
+        ResetBuffers();
+        _saved.Add(section);
+    }
+
+    private void OpenInviteDrawer(string role)
+    {
+        _inviteRole = role;
+        _invitingMember = null;
+        _drawer = DrawerMode.Invite;
+    }
+
+    private void OpenMemberInviteDrawer(MemberAccountDto member)
+    {
+        _inviteRole = GymRoleNames.Member;
+        _invitingMember = member;
+        _drawer = DrawerMode.Invite;
+    }
+
+    private void OpenAccessDrawer(TeamMemberDto person)
+    {
+        _managing = person;
+        _drawer = DrawerMode.Access;
+    }
+
+    private void CloseDrawer()
+    {
+        _drawer = DrawerMode.None;
+        _managing = null;
+        _invitingMember = null;
+    }
+
+    private async Task InviteAsync(InviteDrawer.InviteInput input)
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var invited = await Sender.Send(
+                new InviteTeamMemberCommand(input.Email, input.Role, input.MemberId));
+
+            if (!invited)
+            {
+                throw ValidationFailures.Refuse(
+                    SettingsFieldNames.Invitation, SettingsRules.InvitationNotFound);
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "envoyer l'invitation", "Invitation enregistrée.");
+    }
+
+    private async Task UpdateAccessAsync(AccessDrawer.AccessInput input)
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var updated = await Sender.Send(
+                new UpdateTeamMemberAccessCommand(input.UserId, input.Role));
+
+            if (!updated)
+            {
+                throw ValidationFailures.Refuse(
+                    SettingsFieldNames.Account, SettingsRules.AccountNotFound);
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "modifier l'accès", "Accès modifié.");
+    }
+
+    private async Task RevokeAsync(string userId)
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            var revoked = await Sender.Send(new RevokeAccessCommand(userId));
+
+            if (!revoked)
+            {
+                throw ValidationFailures.Refuse(
+                    SettingsFieldNames.Account, SettingsRules.AccountNotFound);
+            }
+
+            CloseDrawer();
+            await RefreshAsync();
+        }, "retirer l'accès", "Accès retiré.");
+    }
+
+    private void GoToPlans() => Navigation.NavigateTo("/abonnements");
+
+    private void OnShellChanged()
+    {
+        // Going wide drops the sub-header with the sub-panel: the desktop shell
+        // ignores it, but coming back narrow would otherwise restore a back
+        // arrow for a panel that is no longer open.
+        if (!Responsive.IsMobile)
+        {
+            _mobilePanel = null;
+            MobileHeader_.UseRootHeader();
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnShellChanged;
+        MobileHeader_.UseRootHeader();
+    }
+}

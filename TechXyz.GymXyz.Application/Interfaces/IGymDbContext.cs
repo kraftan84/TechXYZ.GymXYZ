@@ -23,6 +23,9 @@ public interface IGymDbContext
     DbSet<Subscription> Subscriptions { get; }
     DbSet<Payment> Payments { get; }
     DbSet<Invitation> Invitations { get; }
+    DbSet<GymSettings> GymSettings { get; }
+    DbSet<OpeningHours> OpeningHours { get; }
+    DbSet<NotificationSetting> NotificationSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

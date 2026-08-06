@@ -1,0 +1,123 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Formules & tarifs: the offers on sale, read-only here, then the money they are
+   taken in.
+
+   The formules are not editable from this panel. The prototype puts « Gérer dans
+   Abonnements » on the card head and nothing else, and it is right: a formule is
+   edited in one place, beside the members it covers and the revenue it makes.
+   The rows carry the same figures the Abonnements screen shows because both read
+   GetPlansQuery, which was written parameterless for exactly this. *@
+
+<div class="gx-set-panel">
+    <p class="gx-set-intro">
+        Ce que la salle vend et comment elle se fait payer. Les formules se
+        modifient depuis Abonnements, où elles s'affichent avec les membres
+        qu'elles couvrent.
+    </p>
+
+    <GxCard Padded="false">
+        <CardHead Title="Formules d'abonnement">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnManagePlans">
+                Gérer dans Abonnements
+                <GxIcon Slot="end" Name="@GxIconPaths.ArrowRight" Size="16"/>
+            </FluentButton>
+        </CardHead>
+
+        @if (Plans.Count == 0)
+        {
+            <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+                Aucune formule pour l'instant.
+            </div>
+        }
+        else
+        {
+            @foreach (var plan in Plans)
+            {
+                <div class="gx-formrow">
+                    <span class="gx-disc-ic t-@(plan.IsFeatured ? "brand" : "neutral")"
+                          style="width:38px;height:38px">
+                        <GxIcon Name="@GxIconPaths.Card" Size="18"/>
+                    </span>
+                    <div class="main">
+                        <div class="t">@plan.Name</div>
+                        <div class="s">@plan.BillingLabel</div>
+                    </div>
+                    <div class="price">
+                        @GxFormats.Number(plan.Price) <span>@plan.Unit</span>
+                    </div>
+                </div>
+            }
+        }
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Paiement & facturation"/>
+        <div class="gx-field-grid">
+            @* Wrapped: a Fluent field is a label plus an input, two siblings —
+               unwrapped it would take two cells of the grid. *@
+            <div>
+                <FluentSelect Label="Devise" TOption="string"
+                              Items="Currencies"
+                              OptionValue="@(code => code)"
+                              OptionText="@(code => SettingsLabels.CurrencyLabel(code))"
+                              @bind-SelectedOption="Form.Currency"
+                              @bind-SelectedOption:after="Touch"
+                              style="width:100%"/>
+            </div>
+            <div>
+                <FluentTextField Label="Régime de TVA" @bind-Value="Form.VatMention"
+                                 @bind-Value:after="Touch"
+                                 Placeholder="TVA non applicable, art. 293 B du CGI"
+                                 style="width:100%"/>
+            </div>
+        </div>
+
+        <div class="gx-seclab" style="padding:0 18px;margin:4px 0 0">Moyens de paiement acceptés</div>
+
+        @foreach (var method in SettingsLabels.PaymentMethods)
+        {
+            <div class="gx-pay-row">
+                <GxIcon Name="@SettingsLabels.Icon(method)" Size="18"/>
+                <span class="nm">@SubscriptionLabels.Label(method)</span>
+                <FluentSwitch Value="Form.Accepts(method)"
+                              ValueChanged="@(accepted => ToggleAsync(method, accepted))"
+                              TValue="bool"/>
+            </div>
+        }
+
+        <div style="padding:0 18px 16px;font-size:var(--text-2xs);color:var(--text-muted);line-height:1.5">
+            Un moyen décoché disparaît du tiroir d'encaissement. Les encaissements
+            déjà enregistrés avec gardent le leur.
+        </div>
+    </GxCard>
+
+    <SaveBar IsDirty="IsDirty" IsSaved="IsSaved"
+             UpToDateNote="Les réglages de paiement sont à jour."
+             OnSave="OnSave" OnCancel="OnCancel"/>
+</div>
+
+@code {
+    private static readonly string[] Currencies =
+        SettingsLabels.Currencies.Select(currency => currency.Code).ToArray();
+
+    [Parameter, EditorRequired] public PaymentsForm Form { get; set; } = new();
+
+    [Parameter] public IReadOnlyList<PlanDto> Plans { get; set; } = [];
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+    [Parameter] public EventCallback OnManagePlans { get; set; }
+
+    private Task Touch() => OnTouch.InvokeAsync();
+
+    private async Task ToggleAsync(PaymentMethod method, bool accepted)
+    {
+        Form.Toggle(method, accepted);
+        await Touch();
+    }
+}

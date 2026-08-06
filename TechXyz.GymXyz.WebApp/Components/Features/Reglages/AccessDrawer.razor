@@ -1,0 +1,86 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Gérer l'accès d'un collaborateur: what they can open, and the door.
+
+   Revoking is in the footer beside « Enregistrer » rather than behind a
+   confirmation of its own — it is reversible from the same screen, unlike a
+   deletion, and the handler refuses the two cases that are not (yourself, and
+   the last gestionnaire). *@
+
+<GxDrawer Title="Gérer l'accès"
+          Subtitle="@Person.DisplayName"
+          Icon="@GxIconPaths.Shield"
+          OnClose="OnClose">
+    <ChildContent>
+        <div class="gx-seclab">Compte</div>
+
+        <div class="gx-kv"><span class="k">E-mail</span><span class="v">@Person.Email</span></div>
+        <div class="gx-kv">
+            <span class="k">Dernière connexion</span>
+            <span class="v">@SettingsLabels.LastSeen(Person.LastSeenAt, Now)</span>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Person.RoleLabel))
+        {
+            <div class="gx-kv"><span class="k">Fonction</span><span class="v">@Person.RoleLabel</span></div>
+        }
+
+        <div class="gx-seclab">Accès</div>
+
+        <div class="gx-form-field">
+            <FluentSelect Label="Rôle" TOption="string"
+                          Items="TeamAccessScopes.Assignable"
+                          OptionValue="@(role => role)"
+                          OptionText="@(role => SettingsLabels.RoleLabel(role))"
+                          @bind-SelectedOption="_role"
+                          style="width:100%"/>
+            <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                @TeamAccessScopes.Label(_role)
+            </div>
+        </div>
+
+        @if (Person.IsRevoked)
+        {
+            <div style="margin-top:12px;font-size:var(--text-xs);color:var(--color-danger);line-height:1.5">
+                Cet accès est retiré : la personne ne peut plus se connecter, mais
+                tout ce qu'elle a fait reste à son nom.
+            </div>
+        }
+    </ChildContent>
+    <Footer>
+        @if (!Person.IsCurrentUser && !Person.IsRevoked)
+        {
+            <FluentButton Appearance="Appearance.Outline" @onclick="() => OnRevoke.InvokeAsync(Person.UserId)">
+                <GxIcon Slot="start" Name="@GxIconPaths.Close" Size="18"/>
+                Retirer l'accès
+            </FluentButton>
+        }
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
+                Enregistrer
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    private string _role = GymRoleNames.Coach;
+
+    [Parameter, EditorRequired] public TeamMemberDto Person { get; set; } = default!;
+
+    [Parameter] public DateTime Now { get; set; } = DateTime.UtcNow;
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<AccessInput> OnSave { get; set; }
+    [Parameter] public EventCallback<string> OnRevoke { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _role = TeamAccessScopes.IsAssignable(Person.Role) ? Person.Role : GymRoleNames.Coach;
+    }
+
+    private Task SubmitAsync() => OnSave.InvokeAsync(new AccessInput(Person.UserId, _role));
+
+    public sealed record AccessInput(string UserId, string Role);
+}

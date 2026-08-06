@@ -1,0 +1,211 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Identité: how the gym presents itself, where it is, when it is open, and the
+   school-holiday zone its postcode falls in.
+
+   The address block obeys the white-label rule. A customer working on the move —
+   Leyssa Coaching, around Thonon — has an AreaLabel and no premises, so the
+   panel offers the zone instead of a street. Showing both would let a stale
+   address survive the switch and reappear on a document; showing an empty
+   address would read as missing data rather than as a deliberate way of working.
+
+   The calendrier scolaire card follows the postcode being typed, not the one
+   saved: the zone is what the postcode decides, and seeing it move is quicker
+   than explaining the rule. It disappears with the address for an itinerant
+   customer, because there is no postcode to derive anything from. *@
+
+<div class="gx-set-panel">
+    <p class="gx-set-intro">
+        Ce que la salle dit d'elle-même : le nom et la baseline suivent la marque
+        partout dans l'application, et les coordonnées apparaissent sur les
+        documents.
+    </p>
+
+    <GxCard Padded="false">
+        <CardHead Title="Informations générales"/>
+        <div class="gx-field-grid">
+            <div class="full">
+                <FluentTextField Label="Nom de la salle" @bind-Value="Form.Name"
+                                 @bind-Value:after="Touch" style="width:100%"/>
+            </div>
+            <div class="full">
+                <FluentTextField Label="Baseline" @bind-Value="Form.Baseline"
+                                 @bind-Value:after="Touch" style="width:100%"/>
+                <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                    Affichée sous le logo et sur les documents.
+                </div>
+            </div>
+            <div>
+                <FluentNumberField Label="Capacité d'accueil" Min="1" @bind-Value="Form.Capacity"
+                                   @bind-Value:after="Touch" style="width:100%"/>
+                <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                    Membres maximum.
+                </div>
+            </div>
+            @* Wrapped, like every other cell: a Fluent field renders its label and
+               its input as two siblings, and a bare one would take two cells of
+               the grid — putting the label in one column and the input in the
+               next row. *@
+            <div>
+                <FluentTextField Label="SIRET" @bind-Value="Form.Siret"
+                                 @bind-Value:after="Touch" style="width:100%"/>
+            </div>
+        </div>
+    </GxCard>
+
+    <GxCard Padded="false">
+        <CardHead Title="Coordonnées">
+            <FluentSwitch Value="Form.WorksFromAnArea"
+                          ValueChanged="SetWorksFromAnAreaAsync"
+                          TValue="bool">
+                Sans local fixe
+            </FluentSwitch>
+        </CardHead>
+        <div class="gx-field-grid">
+            @if (Form.WorksFromAnArea)
+            {
+                <div class="full">
+                    <FluentTextField Label="Zone d'intervention" @bind-Value="Form.AreaLabel"
+                                     @bind-Value:after="Touch" style="width:100%"/>
+                    <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                        Vous intervenez sans local fixe : la zone remplace l'adresse partout
+                        où elle serait affichée. Laissée vide, l'adresse est conservée.
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="full">
+                    <FluentTextField Label="Adresse" @bind-Value="Form.Street"
+                                     @bind-Value:after="Touch" style="width:100%"/>
+                </div>
+                <div>
+                    <FluentTextField Label="Code postal" @bind-Value="Form.ZipCode"
+                                     @bind-Value:after="Touch" style="width:100%"/>
+                </div>
+                <div>
+                    <FluentTextField Label="Ville" @bind-Value="Form.City"
+                                     @bind-Value:after="Touch" style="width:100%"/>
+                </div>
+            }
+
+            <div>
+                <FluentTextField Label="E-mail de contact" TextFieldType="TextFieldType.Email"
+                                 @bind-Value="Form.Email" @bind-Value:after="Touch" style="width:100%"/>
+            </div>
+            <div>
+                <FluentTextField Label="Téléphone" TextFieldType="TextFieldType.Tel"
+                                 @bind-Value="Form.Phone" @bind-Value:after="Touch" style="width:100%"/>
+            </div>
+        </div>
+    </GxCard>
+
+    @if (!Form.WorksFromAnArea)
+    {
+        <CalendarCard Calendar="Calendar"/>
+    }
+
+    <GxCard Padded="false">
+        <CardHead Title="Horaires d'ouverture">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="AddHours">
+                <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="16"/>
+                Ajouter
+            </FluentButton>
+        </CardHead>
+
+        @if (Form.OpeningHours.Count == 0)
+        {
+            <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
+                Aucun horaire renseigné. Ajoutez une plage pour indiquer quand la salle est ouverte.
+            </div>
+        }
+        else
+        {
+            @foreach (var line in Form.OpeningHours)
+            {
+                <div class="gx-hours-row">
+                    <span class="day" style="display:flex;gap:8px;align-items:center">
+                        <FluentSelect TOption="DayOfWeek" Items="Days" @bind-SelectedOption="line.DayFrom"
+                                      @bind-SelectedOption:after="Touch"
+                                      OptionValue="@(day => day.ToString())"
+                                      OptionText="@(day => SettingsLabels.DayName(day))"
+                                      style="width:130px"/>
+                        <span style="color:var(--text-muted)">–</span>
+                        <FluentSelect TOption="DayOfWeek" Items="Days" @bind-SelectedOption="line.DayTo"
+                                      @bind-SelectedOption:after="Touch"
+                                      OptionValue="@(day => day.ToString())"
+                                      OptionText="@(day => SettingsLabels.DayName(day))"
+                                      style="width:130px"/>
+                    </span>
+                    <span class="h" style="display:flex;gap:8px;align-items:center">
+                        <FluentTimePicker @bind-Value="line.OpensAtValue"
+                                          @bind-Value:after="Touch" style="width:120px"/>
+                        <FluentTimePicker @bind-Value="line.ClosesAtValue"
+                                          @bind-Value:after="Touch" style="width:120px"/>
+                    </span>
+                    <FluentButton Appearance="Appearance.Stealth" Title="Retirer la plage"
+                                  @onclick="() => RemoveHours(line)">
+                        <GxIcon Name="@GxIconPaths.Trash" Size="16"/>
+                    </FluentButton>
+                </div>
+            }
+        }
+    </GxCard>
+
+    <SaveBar IsDirty="IsDirty" IsSaved="IsSaved"
+             UpToDateNote="L'identité de la salle est à jour."
+             OnSave="OnSave" OnCancel="OnCancel"/>
+</div>
+
+@code {
+    private static readonly DayOfWeek[] Days =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    [Parameter, EditorRequired] public IdentityForm Form { get; set; } = new();
+
+    [Parameter] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Raised on every edit so the page can arm the save bar.</summary>
+    [Parameter] public EventCallback OnTouch { get; set; }
+
+    private Task Touch() => OnTouch.InvokeAsync();
+
+    /// <summary>
+    /// Switches the card between a postal address and a zone. Nothing is cleared
+    /// here — the address stays in the form so switching back and forth does not
+    /// lose it, and the handler is what drops it when a zone is actually saved.
+    /// </summary>
+    private async Task SetWorksFromAnAreaAsync(bool worksFromAnArea)
+    {
+        Form.WorksFromAnArea = worksFromAnArea;
+        await Touch();
+    }
+
+    private async Task AddHours()
+    {
+        Form.OpeningHours.Add(new OpeningHoursForm
+        {
+            DayFrom = DayOfWeek.Monday,
+            DayTo = DayOfWeek.Friday,
+            OpensAt = new TimeOnly(9, 0),
+            ClosesAt = new TimeOnly(18, 0)
+        });
+
+        await Touch();
+    }
+
+    private async Task RemoveHours(OpeningHoursForm line)
+    {
+        Form.OpeningHours.Remove(line);
+        await Touch();
+    }
+}

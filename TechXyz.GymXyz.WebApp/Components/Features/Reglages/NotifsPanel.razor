@@ -1,0 +1,121 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Notifications: two groups, six switches, and the channels each one goes down.
+
+   The channel pills are the prototype's read-only badges turned into checkboxes:
+   the hand-off draws « Email » and « SMS » as chips beside every row, and the lot
+   asks for the channels to be stored, which they cannot be if there is nothing to
+   click. The pill styling stays — only the control underneath is real.
+
+   SMS persists without sending. The caveat is stated once at the top of the panel
+   rather than beside all six rows: the same sentence six times reads as noise and
+   stops being read. *@
+
+<div class="gx-set-panel">
+    <p class="gx-set-intro">
+        Choisissez quand GymXYZ envoie un message — à vos membres ou à vous.
+    </p>
+
+    <div class="gx-set-intro" style="display:flex;gap:8px;align-items:flex-start;color:var(--text-muted)">
+        <GxIcon Name="@GxIconPaths.Alert" Size="16"/>
+        <span>@SettingsLabels.SmsPending</span>
+    </div>
+
+    @foreach (var group in Groups)
+    {
+        var rows = Forms.Where(form => form.Group == group).ToList();
+
+        @if (rows.Count > 0)
+        {
+            <GxCard Padded="false">
+                <CardHead Title="@SettingsLabels.Title(group)"/>
+
+                @foreach (var row in rows)
+                {
+                    <div class="gx-notif-row">
+                        <div class="main">
+                            <div class="t">@SettingsLabels.Title(row.Key)</div>
+                            <div class="d">@SettingsLabels.Description(row.Key)</div>
+
+                            <div class="gx-chan">
+                                <FluentCheckbox Value="row.UsesEmail"
+                                                ValueChanged="@(uses => SetChannelAsync(row, NotificationChannels.Email, uses))"
+                                                Disabled="@(!row.IsEnabled)">
+                                    Email
+                                </FluentCheckbox>
+                                <FluentCheckbox Value="row.UsesSms"
+                                                ValueChanged="@(uses => SetChannelAsync(row, NotificationChannels.Sms, uses))"
+                                                Disabled="@(!row.IsEnabled)"
+                                                title="@SettingsLabels.SmsPending">
+                                    SMS
+                                </FluentCheckbox>
+                            </div>
+                        </div>
+
+                        <FluentSwitch Value="row.IsEnabled"
+                                      ValueChanged="@(enabled => SetEnabledAsync(row, enabled))"
+                                      TValue="bool"/>
+                    </div>
+                }
+            </GxCard>
+        }
+    }
+
+    <SaveBar IsDirty="IsDirty" IsSaved="IsSaved"
+             UpToDateNote="Les notifications sont à jour."
+             OnSave="OnSave" OnCancel="OnCancel"/>
+</div>
+
+@code {
+    private static readonly NotificationGroup[] Groups =
+    [
+        NotificationGroup.MembersAndSubscriptions,
+        NotificationGroup.CoursesAndAttendance
+    ];
+
+    [Parameter, EditorRequired] public List<NotificationForm> Forms { get; set; } = [];
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+
+    private async Task SetEnabledAsync(NotificationForm row, bool enabled)
+    {
+        row.IsEnabled = enabled;
+
+        // Switching a message on with every channel unticked would save as "on
+        // and silent", which the command refuses. Email is the one that works
+        // today, so it is what comes back on.
+        if (enabled && row.Channels == NotificationChannels.None)
+        {
+            row.UsesEmail = true;
+        }
+
+        await OnTouch.InvokeAsync();
+    }
+
+    private async Task SetChannelAsync(NotificationForm row, NotificationChannels channel, bool uses)
+    {
+        if (channel == NotificationChannels.Email)
+        {
+            row.UsesEmail = uses;
+        }
+        else
+        {
+            row.UsesSms = uses;
+        }
+
+        // Unticking the last channel is how somebody says "stop sending this".
+        // Taking the switch down with it says the same thing in a way the
+        // command accepts.
+        if (row.Channels == NotificationChannels.None)
+        {
+            row.IsEnabled = false;
+        }
+
+        await OnTouch.InvokeAsync();
+    }
+}
