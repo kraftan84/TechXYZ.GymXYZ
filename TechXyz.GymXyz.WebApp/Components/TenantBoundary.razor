@@ -57,6 +57,12 @@
         return new GymUserInfo(
             displayName,
             principal.FindFirstValue(GymClaimTypes.Nickname),
-            principal.FindFirstValue(GymClaimTypes.RoleLabel));
+            principal.FindFirstValue(GymClaimTypes.RoleLabel))
+        {
+            // The tenant claims beside it are borrowed, not owned: a platform
+            // admin's own account carries no tenant at all.
+            IsImpersonating = principal.HasClaim(
+                claim => claim.Type == GymClaimTypes.Impersonation)
+        };
     }
 }

@@ -38,6 +38,19 @@ public static class DbInitializer
                 await SeedAccessAsync(serviceProvider, dbContext, tenant);
                 await SeedSettingsAsync(dbContext, tenant);
             }
+
+            await SeedInvoicesAsync(dbContext, tenant);
+
+            // The two other customers of the hand-off. They exist so the TechXYZ
+            // console has more than one row to show, and so the white-label
+            // promise is finally exercised end to end: themes.css has carried
+            // their token blocks since lot 0 and nothing ever selected them.
+            await SeedOtherCustomersAsync(serviceProvider, dbContext, tenantContext);
+
+            // Last, and outside every UseTenant: the platform admin belongs to no
+            // customer. Seeding it inside one would stamp it with that tenant and
+            // hand a super-admin a home it must not have.
+            await SeedPlatformAdminAsync(serviceProvider);
         }
     }
 
@@ -61,9 +74,254 @@ public static class DbInitializer
             Capacity = 180,
             IsSolo = false,
             GymPlan = "GymXYZ Pro",
+            PlanDescription = "Engagement annuel · sans frais de mise en service",
             PlanPrice = 79m,
-            PlanRenewalDate = today.AddMonths(1)
+            PlanRenewalDate = today.AddMonths(1),
+            // Pro is the uncapped formula: the billing panel reads "illimité" and
+            // draws no gauge. The two other customers are capped, so both shapes
+            // of that card are exercised by the seed.
+            PlanMemberCap = null,
+            PaymentBrand = "Visa",
+            PaymentLast4 = "4242",
+            PaymentExpiry = "08 / 27"
         };
+    }
+
+    /// <summary>
+    /// The TechXYZ super-admin. Belongs to no customer — <c>TenantId</c> null is
+    /// what tells the claims factory to write no tenant claim, which is what
+    /// makes the account land on the console rather than inside a gym.
+    /// <para>
+    /// Without this account nobody at all can reach <c>/administration</c>: the
+    /// page has carried its policy since lot 0 and the seed had no holder for it.
+    /// </para>
+    /// </summary>
+    private static async Task SeedPlatformAdminAsync(IServiceProvider serviceProvider)
+    {
+        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        const string email = "admin@techxyz.fr";
+        if (await userManager.FindByEmailAsync(email) is not null)
+            return;
+
+        var admin = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            TenantId = null,
+            DisplayName = "Console TechXYZ",
+            RoleLabel = "Super-admin"
+        };
+
+        var result = await userManager.CreateAsync(admin, DemoPassword);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Could not seed the platform admin: {errors}");
+        }
+
+        await userManager.AddToRoleAsync(admin, GymRoles.PlatformAdmin);
+    }
+
+    /// <summary>
+    /// Team Trainer's and Leyssa Coaching, the two other customers the hand-off
+    /// describes (<c>GX_THEMES</c>), each with its manager, its brand lockup, its
+    /// GymXYZ plan and its invoices.
+    /// <para>
+    /// Deliberately thin compared with GymXYZ: a handful of members, and no
+    /// courses, coaches, sessions or takings. The console counts members and
+    /// shows brand and billing, and that is all these two have to answer. What
+    /// they do carry is what GymXYZ cannot demonstrate on its own — a mark with a
+    /// dark variant, a circular mark, a capped plan, and a customer with an area
+    /// instead of an address.
+    /// </para>
+    /// </summary>
+    private static async Task SeedOtherCustomersAsync(
+        IServiceProvider serviceProvider,
+        GymDbContext dbContext,
+        ITenantContext tenantContext)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var teamTrainers = new Tenant("Team Trainer's", "teamtrainers", "teamtrainers")
+        {
+            DisplayName = "Team Trainer's",
+            Baseline = "Salle de sport",
+            // Whole wordmark rather than a split one: the accent trick is GymXYZ's.
+            WordmarkText = "TEAM TRAINER'S",
+            LogoPath = "/images/themes/teamtrainers-mark.png",
+            // The only customer of the product with a light-on-dark variant, and
+            // therefore the only place the lockup's theme switch is exercised.
+            LogoDarkPath = "/images/themes/teamtrainers-white.png",
+            Email = "contact@teamtrainers.fr",
+            Phone = "04 72 44 18 90",
+            Siret = "812 456 903 00027",
+            Street = "27 avenue Jean Jaurès",
+            ZipCode = "69007",
+            City = "Lyon 7ᵉ",
+            Country = "France",
+            Capacity = 120,
+            IsSolo = false,
+            GymPlan = "GymXYZ Studio",
+            PlanDescription = "Mensuel · jusqu'à 150 membres",
+            PlanPrice = 49m,
+            PlanRenewalDate = today.AddDays(18),
+            PlanMemberCap = 150,
+            PaymentBrand = "Mastercard",
+            PaymentLast4 = "5417",
+            PaymentExpiry = "11 / 28"
+        };
+
+        var leyssa = new Tenant("Leyssa Coaching", "leyssa", "leyssa")
+        {
+            DisplayName = "Leyssa Coaching",
+            Baseline = "Coach indépendante",
+            WordmarkText = "Leyssa Coaching",
+            LogoPath = "/images/themes/leyssa-mark.png",
+            CircleLogo = true,
+            Email = "najate@leyssa-coaching.fr",
+            Phone = "06 24 71 08 33",
+            Siret = "923 887 145 00014",
+            // No street, no postcode: an itinerant coach has an area, not an
+            // address, and the whole product reads AreaLabel instead.
+            AreaLabel = "Thonon et alentours",
+            Country = "France",
+            IsSolo = true,
+            GymPlan = "GymXYZ Solo",
+            PlanDescription = "Mensuel · jusqu'à 50 membres",
+            PlanPrice = 19m,
+            PlanRenewalDate = today.AddDays(6),
+            PlanMemberCap = 50,
+            PaymentBrand = "Visa",
+            PaymentLast4 = "8830",
+            PaymentExpiry = "03 / 27"
+        };
+
+        dbContext.Tenants.AddRange(teamTrainers, leyssa);
+        await dbContext.SaveChangesAsync();
+
+        await SeedSmallCustomerAsync(
+            serviceProvider, dbContext, tenantContext, teamTrainers,
+            managerEmail: "aurelie.siquier@teamtrainers.fr",
+            managerName: "Aurélie Siquier",
+            managerNickname: "Lily",
+            managerRoleLabel: "Gérante",
+            gymName: "Team Trainer's Lyon 7ᵉ",
+            memberNames:
+            [
+                ("Marion", "Delaunay"), ("Kevin", "Boucher"), ("Sofia", "Marchetti"),
+                ("Hugo", "Perrin"), ("Anaïs", "Leroy"), ("Bastien", "Colin"),
+                ("Chloé", "Ferrand"), ("Yanis", "Roussel")
+            ]);
+
+        await SeedSmallCustomerAsync(
+            serviceProvider, dbContext, tenantContext, leyssa,
+            managerEmail: "najate.amzil@leyssa-coaching.fr",
+            managerName: "Najate Amzil",
+            managerNickname: "Naj",
+            managerRoleLabel: "Coach",
+            gymName: "Leyssa Coaching",
+            memberNames:
+            [
+                ("Élodie", "Bonnet"), ("Rémi", "Charpentier"), ("Inès", "Nadal")
+            ]);
+
+        await SeedInvoicesAsync(dbContext, teamTrainers);
+        await SeedInvoicesAsync(dbContext, leyssa);
+    }
+
+    /// <summary>
+    /// A customer reduced to what the console reads: a manager who can sign in, a
+    /// gym to hang members off, and the members themselves.
+    /// </summary>
+    private static async Task SeedSmallCustomerAsync(
+        IServiceProvider serviceProvider,
+        GymDbContext dbContext,
+        ITenantContext tenantContext,
+        Tenant tenant,
+        string managerEmail,
+        string managerName,
+        string managerNickname,
+        string managerRoleLabel,
+        string gymName,
+        (string First, string Last)[] memberNames)
+    {
+        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        using (tenantContext.UseTenant(tenant.Id, tenant.Slug))
+        {
+            var manager = new ApplicationUser
+            {
+                UserName = managerEmail,
+                Email = managerEmail,
+                EmailConfirmed = true,
+                TenantId = tenant.Id,
+                DisplayName = managerName,
+                Nickname = managerNickname,
+                RoleLabel = managerRoleLabel,
+                LastSeenAt = DateTime.UtcNow.AddHours(-9)
+            };
+
+            var result = await userManager.CreateAsync(manager, DemoPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException(
+                    $"Could not seed the manager of {tenant.Slug}: {errors}");
+            }
+
+            await userManager.AddToRoleAsync(manager, GymRoles.GymManager);
+
+            var gym = new Gym(gymName);
+            tenant.AddGym(gym);
+
+            var joinedOn = DateOnly.FromDateTime(DateTime.Today).AddMonths(-7);
+
+            foreach (var (first, last) in memberNames)
+            {
+                gym.AddMember(new Member(first, last)
+                {
+                    Email = $"{Slug(first)}.{Slug(last)}@example.fr",
+                    JoinedOn = joinedOn
+                });
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    /// <summary>
+    /// What the customer owes TechXYZ. One invoice a year at the plan's yearly
+    /// rate, newest first on screen — the hand-off draws three of them.
+    /// <para>
+    /// Nothing collects this money and nothing generates a document: these rows
+    /// exist so the billing panel has a history to list.
+    /// </para>
+    /// </summary>
+    private static async Task SeedInvoicesAsync(GymDbContext dbContext, Tenant tenant)
+    {
+        if (tenant.PlanPrice is not { } monthly)
+            return;
+
+        var yearly = monthly * 12;
+        var thisYear = DateTime.Today.Year;
+
+        for (var age = 0; age < 3; age++)
+        {
+            var year = thisYear - age;
+
+            dbContext.Invoices.Add(new Invoice
+            {
+                TenantId = tenant.Id,
+                Reference = $"GX-{year}-{tenant.Id:000}",
+                Date = new DateOnly(year, 1, 1),
+                Amount = yearly,
+                Status = InvoiceStatus.Paid
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task SeedRolesAsync(IServiceProvider serviceProvider)

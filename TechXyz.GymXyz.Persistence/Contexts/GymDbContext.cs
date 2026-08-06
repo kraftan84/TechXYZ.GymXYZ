@@ -48,6 +48,11 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<NotificationSetting> NotificationSettings => Set<NotificationSetting>();
     public DbSet<Address> Addresses =>  Set<Address>();
 
+    // Both sit above the tenant filter, alongside Tenant: they are read by the
+    // TechXYZ console about a customer it does not inhabit.
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<TenantImpersonation> TenantImpersonations => Set<TenantImpersonation>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
         builder.Properties<Enum>()
@@ -293,6 +298,36 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Slug)
             .IsUnique();
+
+        modelBuilder.Entity<Invoice>(x =>
+        {
+            x.Property(invoice => invoice.Amount).HasPrecision(9, 2);
+
+            x.HasOne(invoice => invoice.Tenant)
+                .WithMany(tenant => tenant.Invoices)
+                .HasForeignKey(invoice => invoice.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // The billing panel reads one customer's invoices, newest first.
+            x.HasIndex(invoice => new { invoice.TenantId, invoice.Date });
+
+            // A reference identifies a document, and issuing it twice would make
+            // "which invoice is GX-2026-001" a question with two answers.
+            x.HasIndex(invoice => invoice.Reference).IsUnique();
+        });
+
+        modelBuilder.Entity<TenantImpersonation>(x =>
+        {
+            x.HasOne(visit => visit.Tenant)
+                .WithMany()
+                .HasForeignKey(visit => visit.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Closing a visit looks up the admin's open row; auditing one
+            // customer reads the other index.
+            x.HasIndex(visit => new { visit.AdminUserId, visit.EndedAt });
+            x.HasIndex(visit => new { visit.TenantId, visit.StartedAt });
+        });
 
         modelBuilder.Entity<ApplicationUser>()
             .HasIndex(u => u.TenantId);

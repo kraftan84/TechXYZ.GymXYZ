@@ -10,4 +10,11 @@ public sealed record GymUserInfo(string DisplayName, string? Nickname, string? R
 
     /// <summary>Familiar name for the dashboard greeting, full name otherwise.</summary>
     public string GreetingName => string.IsNullOrWhiteSpace(Nickname) ? DisplayName : Nickname;
+
+    /// <summary>
+    /// True while a platform admin is inside a customer. Read from the
+    /// impersonation claim once, at the boundary, so the shell never has to ask
+    /// the authentication state whose data it is drawing.
+    /// </summary>
+    public bool IsImpersonating { get; init; }
 }

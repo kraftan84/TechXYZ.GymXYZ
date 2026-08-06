@@ -26,6 +26,8 @@ public interface IGymDbContext
     DbSet<GymSettings> GymSettings { get; }
     DbSet<OpeningHours> OpeningHours { get; }
     DbSet<NotificationSetting> NotificationSettings { get; }
+    DbSet<Invoice> Invoices { get; }
+    DbSet<TenantImpersonation> TenantImpersonations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

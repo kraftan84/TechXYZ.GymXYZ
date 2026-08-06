@@ -1,12 +1,74 @@
-@* Reserved for the TechXYZ super-admin. Guarded by policy, not by hiding the link. *@
+@* Reserved for the TechXYZ super-admin. Guarded by policy, not by hiding the link.
+
+   PR 1 of lot 9 lands the plumbing, not the screen: this is the plainest list
+   that lets the multi-customer seed and the impersonation round trip be
+   exercised at all. « Apparence & marque » and « Facturation » — the two panels
+   the prototype draws — arrive in PR 2, which replaces everything below the
+   heading with the real console. The query and the count behind it are already
+   the ones PR 2 will use. *@
 
 @page "/administration"
 @attribute [Authorize(Policy = GymPolicies.PlatformAdmin)]
+
+@using MediatR
+@using TechXyz.GymXyz.Application.Queries
+
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
 
 <PageTitle>Administration</PageTitle>
 
 <PageHead Title="Administration" Subtitle="Clients GymXYZ, apparence & marque, facturation."/>
 
-<EmptyState Icon="@GxIconPaths.Shield"
-            Title="Bientôt l'administration"
-            Text="La gestion des clients GymXYZ arrive au prochain lot."/>
+@if (_customers.Count == 0)
+{
+    <EmptyState Icon="@GxIconPaths.Shield"
+                Title="Aucun client"
+                Text="Aucun client GymXYZ n'est enregistré."/>
+}
+else
+{
+    <div class="gx-card">
+        <div style="padding:4px 18px 8px">
+            @foreach (var customer in _customers)
+            {
+                <div class="gx-listrow">
+                    <span class="gx-disc-ic t-brand" style="width:34px;height:34px">
+                        <GxIcon Name="@GxIconPaths.Building" Size="16"/>
+                    </span>
+                    <div class="main">
+                        <div class="t">@customer.DisplayName</div>
+                        <div class="s">
+                            @customer.MemberCount membres
+                            @if (customer.Where is { } where)
+                            {
+                                @(" · ")
+
+                                @where
+                            }
+                            @if (customer.GymPlan is { } plan)
+                            {
+                                @(" · ")
+
+                                @plan
+                            }
+                        </div>
+                    </div>
+                    <a class="gx-tab" href="@($"/account/client?client={customer.Id}")">Entrer</a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<TenantSummaryDto> _customers = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UserFeedback.ExecuteAsync(async () =>
+        {
+            _customers = await Sender.Send(new GetTenantsQuery());
+        }, "charger les clients");
+    }
+}

@@ -90,7 +90,35 @@ public class Tenant : EntityBase<int>
     public decimal? PlanPrice { get; set; }
     public DateOnly? PlanRenewalDate { get; set; }
 
+    /// <summary>
+    /// How many members the plan covers. Null means unlimited, which is what the
+    /// billing panel shows as "112 / illimité" with no gauge to fill.
+    /// </summary>
+    public int? PlanMemberCap { get; set; }
+
+    /// <summary>Sentence describing what the plan includes, under its name.</summary>
+    public string? PlanDescription { get; set; }
+
+    // ---- Payment method -----------------------------------------------------
+    //
+    // Descriptive only. These three fields are what a payment provider hands
+    // back about a card, never what somebody typed: there is no card number
+    // here, and there must not be one. Until a provider is wired in, they are
+    // seeded and read-only — the "Modifier" button stays disabled.
+
+    /// <summary>Card network as the provider names it ("Visa").</summary>
+    public string? PaymentBrand { get; set; }
+
+    /// <summary>Last four digits, the only part of a card safe to hold.</summary>
+    public string? PaymentLast4 { get; set; }
+
+    /// <summary>Expiry as the provider formats it ("08 / 27").</summary>
+    public string? PaymentExpiry { get; set; }
+
     public ICollection<Gym>? Gyms { get; set; }
+
+    /// <summary>What this customer owes TechXYZ, newest first on screen.</summary>
+    public ICollection<Invoice>? Invoices { get; set; }
 
     public void AddGym(Gym gym)
     {
