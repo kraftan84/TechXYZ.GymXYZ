@@ -14,6 +14,24 @@ public class GxNavigationTests
     }
 
     [Fact]
+    public void ShortLabel_ShouldShortenOnlyTheTwoThatOverflowATile()
+    {
+        GxNavigation.Abonnements.ShortLabel.ShouldBe("Abos");
+        GxNavigation.Administration.ShortLabel.ShouldBe("Admin.");
+    }
+
+    [Fact]
+    public void ShortLabel_ShouldFallBackToTheFullWording()
+    {
+        // Only the long ones carry a second wording; everything else answers
+        // with its own label, so the markup never has to test for a null.
+        foreach (var item in GxNavigation.MobileMore.Except([GxNavigation.Abonnements, GxNavigation.Administration]))
+        {
+            item.ShortLabel.ShouldBe(item.Label);
+        }
+    }
+
+    [Fact]
     public void Visible_ShouldDropCoachs_ForASoloCoach()
     {
         var items = GxNavigation.Visible(GxNavigation.Groups[1].Items, isSolo: true).ToList();

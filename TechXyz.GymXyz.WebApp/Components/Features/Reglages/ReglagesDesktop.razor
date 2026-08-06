@@ -1,0 +1,132 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Desktop Réglages: the section nav across the top, one panel below.
+
+   The nav is gx-tabs / gx-tab — the prototype has no dedicated settings-nav
+   class, it re-uses the tab strip. Presentation only: every piece of state and
+   every write comes from Reglages.razor.
+
+   « Apparence & marque » and « Facturation » are absent on purpose. The
+   prototype puts them behind ScreenAdministration, the super-admin screen, and
+   they belong to lot 9. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Réglages" Subtitle="@($"Configuration de {GymName}")"/>
+
+<div class="gx-tabs" role="tablist">
+    @foreach (var section in Sections)
+    {
+        <button type="button" role="tab"
+                class="@("gx-tab" + (section == Section ? " on" : null))"
+                aria-selected="@(section == Section ? "true" : "false")"
+                @onclick="() => OnSelectSection.InvokeAsync(section)">
+            <GxIcon Name="@Icon(section)" Size="17"/>
+            <span>@Title(section)</span>
+        </button>
+    }
+</div>
+
+@switch (Section)
+{
+    case ReglagesSection.Identite:
+        <IdentitePanel Form="IdentityForm"
+                       Calendar="Calendar"
+                       IsDirty="IsDirty"
+                       IsSaved="IsSaved"
+                       OnSave="OnSave"
+                       OnCancel="OnCancel"
+                       OnTouch="OnTouch"/>
+        break;
+
+    case ReglagesSection.Equipe:
+        <EquipePanel Access="Settings.Team"
+                     Scope="TeamScope"
+                     Now="Now"
+                     OnSelectScope="OnSelectTeamScope"
+                     OnInvite="OnInvite"
+                     OnInviteMember="OnInviteMember"
+                     OnManage="OnManageAccess"/>
+        break;
+
+    case ReglagesSection.Tarifs:
+        <TarifsPanel Form="PaymentsForm"
+                     Plans="Plans"
+                     IsDirty="IsDirty"
+                     IsSaved="IsSaved"
+                     OnSave="OnSave"
+                     OnCancel="OnCancel"
+                     OnTouch="OnTouch"
+                     OnManagePlans="OnManagePlans"/>
+        break;
+
+    default:
+        <NotifsPanel Forms="NotificationForms"
+                     IsDirty="IsDirty"
+                     IsSaved="IsSaved"
+                     OnSave="OnSave"
+                     OnCancel="OnCancel"
+                     OnTouch="OnTouch"/>
+        break;
+}
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Réglages")
+    ];
+
+    private static readonly ReglagesSection[] Sections =
+    [
+        ReglagesSection.Identite,
+        ReglagesSection.Equipe,
+        ReglagesSection.Tarifs,
+        ReglagesSection.Notifications
+    ];
+
+    [Parameter, EditorRequired] public GymSettingsPageDto Settings { get; set; } = GymSettingsPageDto.Empty;
+    [Parameter, EditorRequired] public ReglagesSection Section { get; set; }
+
+    [Parameter] public IdentityForm IdentityForm { get; set; } = new();
+    [Parameter] public PaymentsForm PaymentsForm { get; set; } = new();
+    [Parameter] public List<NotificationForm> NotificationForms { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<PlanDto> Plans { get; set; } = [];
+    [Parameter] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
+    [Parameter] public EquipePanel.TeamScope TeamScope { get; set; }
+    [Parameter] public DateTime Now { get; set; } = DateTime.UtcNow;
+
+    [Parameter] public bool IsDirty { get; set; }
+    [Parameter] public bool IsSaved { get; set; }
+
+    [Parameter] public EventCallback<ReglagesSection> OnSelectSection { get; set; }
+    [Parameter] public EventCallback<EquipePanel.TeamScope> OnSelectTeamScope { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnTouch { get; set; }
+    [Parameter] public EventCallback<string> OnInvite { get; set; }
+    [Parameter] public EventCallback<MemberAccountDto> OnInviteMember { get; set; }
+    [Parameter] public EventCallback<TeamMemberDto> OnManageAccess { get; set; }
+    [Parameter] public EventCallback OnManagePlans { get; set; }
+
+    private string GymName => string.IsNullOrWhiteSpace(Settings.Identity.Name)
+        ? "la salle"
+        : Settings.Identity.Name;
+
+    public static string Title(ReglagesSection section) => section switch
+    {
+        ReglagesSection.Identite => "Identité",
+        ReglagesSection.Equipe => "Équipe & accès",
+        ReglagesSection.Tarifs => "Formules & tarifs",
+        _ => "Notifications"
+    };
+
+    public static string Icon(ReglagesSection section) => section switch
+    {
+        ReglagesSection.Identite => GxIconPaths.Building,
+        ReglagesSection.Equipe => GxIconPaths.Users,
+        ReglagesSection.Tarifs => GxIconPaths.Euro,
+        _ => GxIconPaths.Bell
+    };
+}

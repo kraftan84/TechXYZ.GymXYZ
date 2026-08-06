@@ -16,8 +16,15 @@
                 <span class="si">
                     <GxIcon Name="@item.Icon" Size="20"/>
                 </span>
+                @* Both wordings are rendered and the stylesheet picks one on the
+                   width of the tile: a container query can answer "does it fit"
+                   where the markup cannot. Identical for every item but the two
+                   long ones, whose short label defaults to the full one. *@
                 <span class="tt">
-                    <span class="t">@item.Label</span>
+                    <span class="t">
+                        <span class="long">@item.Label</span>
+                        <span class="short">@item.ShortLabel</span>
+                    </span>
                 </span>
             </button>
         }

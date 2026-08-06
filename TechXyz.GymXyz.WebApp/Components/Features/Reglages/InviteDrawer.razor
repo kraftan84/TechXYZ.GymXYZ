@@ -1,0 +1,78 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Reglages
+
+@* Inviter quelqu'un — an address and what it will be able to open.
+
+   The role picker offers the three a customer may hand out. PlatformAdmin is not
+   among them and is not hidden either: it is not assignable, so it is not in the
+   list the command accepts. *@
+
+<GxDrawer Title="Inviter"
+          Subtitle="@(MemberName ?? "Ouvrir un accès")"
+          Icon="@GxIconPaths.Mail"
+          OnClose="OnClose">
+    <ChildContent>
+        <div class="gx-seclab">Adresse</div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="E-mail" TextFieldType="TextFieldType.Email"
+                             @bind-Value="_email" Placeholder="prenom.nom@salle.fr"
+                             Disabled="@(MemberName is not null)"
+                             style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentSelect Label="Accès" TOption="string"
+                          Items="TeamAccessScopes.Assignable"
+                          OptionValue="@(role => role)"
+                          OptionText="@(role => SettingsLabels.RoleLabel(role))"
+                          @bind-SelectedOption="_role"
+                          style="width:100%"/>
+            <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:4px">
+                @TeamAccessScopes.Label(_role)
+            </div>
+        </div>
+
+        <div style="margin-top:12px;font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+            L'invitation est enregistrée dès maintenant et apparaît dans « en attente ».
+            Le compte se crée quand la personne l'accepte — l'e-mail qui la porte
+            part avec le canal de messagerie.
+        </div>
+    </ChildContent>
+    <Footer>
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <GxIcon Slot="start" Name="@GxIconPaths.Send" Size="18"/>
+                Envoyer l'invitation
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    private string _email = string.Empty;
+    private string _role = GymRoleNames.Coach;
+
+    /// <summary>Pre-filled when inviting a member from their row.</summary>
+    [Parameter] public string? Email { get; set; }
+
+    /// <summary>Set when the invitation is a member's, for the drawer subtitle.</summary>
+    [Parameter] public string? MemberName { get; set; }
+
+    [Parameter] public int? MemberId { get; set; }
+
+    [Parameter] public string Role { get; set; } = GymRoleNames.Coach;
+
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<InviteInput> OnSave { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _email = Email ?? string.Empty;
+        _role = Role;
+    }
+
+    private Task SubmitAsync() => OnSave.InvokeAsync(new InviteInput(_email, _role, MemberId));
+
+    public sealed record InviteInput(string Email, string Role, int? MemberId);
+}

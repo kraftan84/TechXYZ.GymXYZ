@@ -43,6 +43,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<GymSettings> GymSettings => Set<GymSettings>();
+    public DbSet<OpeningHours> OpeningHours => Set<OpeningHours>();
+    public DbSet<NotificationSetting> NotificationSettings => Set<NotificationSetting>();
     public DbSet<Address> Addresses =>  Set<Address>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -258,6 +261,30 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // The comptes membres segment asks the question the other way round:
             // which of these members is waiting on an invitation.
             x.HasIndex(invitation => invitation.MemberId);
+        });
+
+        modelBuilder.Entity<GymSettings>(x =>
+        {
+            x.Property(settings => settings.AcceptedPaymentMethods)
+                .HasConversion(new PaymentMethodListConverter())
+                .Metadata.SetValueComparer(new PaymentMethodListComparer());
+
+            x.Property(settings => settings.Currency).HasMaxLength(3);
+
+            x.HasMany(settings => settings.OpeningHours)
+                .WithOne(hours => hours.Settings)
+                .HasForeignKey(hours => hours.GymSettingsId);
+
+            // One row per customer. The screen reads it by tenant and nothing
+            // else ever looks it up.
+            x.HasIndex(settings => settings.TenantId).IsUnique();
+        });
+
+        modelBuilder.Entity<NotificationSetting>(x =>
+        {
+            // A message is configured once per customer: two rows for the same
+            // key would make "is this allowed" a question with two answers.
+            x.HasIndex(setting => new { setting.TenantId, setting.Key }).IsUnique();
         });
 
         modelBuilder.Entity<Member>()

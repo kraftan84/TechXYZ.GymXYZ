@@ -216,3 +216,51 @@ button.gx-coach-card { width: 100%; text-align: left; color: inherit; }
   line-height: 1;
   padding: 4px;
 }
+
+/* ---------- Réglages save bar ---------- */
+/* The prototype styles .gx-savebar as a plain card, while both hand-off
+   documents call it "collante". Layout-only, so it lands here rather than in
+   app.css: the panel above it can be long, and a save button that scrolls out
+   of reach is a save button people stop finding. */
+.gx-savebar-sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+/* ---------- "Plus" sheet: keep the two columns inside the screen ---------- */
+/* .gx-m-plusgrid is 1fr 1fr, and its items are grid items — so they carry the
+   default min-width:auto and refuse to shrink below their longest word. On a
+   375px screen a cell leaves 88px for the label while "Administration" needs
+   110px, so the grid grew wider than the sheet and the whole thing scrolled
+   sideways. The prototype has the same six labels and the same rule, so this is
+   a hand-off gap rather than a deviation.
+
+   Two layout-only rules. The tile becomes a query container, which both lets it
+   shrink to its track and lets the label below ask how much room it actually
+   has. Then the long wording gives way to the short one — "Abonnements" to
+   "Abos", "Administration" to "Admin." — only on a tile too narrow for it.
+
+   188px is where the longest label stops fitting: the tile spends 14px of
+   padding either side, 38px of icon and a 12px gap before the text starts, and
+   "Administration" needs 110px after that. Two columns on a 375px screen give
+   167px a tile, so the short wording shows there; a wide phone or a tablet keeps
+   the full one. */
+.gx-m-plusgrid > .gx-m-plusitem {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.gx-m-plusitem .tt .t .short { display: none; }
+
+@container (max-width: 187px) {
+  .gx-m-plusitem .tt .t .long { display: none; }
+  .gx-m-plusitem .tt .t .short { display: inline; }
+}
+
+/* Any label still too long for its tile wraps rather than pushing the grid
+   sideways — a locale with longer words must not bring the overflow back. */
+.gx-m-plusitem .tt .t {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}

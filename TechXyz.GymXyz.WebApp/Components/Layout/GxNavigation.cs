@@ -7,7 +7,21 @@ public sealed record GxNavItem(
     string Label,
     string Icon,
     string Href,
-    bool HiddenWhenSolo = false);
+    bool HiddenWhenSolo = false)
+{
+    /// <summary>
+    /// The label where the box is narrow — « Abos », « Admin. ». Defaults to the
+    /// full one, so only the two that need shortening carry a second wording.
+    /// <para>
+    /// Stored rather than cut down from <see cref="Label"/> for the reason
+    /// <c>Plan.ShortName</c> is: truncating on a word boundary would turn
+    /// « Administration » into « Administra… », which is not a word anybody
+    /// writes. Which of the two is shown is a question of available width, and
+    /// the stylesheet answers it.
+    /// </para>
+    /// </summary>
+    public string ShortLabel { get; init; } = Label;
+}
 
 public sealed record GxNavGroup(string Title, IReadOnlyList<GxNavItem> Items);
 
@@ -26,10 +40,14 @@ public static class GxNavigation
     public static readonly GxNavItem Coachs = new("coachs", "Coachs", GxIconPaths.User, "/coachs", HiddenWhenSolo: true);
 
     public static readonly GxNavItem Cours = new("cours", "Cours", GxIconPaths.Dumbbell, "/cours");
-    public static readonly GxNavItem Abonnements = new("abos", "Abonnements", GxIconPaths.Card, "/abonnements");
+    public static readonly GxNavItem Abonnements =
+        new("abos", "Abonnements", GxIconPaths.Card, "/abonnements") { ShortLabel = "Abos" };
+
     public static readonly GxNavItem Lieux = new("salles", "Lieux", GxIconPaths.Pin, "/lieux");
     public static readonly GxNavItem Reglages = new("reglages", "Réglages", GxIconPaths.Settings, "/reglages");
-    public static readonly GxNavItem Administration = new("administration", "Administration", GxIconPaths.Shield, "/administration");
+
+    public static readonly GxNavItem Administration =
+        new("administration", "Administration", GxIconPaths.Shield, "/administration") { ShortLabel = "Admin." };
 
     public static readonly IReadOnlyList<GxNavGroup> Groups =
     [

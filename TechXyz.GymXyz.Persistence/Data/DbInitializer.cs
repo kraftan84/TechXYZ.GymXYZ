@@ -36,6 +36,7 @@ public static class DbInitializer
                 await SeedManagerAsync(serviceProvider, tenant);
                 await SeedGymAsync(dbContext, tenant);
                 await SeedAccessAsync(serviceProvider, dbContext, tenant);
+                await SeedSettingsAsync(dbContext, tenant);
             }
         }
     }
@@ -103,6 +104,58 @@ public static class DbInitializer
         }
 
         await userManager.AddToRoleAsync(manager, GymRoles.GymManager);
+    }
+
+    /// <summary>
+    /// The paramétrage of the Réglages screens: money, tax, opening hours and
+    /// the six notification switches, set as the hand-off draws them.
+    /// </summary>
+    private static async Task SeedSettingsAsync(GymDbContext dbContext, Tenant tenant)
+    {
+        var settings = new GymSettings
+        {
+            Currency = GymSettings.DefaultCurrency,
+            VatMention = "TVA non applicable, art. 293 B du CGI",
+            AcceptedPaymentMethods =
+            [
+                PaymentMethod.Card,
+                PaymentMethod.SepaDirectDebit,
+                PaymentMethod.Cash,
+                PaymentMethod.PaymentLink
+            ],
+            SchoolZone = SchoolZones.ForPostcode(tenant.ZipCode)
+        };
+
+        settings.AddOpeningHours(new OpeningHours
+        {
+            DayFrom = DayOfWeek.Monday,
+            DayTo = DayOfWeek.Friday,
+            OpensAt = new TimeOnly(6, 30),
+            ClosesAt = new TimeOnly(22, 0)
+        });
+
+        settings.AddOpeningHours(new OpeningHours
+        {
+            DayFrom = DayOfWeek.Saturday,
+            DayTo = DayOfWeek.Saturday,
+            OpensAt = new TimeOnly(8, 0),
+            ClosesAt = new TimeOnly(19, 0)
+        });
+
+        settings.AddOpeningHours(new OpeningHours
+        {
+            DayFrom = DayOfWeek.Sunday,
+            DayTo = DayOfWeek.Sunday,
+            OpensAt = new TimeOnly(9, 0),
+            ClosesAt = new TimeOnly(13, 0)
+        });
+
+        dbContext.GymSettings.Add(settings);
+
+        dbContext.NotificationSettings.AddRange(
+            NotificationDefaults.All.Select(entry => NotificationDefaults.Create(entry.Key)));
+
+        await dbContext.SaveChangesAsync();
     }
 
     /// <summary>
