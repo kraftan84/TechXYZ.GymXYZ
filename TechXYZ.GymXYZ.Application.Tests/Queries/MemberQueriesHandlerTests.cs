@@ -73,8 +73,8 @@ public class MemberQueriesHandlerTests
         {
             Subscriptions =
             [
-                new Subscription { StartDate = Today.AddDays(-30), EndDate = Today.AddDays(1) },
-                new Subscription { StartDate = Today.AddDays(-2), EndDate = Today.AddMonths(6) }
+                Cover(Today.AddDays(-30), Today.AddDays(1)),
+                Cover(Today.AddDays(-2), Today.AddMonths(6))
             ]
         };
 
@@ -97,12 +97,7 @@ public class MemberQueriesHandlerTests
         {
             Subscriptions =
             [
-                new Subscription
-                {
-                    StartDate = Today.AddDays(-10),
-                    EndDate = Today.AddMonths(3),
-                    IsActive = false
-                }
+                Cover(Today.AddDays(-10), Today.AddMonths(3), isActive: false)
             ]
         };
 
@@ -194,9 +189,9 @@ public class MemberQueriesHandlerTests
     }
 
     [Fact]
-    public async Task GetMembers_ShouldLeaveTheColumnsOfLaterLotsUnset()
+    public async Task GetMembers_ShouldFillThePlanAndCreditColumns()
     {
-        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetMembers_ShouldLeaveTheColumnsOfLaterLotsUnset));
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetMembers_ShouldFillThePlanAndCreditColumns));
 
         dbContext.Members.Add(ActiveMember("Laetitia", "Moriceau"));
         await dbContext.SaveChangesAsync();
@@ -204,11 +199,50 @@ public class MemberQueriesHandlerTests
         var handler = new GetMembersQueryHandler(dbContext);
         var member = (await handler.Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
 
-        member.PlanLabel.ShouldBeNull();
-        member.CreditsLabel.ShouldBeNull();
-        member.CreditsPercent.ShouldBeNull();
+        // A recurring plan counts no entries, so the gauge is full and the
+        // figure beside it is the infinity the prototype prints.
+        member.PlanLabel.ShouldBe("Illimité mensuel");
+        member.CreditsLabel.ShouldBe("∞");
+        member.CreditsPercent.ShouldBe(100);
+
+        // Attendance still comes from the sheets, and nothing here was pointed.
         member.AttendanceRate.ShouldBeNull();
         member.LastVisitOn.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetMembers_ShouldCountAPackDownAsItIsUsed()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetMembers_ShouldCountAPackDownAsItIsUsed));
+
+        var pack = TestPlans.Pack();
+        dbContext.Members.Add(new Member("Camille", "Durand")
+        {
+            Subscriptions =
+            [
+                new Subscription
+                {
+                    Plan = pack,
+                    StartedOn = Today.AddDays(-25),
+                    EndsOn = Today.AddDays(40),
+                    CreditsRemaining = 3,
+                    CreditsTotal = 10,
+                    PriceLabel = pack.FormatPriceLabel()
+                }
+            ]
+        });
+        await dbContext.SaveChangesAsync();
+
+        var handler = new GetMembersQueryHandler(dbContext);
+        var member = (await handler.Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
+
+        member.PlanLabel.ShouldBe("Carte 10 séances");
+        member.CreditsLabel.ShouldBe("3/10");
+        member.CreditsPercent.ShouldBe(30);
+
+        // Three entries left is a warning in its own right, whatever the
+        // calendar says — the cover here runs for another forty days.
+        member.Status.ShouldBe(MemberStatus.ExpiringSoon);
     }
 
     [Fact]
@@ -291,23 +325,38 @@ public class MemberQueriesHandlerTests
     private static MemberStatus StandingOf(MembersPageDto page, string lastName)
         => page.Items.Single(item => item.LastName == lastName).Status;
 
+    /// <summary>
+    /// A monthly cover between two dates. Every member here holds a recurring
+    /// plan unless the test is about packs: the standing legs a pack adds are
+    /// exercised in <c>MemberStatusRulesTests</c>, against the SQL filter.
+    /// </summary>
+    private static Subscription Cover(DateOnly startedOn, DateOnly endsOn, bool isActive = true) =>
+        new()
+        {
+            Plan = TestPlans.Monthly(),
+            StartedOn = startedOn,
+            EndsOn = endsOn,
+            PriceLabel = "49 € / mois",
+            IsActive = isActive
+        };
+
     /// <summary>Cover running well past the warning window.</summary>
     private static Member ActiveMember(string firstName, string lastName) =>
         new(firstName, lastName)
         {
-            Subscriptions = [new Subscription { StartDate = Today.AddDays(-10), EndDate = Today.AddMonths(3) }]
+            Subscriptions = [Cover(Today.AddDays(-10), Today.AddMonths(3))]
         };
 
     /// <summary>Cover ending inside the warning window.</summary>
     private static Member ExpiringSoonMember(string firstName, string lastName) =>
         new(firstName, lastName)
         {
-            Subscriptions = [new Subscription { StartDate = Today.AddDays(-20), EndDate = Today.AddDays(3) }]
+            Subscriptions = [Cover(Today.AddDays(-20), Today.AddDays(3))]
         };
 
     private static Member ExpiredMember(string firstName, string lastName) =>
         new(firstName, lastName)
         {
-            Subscriptions = [new Subscription { StartDate = Today.AddMonths(-3), EndDate = Today.AddMonths(-1) }]
+            Subscriptions = [Cover(Today.AddMonths(-3), Today.AddMonths(-1))]
         };
 }

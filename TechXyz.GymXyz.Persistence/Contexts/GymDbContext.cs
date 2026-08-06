@@ -39,7 +39,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<CourseTemplate> CourseTemplates => Set<CourseTemplate>();
     public DbSet<CourseTemplateCoach> CourseTemplateCoaches => Set<CourseTemplateCoach>();
     public DbSet<Member> Members =>  Set<Member>();
+    public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Address> Addresses =>  Set<Address>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -110,6 +112,64 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // Tallying a sheet — how many present, late, absent — is the one
             // question the roster asks, and it asks it per session.
             x.HasIndex(registration => new { registration.SessionId, registration.Status });
+        });
+
+        modelBuilder.Entity<Plan>(x =>
+        {
+            // Money, spelled out: the engine defaults would round a price into
+            // something the gym never charged.
+            x.Property(plan => plan.Price).HasPrecision(9, 2);
+
+            // The formules grid reads every active plan in display order, on
+            // every load of the Abonnements screen and of the settings panel.
+            x.HasIndex(plan => plan.Rank);
+        });
+
+        modelBuilder.Entity<Subscription>(x =>
+        {
+            x.HasOne(subscription => subscription.Member)
+                .WithMany(member => member.Subscriptions)
+                .HasForeignKey(subscription => subscription.MemberId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Restrict rather than cascade: a plan is retired, and retiring it
+            // must not take the history of everybody who bought it.
+            x.HasOne(subscription => subscription.Plan)
+                .WithMany(plan => plan.Subscriptions)
+                .HasForeignKey(subscription => subscription.PlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // "Which cover is running today", asked once per member row of the
+            // members table and once per seat of every attendance sheet.
+            x.HasIndex(subscription => new { subscription.MemberId, subscription.EndsOn });
+
+            // The suivi table sorts on the due date across every member at once.
+            x.HasIndex(subscription => subscription.EndsOn);
+        });
+
+        modelBuilder.Entity<Payment>(x =>
+        {
+            x.Property(payment => payment.Amount).HasPrecision(9, 2);
+
+            x.HasOne(payment => payment.Member)
+                .WithMany(member => member.Payments)
+                .HasForeignKey(payment => payment.MemberId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            x.HasOne(payment => payment.Subscription)
+                .WithMany(subscription => subscription.Payments)
+                .HasForeignKey(payment => payment.SubscriptionId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // "Encaissements récents" reads the last seven days across everybody;
+            // the member's record reads one member's, newest first.
+            x.HasIndex(payment => payment.Date);
+            x.HasIndex(payment => new { payment.MemberId, payment.Date });
+
+            // Telling an ended subscription from a late one is a lookup for a
+            // row that is not Collected, and it runs per subscription.
+            x.HasIndex(payment => new { payment.SubscriptionId, payment.Status });
         });
 
         modelBuilder.Entity<CoachDiscipline>(x =>

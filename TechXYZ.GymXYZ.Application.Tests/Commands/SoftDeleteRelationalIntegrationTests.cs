@@ -20,8 +20,10 @@ public class SoftDeleteRelationalIntegrationTests
             [
                 new Subscription
                 {
-                    StartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-2)),
-                    EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2))
+                    Plan = TestPlans.Monthly(),
+                    StartedOn = DateOnly.FromDateTime(DateTime.Today.AddDays(-2)),
+                    EndsOn = DateOnly.FromDateTime(DateTime.Today.AddDays(2)),
+                    PriceLabel = "49 € / mois"
                 }
             ]
         };

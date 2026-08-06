@@ -40,7 +40,15 @@ public sealed class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanc
 
         AttendanceCompositionHelper.GuardWritable(session);
 
-        AttendanceCompositionHelper.Apply(registration, request.Status, DateTime.Now);
+        // The cover is read on the day of the session, not on today: a sheet
+        // corrected a week later must spend the pack that was running then.
+        var ledger = await CreditLedger.LoadAsync(
+            _dbContext,
+            [registration],
+            DateOnly.FromDateTime(session.StartsAt),
+            cancellationToken);
+
+        AttendanceCompositionHelper.Apply(registration, request.Status, DateTime.Now, ledger);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

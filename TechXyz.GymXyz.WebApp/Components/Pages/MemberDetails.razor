@@ -61,12 +61,13 @@ else
 @if (_member is not null && _drawer is DrawerMode.Subscriptions or DrawerMode.Renew)
 {
     <MemberSubscriptionsDrawer Subscriptions="_member.Subscriptions"
+                               Plans="_plans"
                                CurrentSubscription="_member.CurrentSubscription"
                                Subtitle="@_member.FullName"
                                StartOnNew="@(_drawer == DrawerMode.Renew)"
                                OnClose="CloseDrawer"
-                               OnCreate="CreateSubscriptionAsync"
-                               OnUpdate="UpdateSubscriptionAsync"
+                               OnCreate="AssignSubscriptionAsync"
+                               OnRenew="RenewSubscriptionAsync"
                                OnDelete="DeleteSubscriptionAsync"/>
 }
 
@@ -84,6 +85,7 @@ else
     private readonly DateOnly _today = DateOnly.FromDateTime(DateTime.Today);
 
     private MemberDetailsPageDto? _member;
+    private IReadOnlyList<PlanDto> _plans = [];
     private bool _isLoading = true;
     private bool _isSaving;
     private DrawerMode _drawer = DrawerMode.None;
@@ -106,6 +108,11 @@ else
         await UserFeedback.ExecuteAsync(async () =>
         {
             _member = await Sender.Send(new GetMemberDetailsPageQuery(MemberId));
+
+            // The formules the drawer sells from. Loaded with the record rather
+            // than when the drawer opens, so pressing "Renouveler" does not wait
+            // on a second round trip before it can show anything.
+            _plans = await Sender.Send(new GetPlansQuery());
         }, "charger la fiche du membre");
 
         _isLoading = false;
@@ -223,7 +230,7 @@ else
         }, "supprimer le membre", "Membre supprimé.");
     }
 
-    private async Task CreateSubscriptionAsync(MemberSubscriptionsDrawer.SubscriptionInput input)
+    private async Task AssignSubscriptionAsync(MemberSubscriptionsDrawer.SubscriptionInput input)
     {
         if (_member is null)
         {
@@ -232,38 +239,28 @@ else
 
         await UserFeedback.ExecuteAsync(async () =>
         {
-            await Sender.Send(new CreateSubscriptionCommand(
+            await Sender.Send(new AssignSubscriptionCommand(
                 _member.Id,
-                input.StartDate,
-                input.EndDate,
-                input.SessionsTotal));
+                input.PlanId,
+                input.StartedOn,
+                input.AutoRenew));
 
             await RefreshAsync();
         }, "créer l'abonnement", "Abonnement créé.");
     }
 
-    private async Task UpdateSubscriptionAsync(MemberSubscriptionsDrawer.SubscriptionInput input)
+    private async Task RenewSubscriptionAsync(int subscriptionId)
     {
-        if (input.Id is not { } subscriptionId)
-        {
-            return;
-        }
-
         await UserFeedback.ExecuteAsync(async () =>
         {
-            var updated = await Sender.Send(new UpdateSubscriptionCommand(
-                subscriptionId,
-                input.StartDate,
-                input.EndDate,
-                input.SessionsTotal));
-
-            if (!updated)
+            var renewed = await Sender.Send(new RenewSubscriptionCommand(subscriptionId));
+            if (renewed is null)
             {
                 throw new ValidationException("Abonnement introuvable.");
             }
 
             await RefreshAsync();
-        }, "mettre à jour l'abonnement", "Abonnement mis à jour.");
+        }, "renouveler l'abonnement", "Abonnement renouvelé.");
     }
 
     private async Task DeleteSubscriptionAsync(int subscriptionId)

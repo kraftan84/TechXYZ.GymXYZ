@@ -17,4 +17,5 @@ public class Member : Person
 
     public ICollection<Subscription>? Subscriptions { get; set; }
     public ICollection<Registration>? Registrations { get; set; }
+    public ICollection<Payment>? Payments { get; set; }
 }

@@ -69,11 +69,10 @@ public sealed record RosterSeatDto(
     public string FullName => $"{FirstName} {LastName}".Trim();
 
     /// <summary>
-    /// Subscription plan name — the prototype's "Illimité", "Carte 10",
-    /// "Étudiant". Filled at lot 7 (Abonnements), where <c>Subscription</c> gains
-    /// a plan; today it holds only a session count, and naming a plan from that
-    /// would be inventing one. Rendered "—", the same as the column of the same
-    /// name on the members table.
+    /// The plan covering the day of the sheet, in its short form — the
+    /// prototype's "Illimité", "Carte 10", "Étudiant". Null for a member with no
+    /// cover, and rendered "—": the sheet points them all the same, and whether
+    /// they are paid up is the abonnements screen's business.
     /// </summary>
     public string? PlanLabel { get; init; }
 }

@@ -23,7 +23,7 @@ public sealed class DeleteSubscriptionCommandHandler : IRequestHandler<DeleteSub
         var subscription = await _dbContext.Subscriptions
             .Include(candidate => candidate.Member)
             .FirstOrDefaultAsync(candidate => candidate.Id == request.Id && candidate.IsActive, cancellationToken);
-        if (subscription is null || !subscription.Member.IsActive)
+        if (subscription?.Member is null || !subscription.Member.IsActive)
         {
             return false;
         }

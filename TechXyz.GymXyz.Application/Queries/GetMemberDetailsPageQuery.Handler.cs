@@ -50,44 +50,69 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
         var horizon = MemberStatusRules.HorizonFrom(today);
         var now = DateTime.Now;
 
-        var subscriptionsRaw = await _dbContext.Members
+        var covers = await _dbContext.Subscriptions
             .AsNoTracking()
-            .Where(candidate => candidate.Id == request.MemberId && candidate.IsActive)
-            .SelectMany(candidate => candidate.Subscriptions!
-                .Where(subscription => subscription.IsActive)
-                .Select(subscription => new
-                {
-                    subscription.Id,
-                    subscription.StartDate,
-                    subscription.EndDate,
-                    subscription.NumberOfSessions
-                }))
-            .OrderByDescending(subscription => subscription.EndDate)
+            .Where(subscription => subscription.IsActive && subscription.MemberId == request.MemberId)
+            .OrderByDescending(subscription => subscription.EndsOn)
+            .Select(subscription => new SubscriptionCoverDto(
+                subscription.Id,
+                subscription.PlanId,
+                subscription.Plan!.Name,
+                subscription.Plan.Kind,
+                subscription.StartedOn,
+                subscription.EndsOn,
+                subscription.CreditsRemaining,
+                subscription.CreditsTotal,
+                subscription.PriceLabel,
+                subscription.AutoRenew,
+                subscription.Payments!.Any(payment =>
+                    payment.IsActive && payment.Status != PaymentStatus.Collected)))
             .ToListAsync(cancellationToken);
 
-        var subscriptions = subscriptionsRaw
-            .Select(subscription =>
-            {
-                var status = GetSubscriptionStatus(subscription.StartDate, subscription.EndDate, today);
-                var sessionsRemaining = status == MemberSubscriptionStatus.Active
-                    ? Math.Max(0, subscription.NumberOfSessions)
-                    : 0;
-
-                return new MemberSubscriptionDto(
-                    subscription.Id,
-                    subscription.StartDate,
-                    subscription.EndDate,
-                    subscription.NumberOfSessions,
-                    sessionsRemaining,
-                    status);
-            })
+        var subscriptions = covers
+            .Select(cover => new MemberSubscriptionDto(
+                cover.SubscriptionId,
+                cover.PlanId,
+                cover.PlanName,
+                cover.Kind,
+                cover.StartedOn,
+                cover.EndsOn,
+                cover.CreditsRemaining,
+                cover.CreditsTotal,
+                cover.PriceLabel,
+                cover.AutoRenew,
+                cover.StartedOn > today
+                    ? null
+                    : SubscriptionStatusRules.Resolve(cover, today, horizon)))
             .ToList();
 
-        // The standing reads the same value as the list: the latest end date
-        // among the subscriptions covering today.
-        var currentSubscription = subscriptions
-            .Where(subscription => subscription.StartDate <= today && subscription.EndDate >= today)
-            .MaxBy(subscription => subscription.EndDate);
+        // The record and the row on the members table read the same cover,
+        // through the same rule — a record that disagreed with the list it was
+        // opened from would be worse than either.
+        //
+        // "En cours" means in force, so a cover that has run out is not one:
+        // the card falls back to "Aucun abonnement en cours" and offers to sell
+        // one, which is exactly what somebody looking at Théo Garnier needs.
+        var governing = SubscriptionStatusRules.Governing(covers, today, horizon);
+        var currentSubscription = governing is null
+            || SubscriptionStatusRules.Resolve(governing, today, horizon)
+                is SubscriptionStatus.Late or SubscriptionStatus.Ended
+            ? null
+            : subscriptions.FirstOrDefault(subscription => subscription.Id == governing.SubscriptionId);
+
+        var payments = await _dbContext.Payments
+            .AsNoTracking()
+            .Where(payment => payment.IsActive && payment.MemberId == request.MemberId)
+            .OrderByDescending(payment => payment.Date)
+            .ThenByDescending(payment => payment.Id)
+            .Select(payment => new MemberPaymentDto(
+                payment.Id,
+                payment.Date,
+                payment.Label,
+                payment.Amount,
+                payment.Method,
+                payment.Status))
+            .ToListAsync(cancellationToken);
 
         // A seat on the waiting list is still a seat the member holds, so it is
         // listed here — it is only occupancy that ignores it.
@@ -145,28 +170,12 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
             member.BirthDate,
             member.Notes,
             member.Address,
-            MemberStatusRules.Resolve(currentSubscription?.EndDate, horizon),
+            MemberStatusRules.Resolve(covers, today, horizon),
             currentSubscription,
             subscriptions,
             upcomingSessions,
             pastSessions,
-            // Payments arrive at lot 7 (Abonnements & encaissements).
-            [],
+            payments,
             stats);
-    }
-
-    private static MemberSubscriptionStatus GetSubscriptionStatus(DateOnly startDate, DateOnly endDate, DateOnly today)
-    {
-        if (endDate < today)
-        {
-            return MemberSubscriptionStatus.Expired;
-        }
-
-        if (startDate > today)
-        {
-            return MemberSubscriptionStatus.Paused;
-        }
-
-        return MemberSubscriptionStatus.Active;
     }
 }

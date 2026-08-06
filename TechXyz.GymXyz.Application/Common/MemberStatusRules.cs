@@ -5,75 +5,84 @@ using TechXyz.GymXyz.Domain.Entities;
 namespace TechXyz.GymXyz.Application.Common;
 
 /// <summary>
-/// The member standing rule.
+/// The member standing rule — now a projection of <see cref="SubscriptionStatusRules"/>
+/// rather than a second opinion on the same dates.
 /// <para>
-/// Everything hangs on one thing — the latest end date among the subscriptions
-/// covering today. <see cref="Resolve"/> turns that value into the label the
-/// user reads; <see cref="Matches"/> says the same three things over the entity
-/// so the database can filter and count without loading rows.
+/// Lot 1 derived the standing from the cover's end date alone, which was all
+/// there was. Lot 7 gives a subscription four states where the member has three,
+/// and they overlap on every one of them: left as two rules reading the same
+/// dates, the members table and the suivi table would disagree the first time
+/// either was touched. So there is one rule, and this is the vocabulary the
+/// members table speaks it in.
 /// </para>
 /// <para>
-/// The two are written separately because a predicate over a projected record
-/// does not translate to SQL. <c>MemberStatusRulesTests</c> pins them to each
-/// other through the real query, so they cannot drift.
+/// <c>Late</c> and <c>Ended</c> both land on "Inactif", which is what the
+/// prototype draws: Théo Garnier reads "En retard" on the abonnements screen and
+/// "Inactif" on the members table, same person, same day. The members table has
+/// no fourth chip and lot 7 does not add one.
 /// </para>
 /// <para>
-/// Business decision of lot 1: the standing is derived from the subscription
-/// alone, and it stays that way. Attendance arrived at lot 6 without adding an
-/// inactivity leg here: the prototype's members table shows Actif / Expire
-/// bientôt / Inactif, all three read from the cover, and no standing in it
-/// expresses "has not come in a while". Poor attendance surfaces where the
-/// prototype puts it — the assiduité column and the "absents à relancer" card —
-/// rather than as a fourth chip nothing in the design asks for.
-/// The whole thing moves onto Plan/Subscription/Payment at lot 7.
+/// Business decision of lot 1, unchanged: the standing is derived from the
+/// subscription alone. Attendance arrived at lot 6 without adding an inactivity
+/// leg here, and poor attendance still surfaces where the prototype puts it —
+/// the assiduité column and the "absents à relancer" card — rather than as a
+/// standing nothing in the design asks for.
 /// </para>
 /// </summary>
 public static class MemberStatusRules
 {
-    /// <summary>A cover ending within this many days reads "Expire bientôt".</summary>
-    public const int ExpiringSoonWithinDays = 7;
+    /// <inheritdoc cref="SubscriptionStatusRules.ExpiringSoonWithinDays"/>
+    public const int ExpiringSoonWithinDays = SubscriptionStatusRules.ExpiringSoonWithinDays;
 
-    public static DateOnly HorizonFrom(DateOnly today) => today.AddDays(ExpiringSoonWithinDays);
-
-    public static MemberStatus Resolve(DateOnly? currentSubscriptionEndsOn, DateOnly horizon)
-    {
-        if (currentSubscriptionEndsOn is null)
-            return MemberStatus.Inactive;
-
-        return currentSubscriptionEndsOn <= horizon
-            ? MemberStatus.ExpiringSoon
-            : MemberStatus.Active;
-    }
+    public static DateOnly HorizonFrom(DateOnly today) => SubscriptionStatusRules.HorizonFrom(today);
 
     /// <summary>
-    /// The same three conditions, over the entity. "Active" is a cover reaching
-    /// past the horizon; "expiring soon" is a cover today but none past it;
-    /// "inactive" is no cover at all.
+    /// The three words the members table uses, for the cover that governs the
+    /// member. No cover at all is "Inactif", the same as a finished one.
+    /// </summary>
+    public static MemberStatus Resolve(
+        IEnumerable<SubscriptionCoverDto> covers,
+        DateOnly today,
+        DateOnly horizon)
+    {
+        var governing = SubscriptionStatusRules.Governing(covers, today, horizon);
+
+        return governing is null
+            ? MemberStatus.Inactive
+            : Project(SubscriptionStatusRules.Resolve(governing, today, horizon));
+    }
+
+    /// <summary>The projection itself, in one place so it can be read in one line.</summary>
+    public static MemberStatus Project(SubscriptionStatus status) => status switch
+    {
+        SubscriptionStatus.Active => MemberStatus.Active,
+        SubscriptionStatus.ExpiringSoon => MemberStatus.ExpiringSoon,
+        _ => MemberStatus.Inactive
+    };
+
+    /// <summary>
+    /// The same three conditions, over the entity. A member is "Actif" if any of
+    /// their subscriptions is; "Expire bientôt" if one is and none is better;
+    /// "Inactif" if none is either — which is the projection said backwards, and
+    /// <c>MemberStatusRulesTests</c> pins it to <see cref="Resolve"/> through the
+    /// real query.
     /// </summary>
     public static Expression<Func<Member, bool>> Matches(MemberStatus status, DateOnly today, DateOnly horizon)
     {
+        var isActive = SubscriptionStatusRules.Matches(SubscriptionStatus.Active, today, horizon);
+        var isExpiringSoon = SubscriptionStatusRules.Matches(SubscriptionStatus.ExpiringSoon, today, horizon);
+
         return status switch
         {
-            MemberStatus.Inactive => member => !member.Subscriptions!.Any(subscription =>
-                subscription.IsActive &&
-                subscription.StartDate <= today &&
-                subscription.EndDate >= today),
+            MemberStatus.Inactive => member =>
+                !member.Subscriptions!.AsQueryable().Any(isActive) &&
+                !member.Subscriptions!.AsQueryable().Any(isExpiringSoon),
 
             MemberStatus.ExpiringSoon => member =>
-                member.Subscriptions!.Any(subscription =>
-                    subscription.IsActive &&
-                    subscription.StartDate <= today &&
-                    subscription.EndDate >= today) &&
-                !member.Subscriptions!.Any(subscription =>
-                    subscription.IsActive &&
-                    subscription.StartDate <= today &&
-                    subscription.EndDate > horizon),
+                member.Subscriptions!.AsQueryable().Any(isExpiringSoon) &&
+                !member.Subscriptions!.AsQueryable().Any(isActive),
 
-            // A cover ending past the horizon necessarily covers today.
-            _ => member => member.Subscriptions!.Any(subscription =>
-                subscription.IsActive &&
-                subscription.StartDate <= today &&
-                subscription.EndDate > horizon)
+            _ => member => member.Subscriptions!.AsQueryable().Any(isActive)
         };
     }
 }

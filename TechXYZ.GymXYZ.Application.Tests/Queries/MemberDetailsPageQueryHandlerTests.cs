@@ -45,13 +45,18 @@ public class MemberDetailsPageQueryHandlerTests
             StartsAt = DateTime.Today.AddDays(2).AddHours(18),
             EndsAt = DateTime.Today.AddDays(2).AddHours(19)
         };
+        var plan = TestPlans.Pack(credits: 12);
         var subscription = new Subscription
         {
             Member = member,
-            StartDate = DateOnly.FromDateTime(DateTime.Today.AddDays(-10)),
-            EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(20)),
-            NumberOfSessions = 12
+            Plan = plan,
+            StartedOn = DateOnly.FromDateTime(DateTime.Today.AddDays(-10)),
+            EndsOn = DateOnly.FromDateTime(DateTime.Today.AddDays(20)),
+            CreditsRemaining = 12,
+            CreditsTotal = 12,
+            PriceLabel = plan.FormatPriceLabel()
         };
+        dbContext.Plans.Add(plan);
 
         member.Registrations =
         [
@@ -89,7 +94,8 @@ public class MemberDetailsPageQueryHandlerTests
         result.Stats.AttendanceRate.ShouldBeNull();
         result.Stats.LastVisitOn.ShouldBeNull();
 
-        // Payments arrive with the subscriptions section (lot 7).
+        // Nothing has been recorded against this member, so the payments card
+        // is empty — which is not the same as it having no source.
         result.Payments.ShouldBeEmpty();
     }
 
@@ -109,9 +115,10 @@ public class MemberDetailsPageQueryHandlerTests
             [
                 new Subscription
                 {
-                    StartDate = today.AddDays(-20),
-                    EndDate = today.AddDays(3),
-                    NumberOfSessions = 10
+                    Plan = TestPlans.Monthly(),
+                    StartedOn = today.AddDays(-20),
+                    EndsOn = today.AddDays(3),
+                    PriceLabel = "49 € / mois"
                 }
             ]
         };
@@ -128,7 +135,7 @@ public class MemberDetailsPageQueryHandlerTests
         result.Notes.ShouldBe("Préfère les cours du matin.");
         result.Status.ShouldBe(MemberStatus.ExpiringSoon);
         result.CurrentSubscription.ShouldNotBeNull();
-        result.CurrentSubscription!.EndDate.ShouldBe(today.AddDays(3));
+        result.CurrentSubscription!.EndsOn.ShouldBe(today.AddDays(3));
     }
 
     [Fact]
@@ -144,8 +151,10 @@ public class MemberDetailsPageQueryHandlerTests
             [
                 new Subscription
                 {
-                    StartDate = today.AddMonths(-4),
-                    EndDate = today.AddMonths(-1)
+                    Plan = TestPlans.Monthly(),
+                    StartedOn = today.AddMonths(-4),
+                    EndsOn = today.AddMonths(-1),
+                    PriceLabel = "49 € / mois"
                 }
             ]
         };
@@ -159,6 +168,64 @@ public class MemberDetailsPageQueryHandlerTests
         result.ShouldNotBeNull();
         result!.Status.ShouldBe(MemberStatus.Inactive);
         result.CurrentSubscription.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Handle_ShouldListThePaymentsNewestFirst()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldListThePaymentsNewestFirst));
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var pack = TestPlans.Pack();
+        var subscription = new Subscription
+        {
+            Plan = pack,
+            StartedOn = today.AddDays(-90),
+            EndsOn = today.AddDays(-25),
+            CreditsRemaining = 0,
+            CreditsTotal = 10,
+            PriceLabel = pack.FormatPriceLabel()
+        };
+        var member = new Member("Théo", "Garnier") { Subscriptions = [subscription] };
+
+        // Both against the cover they paid for: "late" means this subscription
+        // is unsettled, so a payment floating free of one cannot make it so.
+        member.Payments =
+        [
+            new Payment
+            {
+                Subscription = subscription,
+                Date = today.AddDays(-40), Label = pack.Name, Amount = 120m,
+                Method = PaymentMethod.Cash, Status = PaymentStatus.Collected
+            },
+            new Payment
+            {
+                Subscription = subscription,
+                Date = today.AddDays(-4), Label = pack.Name, Amount = 120m,
+                Method = PaymentMethod.SepaDirectDebit, Status = PaymentStatus.Rejected
+            }
+        ];
+
+        dbContext.Members.Add(member);
+        await dbContext.SaveChangesAsync();
+
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var result = await handler.Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result!.Payments.Count.ShouldBe(2);
+        result.Payments[0].Status.ShouldBe(PaymentStatus.Rejected);
+        result.Payments[0].Method.ShouldBe(PaymentMethod.SepaDirectDebit);
+
+        // The rejected direct debit is what separates a cover that merely ended
+        // from one that is late — and the record folds "En retard" onto the
+        // standing the members table shows, "Inactif".
+        result.Status.ShouldBe(MemberStatus.Inactive);
+
+        // "En cours" means in force: an expired cover is not one, so the card
+        // falls back to offering a new subscription.
+        result.CurrentSubscription.ShouldBeNull();
+        result.Subscriptions.Single().Status.ShouldBe(SubscriptionStatus.Late);
     }
 
     [Fact]

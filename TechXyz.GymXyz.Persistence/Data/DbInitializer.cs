@@ -144,16 +144,26 @@ public static class DbInitializer
             coaches[coach.FirstName] = coach;
         }
 
+        var plans = CreatePlans();
+        dbContext.Plans.AddRange(plans.Values);
+
         // Ordered on purpose: the six people of the demo set come first, so they
         // are the ones filling the sessions the screens open on.
-        var members = CreateDemoMembers()
-            .Concat(CreateSupportingMembers())
+        var members = CreateDemoMembers(plans)
+            .Concat(CreateSupportingMembers(plans))
             .ToList();
 
         foreach (var member in members)
         {
             gym.AddMember(member);
         }
+
+        var demoMembers = members
+            .Take(6)
+            .ToDictionary(member => member.LastName);
+
+        dbContext.Payments.AddRange(
+            CreatePayments(demoMembers, DateOnly.FromDateTime(DateTime.Today)));
 
         var courseTemplates = CreateCourseTemplates(disciplines, locations, coaches)
             .ToDictionary(template => template.Name);
@@ -515,45 +525,164 @@ public static class DbInitializer
     }
 
     /// <summary>
+    /// The four formules of the prototype, in the order its cards are laid out —
+    /// which is neither alphabetical nor by price, hence <see cref="Plan.Rank"/>.
+    /// <para>
+    /// "Carte 10 séances" is the one pack: ten entries, four months to use them.
+    /// The other three run by the calendar and are what the MRR is the sum of —
+    /// the pack is deliberately outside it, a one-off purchase being no more a
+    /// monthly revenue than it is a monthly cost.
+    /// </para>
+    /// </summary>
+    private static Dictionary<string, Plan> CreatePlans()
+    {
+        var plans = new[]
+        {
+            new Plan
+            {
+                Name = "Illimité mensuel",
+                ShortName = "Illimité",
+                Price = 49m,
+                Unit = "€ / mois",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 1,
+                BillingLabel = "Sans engagement",
+                Description = "Accès illimité à tous les cours collectifs.",
+                Tone = "brand",
+                IsFeatured = true,
+                Rank = 0
+            },
+            new Plan
+            {
+                Name = "Carte 10 séances",
+                ShortName = "Carte 10",
+                Price = 120m,
+                Unit = "€ / carte",
+                Kind = PlanKind.CreditPack,
+                CreditCount = 10,
+                ValidityMonths = 4,
+                BillingLabel = "Paiement unique",
+                Description = "10 entrées valables 4 mois.",
+                Tone = "neutral",
+                Rank = 1
+            },
+            new Plan
+            {
+                Name = "Étudiant mensuel",
+                ShortName = "Étudiant",
+                Price = 35m,
+                Unit = "€ / mois",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 1,
+                BillingLabel = "Sans engagement",
+                Description = "Tarif réduit sur justificatif de scolarité.",
+                Tone = "success",
+                Rank = 2
+            },
+            new Plan
+            {
+                Name = "Illimité annuel",
+                ShortName = "Annuel",
+                Price = 490m,
+                Unit = "€ / an",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 12,
+                BillingLabel = "Engagement 12 mois",
+                Description = "Deux mois offerts sur l'année.",
+                Tone = "warning",
+                Rank = 3
+            }
+        };
+
+        return plans.ToDictionary(plan => plan.Name);
+    }
+
+    /// <summary>
     /// The six members of the design hand-off demo set, same people as on every
     /// other screen. Dates are relative to today so the demo never goes stale;
     /// the subscription windows are what produce the three standings shown in
     /// the prototype (four active, one expiring, one inactive).
+    /// <para>
+    /// The formules are the ones the abonnements screen gives each of them.
+    /// Camille lands on "Expire bientôt" twice over — five days left and three
+    /// entries left — which is the prototype's own row for her, and Théo's
+    /// expired pack plus the rejected direct debit below is what makes him
+    /// "En retard" there and "Inactif" on the members table.
+    /// </para>
     /// </summary>
-    private static IEnumerable<Member> CreateDemoMembers()
+    private static IEnumerable<Member> CreateDemoMembers(Dictionary<string, Plan> plans)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
         yield return CreateMember(
             "Laetitia", "Moriceau", "laetitia.moriceau@gymxyz.fr", "06 12 34 56 78",
-            joinedMonthsAgo: 27, today,
-            subscriptionStartsInDays: -12, subscriptionEndsInDays: 18, numberOfSessions: 0,
+            joinedMonthsAgo: 27, today, plans["Illimité mensuel"],
+            subscriptionStartsInDays: -12, subscriptionEndsInDays: 18,
             notes: "Préfère les cours du matin. Vient surtout en début de semaine.");
 
         yield return CreateMember(
             "Camille", "Durand", "camille.durand@gymxyz.fr", "06 22 11 90 04",
-            joinedMonthsAgo: 17, today,
-            subscriptionStartsInDays: -25, subscriptionEndsInDays: 5, numberOfSessions: 10);
+            joinedMonthsAgo: 17, today, plans["Carte 10 séances"],
+            subscriptionStartsInDays: -25, subscriptionEndsInDays: 5, creditsRemaining: 3);
 
         yield return CreateMember(
             "Lucas", "Martin", "lucas.martin@gymxyz.fr", "06 80 45 12 33",
-            joinedMonthsAgo: 20, today,
-            subscriptionStartsInDays: -40, subscriptionEndsInDays: 50, numberOfSessions: 10);
+            joinedMonthsAgo: 20, today, plans["Étudiant mensuel"],
+            subscriptionStartsInDays: -40, subscriptionEndsInDays: 50);
 
         yield return CreateMember(
             "Amina", "Benali", "amina.benali@gymxyz.fr", "06 14 78 22 09",
-            joinedMonthsAgo: 28, today,
-            subscriptionStartsInDays: -8, subscriptionEndsInDays: 22, numberOfSessions: 0);
+            joinedMonthsAgo: 28, today, plans["Illimité annuel"],
+            subscriptionStartsInDays: -8, subscriptionEndsInDays: 22);
 
         yield return CreateMember(
             "Théo", "Garnier", "theo.garnier@gymxyz.fr", "06 55 32 87 41",
-            joinedMonthsAgo: 21, today,
-            subscriptionStartsInDays: -90, subscriptionEndsInDays: -25, numberOfSessions: 10);
+            joinedMonthsAgo: 21, today, plans["Carte 10 séances"],
+            subscriptionStartsInDays: -90, subscriptionEndsInDays: -25, creditsRemaining: 0);
 
         yield return CreateMember(
             "Sarah", "Cohen", "sarah.cohen@gymxyz.fr", "06 71 09 55 18",
-            joinedMonthsAgo: 37, today,
-            subscriptionStartsInDays: -3, subscriptionEndsInDays: 27, numberOfSessions: 0);
+            joinedMonthsAgo: 37, today, plans["Illimité mensuel"],
+            subscriptionStartsInDays: -3, subscriptionEndsInDays: 27);
+    }
+
+    /// <summary>
+    /// The five encaissements of the prototype's "Encaissements récents", over
+    /// the last week and against the plans the demo six actually hold — the mock
+    /// prints 49 € beside Amina, who it also puts on the yearly plan, and only
+    /// one of those two can be true here.
+    /// <para>
+    /// Théo's rejected direct debit is the load-bearing one: without it his
+    /// expired pack would merely read "Terminé", and "En retard" would have
+    /// nothing behind it.
+    /// </para>
+    /// </summary>
+    private static IEnumerable<Payment> CreatePayments(
+        IReadOnlyDictionary<string, Member> members,
+        DateOnly today)
+    {
+        Payment Record(string lastName, int daysAgo, PaymentMethod method, PaymentStatus status)
+        {
+            var member = members[lastName];
+            var subscription = member.Subscriptions!.First();
+
+            return new Payment
+            {
+                Member = member,
+                Subscription = subscription,
+                Date = today.AddDays(-daysAgo),
+                Label = subscription.Plan!.Name,
+                Amount = subscription.Plan.Price,
+                Method = method,
+                Status = status
+            };
+        }
+
+        yield return Record("Benali", 1, PaymentMethod.SepaDirectDebit, PaymentStatus.Collected);
+        yield return Record("Cohen", 2, PaymentMethod.Card, PaymentStatus.Collected);
+        yield return Record("Durand", 3, PaymentMethod.Cash, PaymentStatus.Collected);
+        yield return Record("Garnier", 4, PaymentMethod.SepaDirectDebit, PaymentStatus.Rejected);
+        yield return Record("Martin", 5, PaymentMethod.Card, PaymentStatus.Collected);
     }
 
     /// <summary>
@@ -564,7 +693,7 @@ public static class DbInitializer
     /// subscription, nothing else. The prototype's own dashboard claims "112
     /// actifs", so this errs on the small side rather than the large one.
     /// </summary>
-    private static IEnumerable<Member> CreateSupportingMembers()
+    private static IEnumerable<Member> CreateSupportingMembers(Dictionary<string, Plan> plans)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
@@ -586,7 +715,13 @@ public static class DbInitializer
             var lastName = people[index][1];
 
             // Spread over the year so the joining dates on the list are not all
-            // the same day, and alternate between a monthly plan and a punch card.
+            // the same day, and spread over the four formules so the répartition
+            // card has four bars of different lengths rather than two.
+            var plan = index % 7 == 0 ? plans["Illimité annuel"]
+                : index % 3 == 0 ? plans["Carte 10 séances"]
+                : index % 5 == 0 ? plans["Étudiant mensuel"]
+                : plans["Illimité mensuel"];
+
             yield return CreateMember(
                 firstName,
                 lastName,
@@ -594,9 +729,12 @@ public static class DbInitializer
                 $"06 {30 + index:00} {11 + index:00} {40 + index:00} {index:00}",
                 joinedMonthsAgo: 2 + index % 22,
                 today,
+                plan,
                 subscriptionStartsInDays: -20 - index % 40,
                 subscriptionEndsInDays: 10 + index % 60,
-                numberOfSessions: index % 3 == 0 ? 10 : 0);
+                // Packs at every stage of being used up, so the gauges on the
+                // members table are not all the same length.
+                creditsRemaining: 10 - index % 9);
         }
     }
 
@@ -614,11 +752,17 @@ public static class DbInitializer
         string phone,
         int joinedMonthsAgo,
         DateOnly today,
+        Plan plan,
         int subscriptionStartsInDays,
         int subscriptionEndsInDays,
-        int numberOfSessions,
+        int? creditsRemaining = null,
+        bool autoRenew = true,
         string? notes = null)
     {
+        // The cover windows are the ones lot 1 seeded, kept to the day: they are
+        // what produce the four active, one expiring and one inactive the
+        // members table shows, and moving them would quietly restate a screen
+        // three lots have already been checked against.
         return new Member(firstName, lastName)
         {
             Email = email,
@@ -629,9 +773,13 @@ public static class DbInitializer
             [
                 new Subscription
                 {
-                    StartDate = today.AddDays(subscriptionStartsInDays),
-                    EndDate = today.AddDays(subscriptionEndsInDays),
-                    NumberOfSessions = numberOfSessions
+                    Plan = plan,
+                    StartedOn = today.AddDays(subscriptionStartsInDays),
+                    EndsOn = today.AddDays(subscriptionEndsInDays),
+                    CreditsRemaining = plan.IsCredited ? creditsRemaining ?? plan.CreditCount : null,
+                    CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
+                    AutoRenew = plan.Kind == PlanKind.Recurring && autoRenew,
+                    PriceLabel = plan.FormatPriceLabel()
                 }
             ]
         };

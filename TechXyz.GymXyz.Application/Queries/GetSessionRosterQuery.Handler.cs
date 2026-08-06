@@ -25,6 +25,8 @@ public sealed class GetSessionRosterQueryHandler : IRequestHandler<GetSessionRos
         // whether to draw the control.
         var canReopen = _currentUser.IsInRole(AttendanceRules.ReopenRole);
 
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
         var roster = await _dbContext.Sessions
             .AsNoTracking()
             .Where(session => session.Id == request.SessionId && session.IsActive)
@@ -54,7 +56,20 @@ public sealed class GetSessionRosterQueryHandler : IRequestHandler<GetSessionRos
                         seat.Member.LastName,
                         seat.IsWaitlisted,
                         seat.Status,
-                        seat.CheckedInAt))
+                        seat.CheckedInAt)
+                    {
+                        // The cover running on the day of the sheet, in the short
+                        // form the narrow column prints. A member with none keeps
+                        // the "—" the column has shown since lot 6.
+                        PlanLabel = seat.Member.Subscriptions!
+                            .Where(subscription =>
+                                subscription.IsActive &&
+                                subscription.StartedOn <= today &&
+                                subscription.EndsOn >= today)
+                            .OrderByDescending(subscription => subscription.EndsOn)
+                            .Select(subscription => subscription.Plan!.ShortName)
+                            .FirstOrDefault()
+                    })
                     .ToList()))
             .FirstOrDefaultAsync(cancellationToken);
 

@@ -48,19 +48,30 @@
             <span class="k">E-mail</span>
             <span class="v" style="font-weight:600;font-size:var(--text-xs)">@(Member.Email ?? "—")</span>
         </div>
-        <div class="gx-m-kv">
-            <span class="k">Abonnement</span>
-            <span class="v">
-                @if (Member.CurrentSubscription is { } subscription)
-                {
-                    <GxChip Tone="GxTone.Brand">Jusqu'au @GxFormats.ShortDate(subscription.EndDate)</GxChip>
-                }
-                else
-                {
-                    <GxChip Tone="GxTone.Danger">Aucun</GxChip>
-                }
-            </span>
-        </div>
+        @* The formule and its end date are two rows rather than one chip: on a
+           375-wide phone "Illimité mensuel · jusqu'au 25/09/2026" runs off the
+           edge, and the date is the half somebody scrolling a record is looking
+           for. *@
+        @if (Member.CurrentSubscription is { } subscription)
+        {
+            <div class="gx-m-kv">
+                <span class="k">Formule</span>
+                <span class="v">@subscription.PlanName</span>
+            </div>
+            <div class="gx-m-kv">
+                <span class="k">Abonnement</span>
+                <span class="v">
+                    <GxChip Tone="GxTone.Brand">Jusqu'au @GxFormats.ShortDate(subscription.EndsOn)</GxChip>
+                </span>
+            </div>
+        }
+        else
+        {
+            <div class="gx-m-kv">
+                <span class="k">Abonnement</span>
+                <span class="v"><GxChip Tone="GxTone.Danger">Aucun</GxChip></span>
+            </div>
+        }
     </div>
 
     <div class="gx-m-sec"><span class="t">Prochains cours</span></div>
@@ -130,11 +141,15 @@
                 <div class="gx-m-row" style="cursor:default">
                     <div class="main">
                         <div class="nm">@payment.Label</div>
-                        <div class="meta">@GxFormats.Date(payment.Date)</div>
+                        <div class="meta">
+                            @GxFormats.Date(payment.Date) · @SubscriptionLabels.Label(payment.Method)
+                        </div>
                     </div>
                     <div class="trail">
                         <span class="amt">@GxFormats.Amount(payment.Amount)</span>
-                        <GxChip Tone="GxTone.Success">@payment.Status</GxChip>
+                        <GxChip Tone="@SubscriptionLabels.Tone(payment.Status)">
+                            @SubscriptionLabels.Label(payment.Status)
+                        </GxChip>
                     </div>
                 </div>
             }

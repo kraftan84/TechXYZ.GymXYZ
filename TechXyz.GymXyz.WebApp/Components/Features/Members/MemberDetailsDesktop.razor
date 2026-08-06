@@ -48,14 +48,23 @@
                             Label="@($"{RemainingDays(subscription)} j")"
                             Size="88"/>
                     <div style="flex:1">
-                        <div style="font-size:var(--text-sm);color:var(--text-body);margin-bottom:8px">
-                            Débuté le @GxFormats.Date(subscription.StartDate) ·
-                            <b>expire le @GxFormats.Date(subscription.EndDate)</b>
+                        <div style="font-size:var(--text-sm);color:var(--text-strong);font-weight:600;margin-bottom:4px">
+                            @subscription.PlanName · @subscription.PriceLabel
                         </div>
-                        @if (subscription.SessionsTotal > 0)
+                        <div style="font-size:var(--text-sm);color:var(--text-body);margin-bottom:8px">
+                            Débuté le @GxFormats.Date(subscription.StartedOn) ·
+                            <b>expire le @GxFormats.Date(subscription.EndsOn)</b>
+                        </div>
+                        @if (subscription.Kind == PlanKind.CreditPack)
                         {
                             <div style="font-size:var(--text-xs);color:var(--text-muted)">
-                                @subscription.SessionsTotal séances au carnet
+                                @subscription.CreditsLabel séances au carnet
+                            </div>
+                        }
+                        else if (subscription.AutoRenew)
+                        {
+                            <div style="font-size:var(--text-xs);color:var(--text-muted)">
+                                Renouvellement automatique
                             </div>
                         }
                         <div style="margin-top:12px;display:flex;gap:8px">
@@ -100,10 +109,14 @@
                         <div class="gx-listrow">
                             <div class="main">
                                 <div class="t">@payment.Label</div>
-                                <div class="s">@GxFormats.Date(payment.Date)</div>
+                                <div class="s">
+                                    @GxFormats.Date(payment.Date) · @SubscriptionLabels.Label(payment.Method)
+                                </div>
                             </div>
                             <b class="amt">@GxFormats.Amount(payment.Amount)</b>
-                            <GxChip Tone="GxTone.Success">@payment.Status</GxChip>
+                            <GxChip Tone="@SubscriptionLabels.Tone(payment.Status)">
+                                @SubscriptionLabels.Label(payment.Status)
+                            </GxChip>
                         </div>
                     }
                 }
@@ -226,11 +239,11 @@
     }
 
     private int RemainingDays(MemberSubscriptionDto subscription)
-        => Math.Max(0, subscription.EndDate.DayNumber - Today.DayNumber);
+        => Math.Max(0, subscription.EndsOn.DayNumber - Today.DayNumber);
 
     private int RemainingPercent(MemberSubscriptionDto subscription)
     {
-        var total = Math.Max(1, subscription.EndDate.DayNumber - subscription.StartDate.DayNumber);
+        var total = Math.Max(1, subscription.EndsOn.DayNumber - subscription.StartedOn.DayNumber);
 
         return Math.Clamp((int)Math.Round(RemainingDays(subscription) * 100d / total), 0, 100);
     }

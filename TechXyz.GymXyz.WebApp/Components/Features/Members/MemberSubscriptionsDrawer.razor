@@ -1,8 +1,10 @@
 @namespace TechXyz.GymXyz.WebApp.Components.Features.Members
 
-@* Subscription history behind the record's "Historique" button.
-   Interim home for the subscription CRUD the pre-hand-off page carried: the
-   Abonnements section (lot 7) takes it over together with Plan / Payment. *@
+@* Subscription history behind the record's "Historique" button, and the place a
+   plan is sold to one member. The interim CRUD lot 1 wrote here against a raw
+   session count is gone: a subscription is a plan now, and everything it carries
+   — how long it runs, what it costs, how many entries it holds — comes off the
+   formule rather than off a form. *@
 
 <GxDrawer Title="Abonnements"
           Subtitle="@Subtitle"
@@ -24,20 +26,20 @@
                 {
                     <div class="gx-listrow">
                         <div class="main">
-                            <div class="t">
-                                Du @GxFormats.ShortDate(subscription.StartDate)
-                                au @GxFormats.ShortDate(subscription.EndDate)
-                            </div>
+                            <div class="t">@subscription.PlanName</div>
                             <div class="s">
-                                @(subscription.SessionsTotal > 0
-                                    ? $"{subscription.SessionsTotal} séances"
-                                    : "Sans carnet")
+                                Du @GxFormats.ShortDate(subscription.StartedOn)
+                                au @GxFormats.ShortDate(subscription.EndsOn)
+                                @if (subscription.Kind == PlanKind.CreditPack)
+                                {
+                                    <text> · @subscription.CreditsLabel séances</text>
+                                }
                             </div>
                         </div>
-                        <GxChip Tone="@ToneFor(subscription.Status)">@LabelFor(subscription.Status)</GxChip>
-                        <FluentButton Appearance="Appearance.Stealth" Title="Modifier" aria-label="Modifier l'abonnement"
-                                      @onclick="() => StartEdit(subscription)">
-                            <GxIcon Name="@GxIconPaths.Settings" Size="18"/>
+                        <GxChip Tone="@ToneFor(subscription)">@LabelFor(subscription)</GxChip>
+                        <FluentButton Appearance="Appearance.Stealth" Title="Renouveler" aria-label="Renouveler l'abonnement"
+                                      @onclick="() => OnRenew.InvokeAsync(subscription.Id)">
+                            <GxIcon Name="@GxIconPaths.Refresh" Size="18"/>
                         </FluentButton>
                         <FluentButton Appearance="Appearance.Stealth" Title="Supprimer" aria-label="Supprimer l'abonnement"
                                       @onclick="() => OnDelete.InvokeAsync(subscription.Id)">
@@ -49,18 +51,44 @@
         }
         else
         {
-            <div class="gx-seclab">@(_editingId is null ? "Nouvel abonnement" : "Modifier l'abonnement")</div>
-            <div class="gx-form-row">
-                <FluentDatePicker Label="Début" @bind-Value="_form.StartDate" style="width:100%"/>
-                <FluentDatePicker Label="Fin" @bind-Value="_form.EndDate" style="width:100%"/>
-            </div>
-            <div class="gx-form-field">
-                <FluentNumberField Label="Séances au carnet" Min="0" @bind-Value="_form.SessionsTotal" style="width:100%"/>
-            </div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">
-                Laissez 0 pour un accès sans carnet. Les formules et les encaissements
-                arrivent avec la section Abonnements.
-            </div>
+            <div class="gx-seclab">Nouvel abonnement</div>
+            @if (Plans.Count == 0)
+            {
+                <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                    Aucune formule n'est proposée pour l'instant.
+                </div>
+            }
+            else
+            {
+                <div class="gx-form-field">
+                    <FluentSelect Label="Formule"
+                                  TOption="PlanDto"
+                                  Items="Plans"
+                                  OptionValue="@(plan => plan.Id.ToString())"
+                                  OptionText="@(plan => $"{plan.Name} — {plan.PriceLabel}")"
+                                  @bind-SelectedOption="_selectedPlan"
+                                  style="width:100%"/>
+                </div>
+                <div class="gx-form-field">
+                    <FluentDatePicker Label="Début" @bind-Value="_startedOn" style="width:100%"/>
+                </div>
+                @if (_selectedPlan is { } plan)
+                {
+                    <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:12px">
+                        @plan.BillingLabel · couvre @plan.ValidityMonths mois
+                        @if (plan.CreditCount is { } credits)
+                        {
+                            <text> · @credits séances</text>
+                        }
+                    </div>
+                    @if (plan.Kind == PlanKind.Recurring)
+                    {
+                        <div style="padding:6px 0">
+                            <FluentSwitch @bind-Value="_autoRenew">Renouvellement automatique</FluentSwitch>
+                        </div>
+                    }
+                }
+            }
         }
     </ChildContent>
     <Footer>
@@ -78,7 +106,7 @@
         {
             <span style="margin-left:auto;display:flex;gap:10px">
                 <FluentButton Appearance="Appearance.Stealth" @onclick="BackToList">Annuler</FluentButton>
-                <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <FluentButton Appearance="Appearance.Accent" Disabled="@(_selectedPlan is null)" @onclick="SubmitAsync">
                     <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
                     Enregistrer
                 </FluentButton>
@@ -91,20 +119,22 @@
     private enum Mode { List, Form }
 
     private Mode _mode = Mode.List;
-    private int? _editingId;
-    private SubscriptionForm _form = new();
+    private PlanDto? _selectedPlan;
+    private DateTime? _startedOn;
+    private bool _autoRenew = true;
 
     [Parameter, EditorRequired] public IReadOnlyList<MemberSubscriptionDto> Subscriptions { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<PlanDto> Plans { get; set; } = [];
     [Parameter] public string? Subtitle { get; set; }
 
-    /// <summary>Opens straight on the form, prefilled to extend the current cover.</summary>
+    /// <summary>Opens straight on the form, prefilled to follow the current cover.</summary>
     [Parameter] public bool StartOnNew { get; set; }
 
     [Parameter] public MemberSubscriptionDto? CurrentSubscription { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<SubscriptionInput> OnCreate { get; set; }
-    [Parameter] public EventCallback<SubscriptionInput> OnUpdate { get; set; }
+    [Parameter] public EventCallback<int> OnRenew { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
 
     protected override void OnInitialized()
@@ -117,81 +147,57 @@
 
     private void StartCreate()
     {
-        // A renewal picks up where the current cover stops; a first subscription
+        // A new cover picks up where the current one stops; a first subscription
         // starts today. Neither is a business rule — just a sensible prefill.
         var start = CurrentSubscription is { } current
-            ? current.EndDate.AddDays(1)
+            ? current.EndsOn.AddDays(1)
             : DateOnly.FromDateTime(DateTime.Today);
 
-        _editingId = null;
-        _form = new SubscriptionForm
-        {
-            StartDate = start.ToDateTime(TimeOnly.MinValue),
-            EndDate = start.AddYears(1).ToDateTime(TimeOnly.MinValue),
-            SessionsTotal = CurrentSubscription?.SessionsTotal ?? 0
-        };
+        _startedOn = start.ToDateTime(TimeOnly.MinValue);
+        _selectedPlan = Plans.FirstOrDefault(plan => plan.Id == CurrentSubscription?.PlanId)
+                        ?? Plans.FirstOrDefault(plan => plan.IsFeatured)
+                        ?? Plans.FirstOrDefault();
+        _autoRenew = CurrentSubscription?.AutoRenew ?? true;
         _mode = Mode.Form;
     }
 
-    private void StartEdit(MemberSubscriptionDto subscription)
-    {
-        _editingId = subscription.Id;
-        _form = new SubscriptionForm
-        {
-            StartDate = subscription.StartDate.ToDateTime(TimeOnly.MinValue),
-            EndDate = subscription.EndDate.ToDateTime(TimeOnly.MinValue),
-            SessionsTotal = subscription.SessionsTotal
-        };
-        _mode = Mode.Form;
-    }
-
-    private void BackToList()
-    {
-        _mode = Mode.List;
-        _editingId = null;
-    }
+    private void BackToList() => _mode = Mode.List;
 
     private async Task SubmitAsync()
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var input = new SubscriptionInput(
-            _editingId,
-            _form.StartDate is { } start ? DateOnly.FromDateTime(start) : today,
-            _form.EndDate is { } end ? DateOnly.FromDateTime(end) : today.AddYears(1),
-            Math.Max(0, _form.SessionsTotal));
+        if (_selectedPlan is not { } plan)
+        {
+            return;
+        }
 
-        if (_editingId is null)
-        {
-            await OnCreate.InvokeAsync(input);
-        }
-        else
-        {
-            await OnUpdate.InvokeAsync(input);
-        }
+        await OnCreate.InvokeAsync(new SubscriptionInput(
+            plan.Id,
+            _startedOn is { } start
+                ? DateOnly.FromDateTime(start)
+                : DateOnly.FromDateTime(DateTime.Today),
+            plan.Kind == PlanKind.Recurring && _autoRenew));
 
         BackToList();
     }
 
-    private static GxTone ToneFor(MemberSubscriptionStatus status) => status switch
+    private static GxTone ToneFor(MemberSubscriptionDto subscription) => subscription.Status switch
     {
-        MemberSubscriptionStatus.Active => GxTone.Success,
-        MemberSubscriptionStatus.Paused => GxTone.Warning,
+        SubscriptionStatus.Active => GxTone.Success,
+        SubscriptionStatus.ExpiringSoon => GxTone.Warning,
+        SubscriptionStatus.Late => GxTone.Danger,
         _ => GxTone.Neutral
     };
 
-    private static string LabelFor(MemberSubscriptionStatus status) => status switch
+    private static string LabelFor(MemberSubscriptionDto subscription) => subscription.Status switch
     {
-        MemberSubscriptionStatus.Active => "En cours",
-        MemberSubscriptionStatus.Paused => "À venir",
-        _ => "Expiré"
+        SubscriptionStatus.Active => "En cours",
+        SubscriptionStatus.ExpiringSoon => "Expire bientôt",
+        SubscriptionStatus.Late => "En retard",
+        SubscriptionStatus.Ended => "Terminé",
+        // No status at all means the cover has not begun — a renewal booked for
+        // after the current one runs out.
+        _ => "À venir"
     };
 
-    private sealed class SubscriptionForm
-    {
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        public int SessionsTotal { get; set; }
-    }
-
-    public sealed record SubscriptionInput(int? Id, DateOnly StartDate, DateOnly EndDate, int SessionsTotal);
+    public sealed record SubscriptionInput(int PlanId, DateOnly StartedOn, bool AutoRenew);
 }
