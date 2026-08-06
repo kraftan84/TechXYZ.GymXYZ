@@ -248,20 +248,20 @@ else
     /// <summary>
     /// Runs console work in a DI scope of its own, rather than on the circuit's.
     /// <para>
-    /// Two reasons, and both hold on their own. The first is correctness of
-    /// scope: every other screen is served <i>as</i> a customer, this one is
-    /// served as none — it reads <c>Tenant</c> and <c>Invoice</c>, which sit
-    /// above the tenant filter, and counts through the one place that lifts it.
-    /// A fresh scope resolves no tenant, which is exactly right here and would
-    /// be wrong anywhere else.
+    /// One reason now, and it is about scope, not about racing. Every other
+    /// screen is served <i>as</i> a customer; this one is served as none — it
+    /// reads <c>Tenant</c> and <c>Invoice</c>, which sit above the tenant filter,
+    /// and counts through the one place that lifts it. A fresh scope resolves no
+    /// tenant, which is exactly right here and would be wrong anywhere else.
     /// </para>
     /// <para>
-    /// The second is the shared <c>DbContext</c>. It is scoped to the circuit and
-    /// EF forbids two operations on one instance at once — the reason
-    /// <c>TenantResolver</c> already carries a semaphore against the layout. This
-    /// screen fires five queries a load, more than any other, and lost that race
-    /// often enough to land on « Impossible de charger les clients ». Its own
-    /// scope means its own context, and no race to lose.
+    /// It used to carry a second reason: the circuit's shared <c>DbContext</c>,
+    /// which EF forbids two operations on at once. This screen fires five
+    /// queries a load and lost that race often enough to land on « Impossible de
+    /// charger les clients ». That is fixed at the source now —
+    /// <c>IGymDbContext</c> is served per handler from a context factory — so the
+    /// scope is no longer what keeps this screen working, only what keeps it
+    /// reading as nobody.
     /// </para>
     /// <para>
     /// The signed-in admin is carried across so audit stamping still names a
