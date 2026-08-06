@@ -1,9 +1,123 @@
 @page "/"
+@using MediatR
+@using TechXyz.GymXyz.Application.Interfaces
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.WebApp.Components.Features.Dashboard
+@implements IDisposable
+
+@inject ISender Sender
+@inject IUserFeedbackService UserFeedback
+@inject ResponsiveModeService Responsive
+@inject MobileHeaderService MobileHeader_
+@inject ISchoolCalendarService SchoolCalendar
+@inject ITenantContext Tenant
+@inject NavBadgeService Badge
+@inject NavigationManager NavManager
+
+@* Owns the dashboard and the school calendar. The two presentations below take
+   parameters only.
+
+   Planning-first, with no KPI: the hand-off asks for four and describes them,
+   but neither screen-accueil.jsx nor its mobile counterpart draws one. Both
+   mockups describe the same screen, so the mockup decided.
+
+   This is also the screen that finally fills the navigation counters, which had
+   been inert since lot 0: they were published by Présences alone, so a badge
+   only appeared once you had already been where it points. *@
 
 <PageTitle>Accueil</PageTitle>
 
-<PageHead Title="Accueil" Subtitle="Préparez la semaine et diffusez-la à vos membres."/>
+@if (Responsive.IsMobile)
+{
+    <AccueilMobile Dashboard="_dashboard"
+                   Calendar="_calendar"
+                   IsLoaded="_isLoaded"
+                   GreetingName="@User.GreetingName"
+                   OnOpenDay="OpenDay"
+                   OnOpenPlanning="OpenPlanning"
+                   OnOpenSection="OpenSection"/>
+}
+else
+{
+    <div class="gx-screen">
+        <AccueilDesktop Dashboard="_dashboard"
+                        Calendar="_calendar"
+                        IsLoaded="_isLoaded"
+                        GreetingName="@User.GreetingName"
+                        IsSolo="@(Brand?.IsSolo ?? false)"
+                        OnOpenDay="OpenDay"
+                        OnOpenPlanning="OpenPlanning"
+                        OnOpenSection="OpenSection"/>
+    </div>
+}
 
-<EmptyState Icon="@GxIconPaths.Home"
-            Title="Bientôt le tableau de bord"
-            Text="Les indicateurs, les cours du jour et les alertes arrivent au prochain lot."/>
+@code {
+    [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    private DashboardDto _dashboard = DashboardDto.Empty;
+    private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
+
+    /// <summary>
+    /// False until the first read has answered. This screen is the most exposed
+    /// to the state it would otherwise show meanwhile: « Aucun cours
+    /// aujourd'hui » is a statement of fact, and during the load it is not a
+    /// true one.
+    /// </summary>
+    private bool _isLoaded;
+
+    protected override void OnInitialized()
+    {
+        Responsive.Changed += OnResponsiveChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        MobileHeader_.UseRootHeader();
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        await UserFeedback.ExecuteAsync(
+            async () => _dashboard = await Sender.Send(new GetDashboardQuery()),
+            "charger le tableau de bord");
+
+        _isLoaded = true;
+
+        // Both counters, from the read that just happened. The Présences badge
+        // now appears on the first screen of the session rather than after a
+        // detour through the screen it counts.
+        Badge.SetSheetsToPoint(_dashboard.Alerts.SheetsToPoint);
+        Badge.SetSubscriptionsToWatch(_dashboard.Alerts.SubscriptionsToWatch);
+
+        // Fetched apart from the dashboard, as the planning does: it comes from
+        // two government APIs, it swallows its own failures, and the strip has
+        // to draw whether or not they answer.
+        _calendar = await SchoolCalendar.GetAsync(
+            Brand?.ZipCode, _dashboard.WeekStart, _dashboard.WeekEnd);
+    }
+
+    /// <summary>
+    /// A day of the strip opens the Planning on that day rather than a screen of
+    /// its own. The desktop prototype draws a day detail, but its timeline
+    /// restates the day view lot 5 shipped and its side cards restate the week
+    /// and the alerts already on this page — and the mobile mockup had already
+    /// decided this way round.
+    /// </summary>
+    private void OpenDay(DateOnly day) =>
+        NavManager.NavigateTo($"/planning?jour={day:yyyy-MM-dd}");
+
+    private void OpenPlanning() => NavManager.NavigateTo("/planning");
+
+    private void OpenSection(string href) => NavManager.NavigateTo(href);
+
+    private void OnResponsiveChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Responsive.Changed -= OnResponsiveChanged;
+    }
+}

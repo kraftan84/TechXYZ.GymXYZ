@@ -10,6 +10,7 @@
 @inject ISender Sender
 @inject IUserFeedbackService UserFeedback
 @inject ResponsiveModeService Responsive
+@inject NavBadgeService Badge
 
 @* Owns the overview, the open drawer and every write. The two presentations take
    parameters only.
@@ -92,6 +93,11 @@ else if (_drawer == DrawerMode.Payment && _collecting is not null)
         await UserFeedback.ExecuteAsync(
             async () => _overview = await Sender.Send(new GetSubscriptionOverviewQuery()),
             "charger les abonnements");
+
+        // Republished from the screen that just counted them, so renewing a
+        // cover here drops the badge without waiting for a trip through the
+        // Accueil.
+        Badge.SetSubscriptionsToWatch(_overview.Kpis.ExpiringCount + _overview.Kpis.LateCount);
     }
 
     private void SelectFilter(SubscriptionStatus? status) => _status = status;

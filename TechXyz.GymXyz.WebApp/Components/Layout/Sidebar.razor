@@ -22,10 +22,10 @@
                 <GxIcon Name="@item.Icon" Size="19"/>
                 <span>@item.Label</span>
                 @* The same count the mobile tab badges, in the room the sidebar
-                   has for it. *@
-                @if (item.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count)
+                   has for it — plus the one the mobile shell has no tab for. *@
+                @if (CountFor(item) is { } count)
                 {
-                    <GxChip Tone="GxTone.Danger">@count</GxChip>
+                    <GxChip Tone="@ToneFor(item)">@count</GxChip>
                 }
             </NavLink>
         }
@@ -47,8 +47,24 @@
     /// <summary>Sheets waiting to be pointed, or null for no chip at all.</summary>
     [Parameter] public int? SheetsToPoint { get; set; }
 
-    private string LabelFor(GxNavItem item) =>
-        item.Id == GxNavigation.Presences.Id && SheetsToPoint is { } count
+    /// <summary>Covers expiring or late — <c>03-SCREENS-DESKTOP.md</c> draws it as « badge 6 ».</summary>
+    [Parameter] public int? SubscriptionsToWatch { get; set; }
+
+    private int? CountFor(GxNavItem item) =>
+        item.Id == GxNavigation.Presences.Id ? SheetsToPoint
+        : item.Id == GxNavigation.Abonnements.Id ? SubscriptionsToWatch
+        : null;
+
+    /// <summary>
+    /// Sheets are overdue work, covers are work coming — the tones say which is
+    /// which rather than making both shout.
+    /// </summary>
+    private static GxTone ToneFor(GxNavItem item) =>
+        item.Id == GxNavigation.Presences.Id ? GxTone.Danger : GxTone.Warning;
+
+    private string LabelFor(GxNavItem item) => CountFor(item) is not { } count
+        ? item.Label
+        : item.Id == GxNavigation.Presences.Id
             ? $"{item.Label}, {GxFormats.Plural(count, "séance à pointer", "séances à pointer")}"
-            : item.Label;
+            : $"{item.Label}, {GxFormats.Plural(count, "abonnement à surveiller", "abonnements à surveiller")}";
 }

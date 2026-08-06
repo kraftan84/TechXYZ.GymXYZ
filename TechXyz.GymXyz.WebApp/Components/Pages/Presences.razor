@@ -12,7 +12,7 @@
 @inject IUserFeedbackService UserFeedback
 @inject ResponsiveModeService Responsive
 @inject MobileHeaderService MobileHeader_
-@inject AttendanceBadgeService Badge
+@inject NavBadgeService Badge
 @inject NavigationManager NavManager
 
 @* Owns the overview, the open sheet and every write. The four presentations
@@ -104,7 +104,7 @@ else
             async () => _overview = await Sender.Send(new GetAttendanceOverviewQuery()),
             "charger les présences");
 
-        Badge.Set(_overview.Kpis.SheetsToPoint);
+        Badge.SetSheetsToPoint(_overview.Kpis.SheetsToPoint);
     }
 
     private async Task LoadRosterAsync(int sessionId)
