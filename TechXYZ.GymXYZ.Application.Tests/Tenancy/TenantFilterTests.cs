@@ -155,4 +155,55 @@ public class TenantFilterTests
         active.Count.ShouldBe(1);
         active[0].LastName.ShouldBe("Lemoine");
     }
+
+    [Fact]
+    public async Task Query_ShouldNotFilterInvoices_WhichSitAboveTheTenant()
+    {
+        // A GymXYZ invoice is what a customer owes TechXYZ, and the only screen
+        // that reads it is the console, served as no customer at all. Filtering
+        // it by tenant would hide every invoice from the one screen for it.
+        var databaseName = nameof(Query_ShouldNotFilterInvoices_WhichSitAboveTheTenant);
+        var tenantContext = new TestTenantContext(1);
+
+        await using var dbContext = TestInfrastructure.CreateDbContext(databaseName, tenantContext);
+        dbContext.Invoices.AddRange(
+            new Invoice { TenantId = 1, Reference = "GX-2026-001", Amount = 948m },
+            new Invoice { TenantId = 2, Reference = "GX-2026-002", Amount = 588m });
+        await dbContext.SaveChangesAsync();
+
+        tenantContext.Current = 0;
+
+        var invoices = await dbContext.Invoices.AsNoTracking().ToListAsync();
+
+        invoices.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Query_ShouldNotFilterImpersonations_SoACustomerCannotEraseItsOwnTrail()
+    {
+        // The trail records a platform admin entering a customer. Scoping it to
+        // that customer would put the audit inside the thing being audited.
+        var databaseName = nameof(Query_ShouldNotFilterImpersonations_SoACustomerCannotEraseItsOwnTrail);
+        var tenantContext = new TestTenantContext(1);
+
+        await using var dbContext = TestInfrastructure.CreateDbContext(databaseName, tenantContext);
+        dbContext.TenantImpersonations.AddRange(
+            new TenantImpersonation
+            {
+                AdminUserId = "admin", AdminEmail = "admin@techxyz.fr",
+                TenantId = 1, StartedAt = DateTime.UtcNow
+            },
+            new TenantImpersonation
+            {
+                AdminUserId = "admin", AdminEmail = "admin@techxyz.fr",
+                TenantId = 2, StartedAt = DateTime.UtcNow
+            });
+        await dbContext.SaveChangesAsync();
+
+        tenantContext.Current = 0;
+
+        var visits = await dbContext.TenantImpersonations.AsNoTracking().ToListAsync();
+
+        visits.Count.ShouldBe(2);
+    }
 }

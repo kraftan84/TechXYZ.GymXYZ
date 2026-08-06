@@ -16,4 +16,17 @@ public static class GymClaimTypes
 
     /// <summary>Free-text role shown next to the name ("Gérante", "Coach").</summary>
     public const string RoleLabel = "gymxyz:role_label";
+
+    /// <summary>
+    /// Present only while a platform admin is inside a customer. Holds the id of
+    /// the <c>TenantImpersonation</c> row the visit opened, so leaving closes the
+    /// exact row it opened.
+    /// <para>
+    /// Its presence is also what tells the shell that the tenant claims beside it
+    /// are borrowed rather than owned — a platform admin's own account carries no
+    /// tenant at all. Nothing reads it to grant access: the policies are unchanged
+    /// and <c>GymManager</c> already admits a <c>PlatformAdmin</c>.
+    /// </para>
+    /// </summary>
+    public const string Impersonation = "gymxyz:impersonation";
 }

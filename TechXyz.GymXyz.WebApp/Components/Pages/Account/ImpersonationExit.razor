@@ -1,0 +1,77 @@
+@* Leaving a customer and coming back to the console.
+
+   Same reasoning as Impersonation.razor: static rendering under /account,
+   because signing back out of the customer re-signs the cookie.
+
+   The one click is the price of a form the framework can protect. It is also
+   the last thing standing between an admin and forgetting they were still
+   inside somebody else's data. *@
+
+@page "/account/client/sortie"
+@attribute [Authorize(Policy = GymPolicies.PlatformAdmin)]
+@layout EmptyLayout
+
+@using MediatR
+@using Microsoft.AspNetCore.Identity
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Persistence.Identity
+
+@inject ISender Sender
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Quitter le client</PageTitle>
+
+<div class="gx-account-gate">
+    <div class="gx-account-card">
+        <span class="gx-account-eyebrow">Console TechXYZ</span>
+        <h1>Quitter @(Brand?.DisplayName ?? "ce client")</h1>
+        <p class="lead">Vous retrouverez la console TechXYZ et vos propres accès.</p>
+
+        <EditForm Model="_form" method="post" OnValidSubmit="LeaveAsync" FormName="quitter-client">
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">
+                Quitter et revenir à la console
+            </FluentButton>
+        </EditForm>
+
+        <a class="gx-account-back" href="/">Rester chez ce client</a>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    /// <summary>
+    /// EditForm needs a model even when the form has no field. See the note on
+    /// the same field in Impersonation.razor for why it is not bound from the post.
+    /// </summary>
+    private readonly object _form = new();
+
+    private async Task LeaveAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (await UserManager.GetUserAsync(state.User) is not { } admin)
+        {
+            Navigation.NavigateTo("/account/connexion", forceLoad: true);
+
+            return;
+        }
+
+        // The visit id travels in the claim, so an admin can only ever close the
+        // row their own cookie points at.
+        if (int.TryParse(state.User.FindFirstValue(GymClaimTypes.Impersonation), out var visitId))
+        {
+            await Sender.Send(new EndTenantImpersonationCommand(admin.Id, visitId));
+        }
+
+        // Regenerates the principal from the claims factory, which writes no
+        // tenant for a platform admin: the borrowed identity disappears on its
+        // own rather than being unpicked claim by claim.
+        await SignInManager.RefreshSignInAsync(admin);
+
+        Navigation.NavigateTo("/administration", forceLoad: true);
+    }
+}
