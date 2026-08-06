@@ -1,0 +1,135 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Abonnements
+
+@* Encaisser un paiement — the drawer's first mode in the prototype.
+
+   Nothing is taken here. There is no payment provider in the product and none is
+   meant to be in this lot: this records money that already changed hands at the
+   desk, which is why the status is a field and « Rejeté » is one of its values.
+
+   The prototype's « Envoyer le reçu par e-mail » switch is not rendered. It sends
+   a message, and the channel arrives with the Réglages at lot 8 — the same
+   grounds as « Relancer » below, which is drawn but disabled. A switch that
+   silently sends nothing is worse than one that is not there. *@
+
+<GxDrawer Title="Encaisser un paiement"
+          Subtitle="@Subtitle"
+          Icon="@GxIconPaths.Euro"
+          OnClose="OnClose">
+    <ChildContent>
+        <div class="gx-seclab">Paiement</div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Membre" Value="@Row.FullName" ReadOnly="true" style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentTextField Label="Formule" Value="@Row.Cover.PlanName" ReadOnly="true" style="width:100%"/>
+        </div>
+
+        <div class="gx-form-row">
+            <FluentNumberField Label="Montant (€)" Min="0" Step="1" @bind-Value="_amount" style="width:100%"/>
+            <FluentDatePicker Label="Date" @bind-Value="_date" style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentSelect Label="Mode de paiement" TOption="PaymentMethod"
+                          Items="_methods"
+                          OptionValue="@(method => method.ToString())"
+                          OptionText="@(method => SubscriptionLabels.Label(method))"
+                          @bind-SelectedOption="_method"
+                          style="width:100%"/>
+        </div>
+
+        <div class="gx-form-field">
+            <FluentSelect Label="Statut" TOption="PaymentStatus"
+                          Items="_statuses"
+                          OptionValue="@(status => status.ToString())"
+                          OptionText="@(status => SubscriptionLabels.Label(status))"
+                          @bind-SelectedOption="_status"
+                          style="width:100%"/>
+        </div>
+
+        @if (Row.Status is SubscriptionStatus.Late or SubscriptionStatus.ExpiringSoon)
+        {
+            <div class="gx-seclab" style="margin-top:18px">Relance</div>
+            <div style="display:flex;align-items:center;gap:12px">
+                <FluentButton Appearance="Appearance.Outline" Disabled="true"
+                              Title="@PaymentRules.ReminderHasNoChannel">
+                    <GxIcon Slot="start" Name="@GxIconPaths.Send" Size="18"/>
+                    Relancer
+                </FluentButton>
+                <span style="font-size:var(--text-2xs);color:var(--text-muted);line-height:1.5">
+                    @PaymentRules.ReminderHasNoChannel
+                </span>
+            </div>
+            @if (Row.LastReminderSentOn is { } sent)
+            {
+                <div style="font-size:var(--text-2xs);color:var(--text-muted);margin-top:8px">
+                    Dernière relance le @GxFormats.Date(sent).
+                </div>
+            }
+        }
+    </ChildContent>
+    <Footer>
+        <span style="margin-left:auto;display:flex;gap:10px">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="OnClose">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" @onclick="SubmitAsync">
+                <GxIcon Slot="start" Name="@GxIconPaths.Check" Size="18"/>
+                Encaisser
+            </FluentButton>
+        </span>
+    </Footer>
+</GxDrawer>
+
+@code {
+    private static readonly PaymentMethod[] _methods =
+    [
+        PaymentMethod.Card,
+        PaymentMethod.SepaDirectDebit,
+        PaymentMethod.Cash,
+        PaymentMethod.Cheque
+    ];
+
+    private static readonly PaymentStatus[] _statuses =
+    [
+        PaymentStatus.Collected,
+        PaymentStatus.Pending,
+        PaymentStatus.Rejected
+    ];
+
+    private int _amount;
+    private DateTime? _date;
+    private PaymentMethod _method = PaymentMethod.Card;
+    private PaymentStatus _status = PaymentStatus.Collected;
+
+    [Parameter, EditorRequired] public SubscriptionRowDto Row { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<PaymentInput> OnSave { get; set; }
+
+    private string Subtitle => $"{Row.FullName} · {Row.Cover.PlanName}";
+
+    protected override void OnParametersSet()
+    {
+        // Prefilled with what this cover costs and today's date: the overwhelming
+        // case is somebody paying exactly their subscription, now.
+        _amount = (int)Math.Round(Row.Price);
+        _date = DateTime.Today;
+    }
+
+    private async Task SubmitAsync() =>
+        await OnSave.InvokeAsync(new PaymentInput(
+            Row.MemberId,
+            Row.SubscriptionId,
+            _amount,
+            _method,
+            _date is { } date ? DateOnly.FromDateTime(date) : DateOnly.FromDateTime(DateTime.Today),
+            _status));
+
+    public sealed record PaymentInput(
+        int MemberId,
+        int SubscriptionId,
+        decimal Amount,
+        PaymentMethod Method,
+        DateOnly Date,
+        PaymentStatus Status);
+}

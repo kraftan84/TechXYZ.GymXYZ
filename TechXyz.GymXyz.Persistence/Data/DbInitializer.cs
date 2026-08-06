@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 using TechXyz.GymXyz.Persistence.Contexts;
@@ -722,6 +723,16 @@ public static class DbInitializer
                 : index % 5 == 0 ? plans["Étudiant mensuel"]
                 : plans["Illimité mensuel"];
 
+            // Two arrivals inside the last month, so the MRR has something
+            // truthful to compare against. With the whole room signed up long
+            // ago the figure would be flat month on month, and a gym that took
+            // nobody on in thirty days is not the story this demo tells.
+            //
+            // One of them buys a pack, which moves the room but not the MRR —
+            // the business rule made visible rather than asserted.
+            var newcomer = index is 1 or 3;
+            var startsInDays = newcomer ? -12 - index : -20 - index % 40;
+
             yield return CreateMember(
                 firstName,
                 lastName,
@@ -730,11 +741,14 @@ public static class DbInitializer
                 joinedMonthsAgo: 2 + index % 22,
                 today,
                 plan,
-                subscriptionStartsInDays: -20 - index % 40,
+                subscriptionStartsInDays: startsInDays,
                 subscriptionEndsInDays: 10 + index % 60,
                 // Packs at every stage of being used up, so the gauges on the
                 // members table are not all the same length.
-                creditsRemaining: 10 - index % 9);
+                creditsRemaining: 10 - index % 9,
+                // A member never holds a cover that predates their arrival, so
+                // the newcomers join the day their first one starts.
+                joinedDaysAgo: newcomer ? -startsInDays : null);
         }
     }
 
@@ -757,32 +771,115 @@ public static class DbInitializer
         int subscriptionEndsInDays,
         int? creditsRemaining = null,
         bool autoRenew = true,
-        string? notes = null)
+        string? notes = null,
+        int? joinedDaysAgo = null)
     {
-        // The cover windows are the ones lot 1 seeded, kept to the day: they are
-        // what produce the four active, one expiring and one inactive the
-        // members table shows, and moving them would quietly restate a screen
-        // three lots have already been checked against.
+        // The current cover windows are the ones lot 1 seeded, kept to the day:
+        // they are what produce the four active, one expiring and one inactive
+        // the members table shows, and moving them would quietly restate a
+        // screen three lots have already been checked against.
+        // Months are the natural grain for "membre depuis mars 2024"; a recent
+        // arrival needs days, because a month of granularity cannot say
+        // "joined three weeks ago" without predating their own subscription.
+        var joinedOn = joinedDaysAgo is { } days
+            ? today.AddDays(-days)
+            : today.AddMonths(-joinedMonthsAgo);
+        var startedOn = today.AddDays(subscriptionStartsInDays);
+
+        // Lot 1 sized every window at about a month, which was right when a
+        // subscription was just two dates. A yearly formule cannot run for
+        // thirty days: Amina Benali would read "Illimité annuel · 490 € / an"
+        // above an échéance three weeks out, and the gauge would be filling
+        // from the wrong denominator. The cover takes the period it was sold
+        // with — and since every one of these is comfortably active either way,
+        // no standing on the members table moves.
+        //
+        // Packs keep their seeded windows: those encode Théo Garnier's expired
+        // card, which the "En retard" story on three screens depends on.
+        var endsOn = plan.Kind == PlanKind.Recurring && plan.ValidityMonths > 1
+            ? SubscriptionFactory.EndOfCover(plan, startedOn)
+            : today.AddDays(subscriptionEndsInDays);
+
+        var current = new Subscription
+        {
+            Plan = plan,
+            StartedOn = startedOn,
+            EndsOn = endsOn,
+            CreditsRemaining = plan.IsCredited ? creditsRemaining ?? plan.CreditCount : null,
+            CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
+            AutoRenew = plan.Kind == PlanKind.Recurring && autoRenew,
+            PriceLabel = plan.FormatPriceLabel(),
+            Price = plan.Price,
+            MonthlyPrice = SubscriptionFactory.MonthlyPriceOf(plan)
+        };
+
         return new Member(firstName, lastName)
         {
             Email = email,
             Phone = phone,
-            JoinedOn = today.AddMonths(-joinedMonthsAgo),
+            JoinedOn = joinedOn,
             Notes = notes,
-            Subscriptions =
-            [
-                new Subscription
-                {
-                    Plan = plan,
-                    StartedOn = today.AddDays(subscriptionStartsInDays),
-                    EndsOn = today.AddDays(subscriptionEndsInDays),
-                    CreditsRemaining = plan.IsCredited ? creditsRemaining ?? plan.CreditCount : null,
-                    CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
-                    AutoRenew = plan.Kind == PlanKind.Recurring && autoRenew,
-                    PriceLabel = plan.FormatPriceLabel()
-                }
-            ]
+            Subscriptions = [current, .. PreviousCovers(current, plan, joinedOn)]
         };
+    }
+
+    /// <summary>
+    /// The covers a member bought before the one running now, back to the day
+    /// they joined.
+    /// <para>
+    /// Without these the database says every member bought exactly one
+    /// subscription, ever — and the MRR comparison built on that is nonsense.
+    /// "What was the recurring revenue a month ago" sums the covers running
+    /// then, and on a monthly plan those are <b>different rows</b>: a cover that
+    /// started more than thirty days ago has already ended. With one row per
+    /// member the only covers old enough to count were the expired ones, so
+    /// last month came out near empty and the delta read +73 %. Seeding the
+    /// chain is not decoration — it is what makes the question answerable.
+    /// </para>
+    /// <para>
+    /// Capped rather than exhaustive: a member of twenty-seven months would
+    /// otherwise carry twenty-seven rows, and the record's history list is meant
+    /// to be read. A year of it is plenty to answer every question the screens
+    /// ask, and the join date still stops the chain when it comes first.
+    /// </para>
+    /// </summary>
+    private static IEnumerable<Subscription> PreviousCovers(Subscription current, Plan plan, DateOnly joinedOn)
+    {
+        const int MaxHistory = 6;
+
+        var months = Math.Max(1, plan.ValidityMonths);
+        var cursor = current.StartedOn;
+
+        for (var index = 0; index < MaxHistory && cursor > joinedOn; index++)
+        {
+            var endsOn = cursor.AddDays(-1);
+            var startedOn = cursor.AddMonths(-months);
+
+            // The first one a member ever bought starts the day they joined,
+            // not before it.
+            if (startedOn < joinedOn)
+            {
+                startedOn = joinedOn;
+            }
+
+            yield return new Subscription
+            {
+                Plan = plan,
+                StartedOn = startedOn,
+                EndsOn = endsOn,
+                // A pack that has been superseded was used up: leaving entries
+                // on it would have the members table counting credits somebody
+                // can no longer spend.
+                CreditsRemaining = plan.IsCredited ? 0 : null,
+                CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
+                AutoRenew = current.AutoRenew,
+                PriceLabel = plan.FormatPriceLabel(),
+                Price = plan.Price,
+                MonthlyPrice = SubscriptionFactory.MonthlyPriceOf(plan)
+            };
+
+            cursor = startedOn;
+        }
     }
 
     /// <summary>

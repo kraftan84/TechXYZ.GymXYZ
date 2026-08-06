@@ -93,7 +93,8 @@ public class SubscriptionStatusRulesTests
                 EndsOn = Today.AddDays(endsInDays),
                 CreditsRemaining = credits,
                 CreditsTotal = credits is null ? null : plan.CreditCount,
-                PriceLabel = plan.FormatPriceLabel()
+                PriceLabel = plan.FormatPriceLabel(),
+                Price = plan.Price
             };
 
             if (rejected)
@@ -132,6 +133,10 @@ public class SubscriptionStatusRulesTests
                 subscription.CreditsTotal,
                 subscription.PriceLabel,
                 subscription.AutoRenew,
+                subscription.Price,
+                subscription.Payments!
+                    .Where(payment => payment.IsActive && payment.Status == PaymentStatus.Collected)
+                    .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                 subscription.Payments!.Any(payment =>
                     payment.IsActive && payment.Status != PaymentStatus.Collected)))
             .ToListAsync();
@@ -201,5 +206,9 @@ public class SubscriptionStatusRulesTests
             CreditsTotal: kind == PlanKind.CreditPack ? 10 : null,
             PriceLabel: "49 € / mois",
             AutoRenew: true,
-            HasOutstandingPayment: hasOutstandingPayment);
+            Price: 49m,
+            // Nothing collected when a failure is being simulated, so the
+            // shortfall half of the rule holds and the cover really is owing.
+            CollectedAmount: hasOutstandingPayment ? 0m : 49m,
+            HasFailedPayment: hasOutstandingPayment);
 }

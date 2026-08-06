@@ -128,6 +128,36 @@ public static class QueryableProjectionExtensions
     }
 
     /// <summary>
+    /// Cards of the formules grid. The member count is people covered by the
+    /// plan right now — the card says "64 membres", not "64 ever bought it".
+    /// <para>
+    /// Shared by <c>GetPlansQuery</c> and the abonnements overview so the cards
+    /// and the plan picker cannot end up counting differently.
+    /// </para>
+    /// </summary>
+    public static IQueryable<PlanDto> SelectPlanDto(this IQueryable<Plan> query, DateOnly today)
+    {
+        return query.Select(plan => new PlanDto(
+            plan.Id,
+            plan.Name,
+            plan.ShortName,
+            plan.Price,
+            plan.Unit,
+            plan.Kind,
+            plan.CreditCount,
+            plan.ValidityMonths,
+            plan.BillingLabel,
+            plan.Description,
+            plan.Tone,
+            plan.IsFeatured,
+            plan.Rank,
+            plan.Subscriptions!.Count(subscription =>
+                subscription.IsActive &&
+                subscription.StartedOn <= today &&
+                subscription.EndsOn >= today)));
+    }
+
+    /// <summary>
     /// Rows of the members table, each with the subscriptions that have started —
     /// the facts the standing rule reads.
     /// <para>
@@ -165,6 +195,10 @@ public static class QueryableProjectionExtensions
                     subscription.CreditsTotal,
                     subscription.PriceLabel,
                     subscription.AutoRenew,
+                    subscription.Price,
+                    subscription.Payments!
+                        .Where(payment => payment.IsActive && payment.Status == PaymentStatus.Collected)
+                        .Sum(payment => (decimal?)payment.Amount) ?? 0m,
                     subscription.Payments!.Any(payment =>
                         payment.IsActive && payment.Status != PaymentStatus.Collected)))
                 .ToList()));

@@ -1,0 +1,167 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Abonnements
+
+@* Mobile Abonnements: four KPI tiles, then Suivi / Formules / Encaissements
+   behind segmented tabs. Presentation only.
+
+   The desktop's filter chips are not repeated here — the prototype's phone
+   screen shows every cover in one list, and stacking four chips above three tabs
+   would spend a third of the fold on controls. *@
+
+<div class="gx-m-screen">
+    <div class="gx-m-greet">
+        <div class="hi">Abonnements</div>
+        <div class="sub">@SubscriptionFilters.Subtitle(Overview)</div>
+    </div>
+
+    <div class="gx-m-kpis" style="margin-top:16px">
+        <div class="gx-m-kpi spark">
+            <div class="lab">Revenu mensuel</div>
+            <div class="val">@GxFormats.Amount(Overview.Kpis.Mrr)</div>
+            @if (SubscriptionFilters.MrrDelta(Overview.Kpis) is { } delta)
+            {
+                <div class="delta">
+                    <GxIcon Name="@GxIconPaths.Trend" Size="13"/>
+                    @delta
+                </div>
+            }
+        </div>
+        <div class="gx-m-kpi">
+            <div class="lab">Actifs</div>
+            <div class="val">@GxFormats.Count(Overview.Kpis.ActiveCount)</div>
+            <div class="sub">@Overview.Kpis.ExpiringCount expirent bientôt</div>
+        </div>
+    </div>
+    <div class="gx-m-kpis" style="margin-top:10px">
+        <div class="gx-m-kpi">
+            <div class="lab">En retard</div>
+            <div class="val">@GxFormats.Count(Overview.Kpis.LateCount)</div>
+            <div class="sub">@GxFormats.Amount(Overview.Kpis.LateAmount) à encaisser</div>
+        </div>
+        <div class="gx-m-kpi">
+            <div class="lab">Expirent</div>
+            <div class="val">@GxFormats.Count(Overview.Kpis.ExpiringCount)</div>
+            <div class="sub">cette semaine</div>
+        </div>
+    </div>
+
+        <GxMobileTabs TValue="AbonnementsTab" Tabs="_tabs" Selected="Tab" OnSelect="OnSelectTab"/>
+
+        @if (Tab == AbonnementsTab.Suivi)
+        {
+            <div class="gx-m-card" style="margin-top:12px">
+                @if (Overview.Subscriptions.Count == 0)
+                {
+                    <div class="gx-m-kv">
+                        <span class="v" style="font-weight:400;color:var(--text-muted)">
+                            Aucun abonnement enregistré.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var row in Overview.Subscriptions)
+                    {
+                        <button type="button" class="gx-m-row" @onclick="() => OnCollect.InvokeAsync(row)">
+                            <GxAvatar Name="@row.FullName" Size="md"/>
+                            <div class="main">
+                                <div class="nm"><span class="truncate">@row.FullName</span></div>
+                                <div class="meta">
+                                    @row.Cover.PlanName · @SubscriptionFilters.Deadline(row, Today)
+                                </div>
+                            </div>
+                            <div class="trail">
+                                <GxChip Tone="@SubscriptionLabels.Tone(row.Status)">
+                                    @SubscriptionLabels.Label(row.Status)
+                                </GxChip>
+                                @if (row.Cover.AutoRenew)
+                                {
+                                    <span class="gx-m-tag" style="font-size:9px">Auto</span>
+                                }
+                            </div>
+                        </button>
+                    }
+                }
+            </div>
+        }
+        else if (Tab == AbonnementsTab.Formules)
+        {
+            <div class="gx-m-card" style="margin-top:12px">
+                @foreach (var plan in Overview.Plans)
+                {
+                    <button type="button" class="gx-m-formule @(plan.IsFeatured ? "featured" : null)"
+                            @onclick="() => OnEditPlan.InvokeAsync(plan)">
+                        <div class="top">
+                            <span class="nm">@plan.Name</span>
+                            <span class="price">
+                                @GxFormats.Number(plan.Price)<span> @plan.Unit</span>
+                            </span>
+                        </div>
+                        <div class="desc">@plan.Description</div>
+                        <div class="foot">
+                            <GxIcon Name="@GxIconPaths.Refresh" Size="14"/>
+                            @plan.BillingLabel
+                            <span class="members">
+                                @GxFormats.Plural(plan.MemberCount, "membre", "membres")
+                            </span>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="gx-m-card" style="margin-top:12px">
+                @if (Overview.Payments.Count == 0)
+                {
+                    <div class="gx-m-kv">
+                        <span class="v" style="font-weight:400;color:var(--text-muted)">
+                            Aucun encaissement sur la semaine.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var payment in Overview.Payments)
+                    {
+                        <div class="gx-m-row" style="cursor:default">
+                            <span class="gx-m-ic @(payment.Status == PaymentStatus.Collected ? "t-success" : "t-danger")"
+                                  style="width:36px;height:36px">
+                                <GxIcon Name="@(payment.Status == PaymentStatus.Collected ? GxIconPaths.Check : GxIconPaths.Alert)"
+                                        Size="17"/>
+                            </span>
+                            <div class="main">
+                                <div class="nm"><span class="truncate">@payment.FullName</span></div>
+                                <div class="meta">
+                                    @GxFormats.DayAndMonth(payment.Date) ·
+                                    @SubscriptionLabels.Label(payment.Method)
+                                </div>
+                            </div>
+                            <div class="trail">
+                                <span class="amt">@GxFormats.Amount(payment.Amount)</span>
+                                <GxChip Tone="@SubscriptionLabels.Tone(payment.Status)">
+                                    @SubscriptionLabels.Label(payment.Status)
+                                </GxChip>
+                            </div>
+                        </div>
+                    }
+                }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly IReadOnlyList<(AbonnementsTab, string)> _tabs =
+    [
+        (AbonnementsTab.Suivi, "Suivi"),
+        (AbonnementsTab.Formules, "Formules"),
+        (AbonnementsTab.Encaissements, "Encaissements")
+    ];
+
+    [Parameter, EditorRequired] public SubscriptionOverviewDto Overview { get; set; } = SubscriptionOverviewDto.Empty;
+    [Parameter] public AbonnementsTab Tab { get; set; } = AbonnementsTab.Suivi;
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<AbonnementsTab> OnSelectTab { get; set; }
+    [Parameter] public EventCallback<PlanDto?> OnEditPlan { get; set; }
+    [Parameter] public EventCallback<SubscriptionRowDto> OnCollect { get; set; }
+}

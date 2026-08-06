@@ -1,0 +1,303 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Abonnements
+
+@* Desktop Abonnements: four KPI, the formules as cards, then the suivi table
+   behind its filter chips, and finally the encaissements beside the répartition.
+   Presentation only — every piece of state and every action comes from
+   Abonnements.razor.
+
+   « Exporter » is not here. The prototype puts an outline button beside
+   « Nouvelle formule », and there is no export anywhere in the product: no file
+   generation, no format named in any document, nothing to produce. Same reasoning
+   that dropped « Diffuser » at lot 5 and « Borne de pointage » at lot 6.
+
+   « Relancer » is drawn disabled with a tooltip instead, because unlike the
+   export it is coming: the command exists and records the chase, but the channel
+   arrives with the Réglages at lot 8. Lot 6 drew the button of the same name the
+   same way on the absentees card. *@
+
+<Crumb Parts="@_crumb"/>
+
+<PageHead Title="Abonnements" Subtitle="@SubscriptionFilters.Subtitle(Overview)">
+    <FluentButton Appearance="Appearance.Accent" @onclick="() => OnEditPlan.InvokeAsync(null)">
+        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+        Nouvelle formule
+    </FluentButton>
+</PageHead>
+
+<div class="gx-grid4" style="margin-bottom:18px">
+    <Kpi Label="Revenu mensuel récurrent"
+         Value="@GxFormats.Amount(Overview.Kpis.Mrr)"
+         Delta="@SubscriptionFilters.MrrDelta(Overview.Kpis)"
+         DeltaIcon="@(SubscriptionFilters.MrrDelta(Overview.Kpis) is null ? null : GxIconPaths.Trend)"
+         Tone="@(Overview.Kpis.MrrDeltaPercent >= 0 ? GxTone.Success : GxTone.Danger)"
+         Spark="true"/>
+    <Kpi Label="Abonnements actifs"
+         Value="@GxFormats.Count(Overview.Kpis.ActiveCount)"
+         Sub="@SubscriptionFilters.ActiveCaption(Overview.Kpis)"/>
+    <Kpi Label="Expirent (7 j)"
+         Value="@GxFormats.Count(Overview.Kpis.ExpiringCount)"
+         Sub="à relancer"/>
+    <Kpi Label="Paiements en retard"
+         Value="@GxFormats.Count(Overview.Kpis.LateCount)"
+         Sub="@($"{GxFormats.Amount(Overview.Kpis.LateAmount)} à encaisser")"/>
+</div>
+
+<div style="margin-bottom:18px">
+<GxCard Padded="false">
+    <CardHead Title="Formules">
+        <FluentButton Appearance="Appearance.Stealth" @onclick="() => OnEditPlan.InvokeAsync(null)">
+            <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="16"/>
+            Ajouter
+        </FluentButton>
+    </CardHead>
+    <div style="padding:18px">
+        @if (Overview.Plans.Count == 0)
+        {
+            <div style="font-size:var(--text-sm);color:var(--text-muted)">
+                Aucune formule pour l'instant. Créez-en une pour commencer à vendre.
+            </div>
+        }
+        else
+        {
+            <div class="gx-formules">
+                @foreach (var plan in Overview.Plans)
+                {
+                    <button type="button" class="gx-formule @(plan.IsFeatured ? "featured" : null)"
+                            @onclick="() => OnEditPlan.InvokeAsync(plan)">
+                        <div class="nm">@plan.Name</div>
+                        <div class="price">
+                            <span class="amt">@GxFormats.Number(plan.Price)</span>
+                            <span class="unit">@plan.Unit</span>
+                        </div>
+                        <div class="desc">@plan.Description</div>
+                        <div class="foot">
+                            <GxIcon Name="@GxIconPaths.Users" Size="15"/>
+                            <b>@GxFormats.Plural(plan.MemberCount, "membre", "membres")</b>
+                            <span class="sep">@plan.BillingLabel</span>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</GxCard>
+</div>
+
+<div class="gx-filters">
+    @foreach (var (label, status) in SubscriptionFilters.Chips)
+    {
+        <button type="button"
+                class="gx-fchip @(status == SubscriptionStatus.ExpiringSoon ? "warn" : null) @(Status == status ? "on" : null)"
+                aria-pressed="@(Status == status ? "true" : "false")"
+                @onclick="() => OnFilter.InvokeAsync(status)">
+            @label · @SubscriptionFilters.CountOf(Overview, status)
+        </button>
+    }
+</div>
+
+<div style="margin-bottom:18px">
+<GxCard Padded="false">
+<div style="padding:6px 10px 2px">
+    <div class="gx-tbl-scroll">
+        <table class="gx-tbl gx-tbl-abos">
+            <thead>
+            <tr>
+                <th>Membre</th>
+                <th>Formule</th>
+                <th>Échéance</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (Rows.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" style="padding:18px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun abonnement dans ce filtre.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var row in Rows)
+                {
+                    <tr>
+                        <td>
+                            <div class="u">
+                                <GxAvatar Name="@row.FullName" Size="md"/>
+                                <div>
+                                    <div class="nm">@row.FullName</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:var(--text-sm);color:var(--text-body)">@row.Cover.PlanName</div>
+                            @if (row.Cover.AutoRenew)
+                            {
+                                <div class="gx-mini" style="margin-top:3px">
+                                    <GxIcon Name="@GxIconPaths.Refresh" Size="12"/>
+                                    Renouvellement auto
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            <span class="gx-mini"
+                                  style="@(row.Status == SubscriptionStatus.Late ? "color:var(--danger-700)" : null)">
+                                <GxIcon Name="@SubscriptionFilters.DeadlineIcon(row, Today)" Size="13"/>
+                                @SubscriptionFilters.Deadline(row, Today)
+                            </span>
+                            <div style="margin-top:6px">
+                                <GxBar Percent="@SubscriptionFilters.Gauge(row, Today)"
+                                       Tone="@SubscriptionFilters.GaugeTone(row.Status)"
+                                       Width="110px"
+                                       AriaLabel="@($"{row.Cover.PlanName} : {SubscriptionFilters.Deadline(row, Today)}")"/>
+                            </div>
+                        </td>
+                        <td>
+                            @* Nowrap: the column is narrow enough that "49 € / mois"
+                               breaks after the euro sign and reads as two figures. *@
+                            <b style="color:var(--text-strong);font-variant-numeric:tabular-nums;white-space:nowrap">
+                                @row.Cover.PriceLabel
+                            </b>
+                        </td>
+                        <td>
+                            <GxChip Tone="@SubscriptionLabels.Tone(row.Status)"
+                                    Icon="@(row.Status == SubscriptionStatus.Active ? GxIconPaths.Check : null)">
+                                @SubscriptionLabels.Label(row.Status)
+                            </GxChip>
+                        </td>
+                        <td style="text-align:right">
+                            @switch (SubscriptionFilters.ActionFor(row.Status))
+                            {
+                                case SubscriptionFilters.RowAction.Collect:
+                                    <FluentButton Appearance="Appearance.Accent"
+                                                  @onclick="() => OnCollect.InvokeAsync(row)">
+                                        <GxIcon Slot="start" Name="@GxIconPaths.Euro" Size="15"/>
+                                        Encaisser
+                                    </FluentButton>
+                                    break;
+
+                                case SubscriptionFilters.RowAction.Renew:
+                                    <FluentButton Appearance="Appearance.Outline"
+                                                  @onclick="() => OnCollect.InvokeAsync(row)">
+                                        <GxIcon Slot="start" Name="@GxIconPaths.Refresh" Size="15"/>
+                                        Renouveler
+                                    </FluentButton>
+                                    break;
+
+                                default:
+                                    <FluentButton Appearance="Appearance.Stealth" Title="Encaisser un paiement"
+                                                  aria-label="@($"Encaisser un paiement pour {row.FullName}")"
+                                                  @onclick="() => OnCollect.InvokeAsync(row)">
+                                        <GxIcon Name="@GxIconPaths.Settings" Size="17"/>
+                                    </FluentButton>
+                                    break;
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+</GxCard>
+</div>
+
+<div class="gx-grid2" style="align-items:start">
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Encaissements récents">
+                <span style="font-size:var(--text-2xs);color:var(--text-muted)">7 derniers jours</span>
+            </CardHead>
+            <div style="padding:4px 18px 10px">
+                @if (Overview.Payments.Count == 0)
+                {
+                    <div style="padding:14px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                        Aucun encaissement sur la semaine.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var payment in Overview.Payments)
+                    {
+                        <div class="gx-listrow">
+                            <div class="main">
+                                <div class="t">@payment.FullName</div>
+                                <div class="s">
+                                    @GxFormats.DayAndMonth(payment.Date) · @payment.Label ·
+                                    @SubscriptionLabels.Label(payment.Method)
+                                </div>
+                            </div>
+                            <b class="amt"
+                               style="@(payment.Status == PaymentStatus.Rejected ? "color:var(--danger-600)" : null)">
+                                @GxFormats.Amount(payment.Amount)
+                            </b>
+                            <GxChip Tone="@SubscriptionLabels.Tone(payment.Status)">
+                                @SubscriptionLabels.Label(payment.Status)
+                            </GxChip>
+                        </div>
+                    }
+                }
+            </div>
+        </GxCard>
+    </div>
+
+    <div class="gx-col">
+        <GxCard Padded="false">
+            <CardHead Title="Répartition des membres"/>
+            <div style="padding:8px 18px 16px">
+                @foreach (var plan in Overview.Plans)
+                {
+                    var covered = Overview.MemberCountOf(plan.Id);
+                    <div class="gx-statbar">
+                        <span class="nm">@plan.Name</span>
+                        <div style="flex:1">
+                            <GxBar Percent="@Share(covered)"
+                                   AriaLabel="@($"{plan.Name} : {GxFormats.Plural(covered, "membre", "membres")}")"/>
+                        </div>
+                        <span class="pct">@covered</span>
+                    </div>
+                }
+                <div class="gx-diffuse-foot" style="margin-top:8px">
+                    <GxIcon Name="@GxIconPaths.Wallet" Size="15"/>
+                    <span>
+                        Panier moyen <b>@GxFormats.Amount(Overview.Kpis.AverageBasket) / mois</b>
+                        par abonné actif.
+                    </span>
+                </div>
+            </div>
+        </GxCard>
+    </div>
+</div>
+
+@code {
+    private static readonly IReadOnlyList<Crumb.Part> _crumb =
+    [
+        new("Accueil", "/"),
+        new("Abonnements")
+    ];
+
+    [Parameter, EditorRequired] public SubscriptionOverviewDto Overview { get; set; } = SubscriptionOverviewDto.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<SubscriptionRowDto> Rows { get; set; } = [];
+    [Parameter] public SubscriptionStatus? Status { get; set; }
+    [Parameter] public DateOnly Today { get; set; }
+
+    [Parameter] public EventCallback<SubscriptionStatus?> OnFilter { get; set; }
+    [Parameter] public EventCallback<PlanDto?> OnEditPlan { get; set; }
+    [Parameter] public EventCallback<SubscriptionRowDto> OnCollect { get; set; }
+
+    /// <summary>
+    /// The bars are relative to the biggest formule rather than to the total: a
+    /// gym where one plan holds four fifths of the room would draw three slivers
+    /// nobody can compare.
+    /// </summary>
+    private int Share(int count)
+    {
+        var largest = Overview.Plans.Max(plan => (int?)Overview.MemberCountOf(plan.Id)) ?? 0;
+
+        return largest <= 0 ? 0 : (int)Math.Round(count * 100d / largest);
+    }
+}

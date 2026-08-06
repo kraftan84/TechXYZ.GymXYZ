@@ -127,6 +127,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
         modelBuilder.Entity<Subscription>(x =>
         {
+            x.Property(subscription => subscription.Price).HasPrecision(9, 2);
+            x.Property(subscription => subscription.MonthlyPrice).HasPrecision(9, 2);
+
             x.HasOne(subscription => subscription.Member)
                 .WithMany(member => member.Subscriptions)
                 .HasForeignKey(subscription => subscription.MemberId)

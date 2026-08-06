@@ -27,9 +27,23 @@ public static class SubscriptionFactory
             CreditsRemaining = plan.IsCredited ? plan.CreditCount : null,
             CreditsTotal = plan.IsCredited ? plan.CreditCount : null,
             AutoRenew = autoRenew,
-            PriceLabel = plan.FormatPriceLabel()
+            PriceLabel = plan.FormatPriceLabel(),
+            Price = plan.Price,
+            MonthlyPrice = MonthlyPriceOf(plan)
         };
     }
+
+    /// <summary>
+    /// What one month of a plan is worth to the recurring revenue. A pack is
+    /// worth nothing to it: it is bought once, and smoothing it in would have
+    /// the MRR claim money that will not come again. The business asked for that
+    /// rule explicitly, and if a blended figure is ever wanted it is a second
+    /// indicator with its own name, not this one.
+    /// </summary>
+    public static decimal MonthlyPriceOf(Plan plan) =>
+        plan.Kind == PlanKind.Recurring && plan.ValidityMonths > 0
+            ? decimal.Round(plan.Price / plan.ValidityMonths, 2)
+            : 0m;
 
     /// <summary>
     /// Last day a cover bought on <paramref name="startedOn"/> runs. The day

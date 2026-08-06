@@ -1,0 +1,28 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Shared
+@typeparam TValue where TValue : notnull
+
+@* Segmented tabs of a mobile screen. The prototype styles these inline on a
+   re-purposed date bar; this names the pattern, because the Abonnements screen
+   wants three and the Réglages want more.
+
+   The ARIA state is spelled out as a string rather than bound to a bool: Blazor
+   renders a false bool by dropping the attribute, and a tab with no
+   aria-selected reads to a screen reader as one that was never implemented. *@
+
+<div class="gx-m-tabs" role="tablist">
+    @foreach (var tab in Tabs)
+    {
+        <button type="button" role="tab"
+                class="@(Equals(tab.Value, Selected) ? "on" : null)"
+                aria-selected="@(Equals(tab.Value, Selected) ? "true" : "false")"
+                @onclick="() => OnSelect.InvokeAsync(tab.Value)">
+            @tab.Label
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<(TValue Value, string Label)> Tabs { get; set; } = [];
+    [Parameter, EditorRequired] public TValue Selected { get; set; } = default!;
+    [Parameter] public EventCallback<TValue> OnSelect { get; set; }
+}

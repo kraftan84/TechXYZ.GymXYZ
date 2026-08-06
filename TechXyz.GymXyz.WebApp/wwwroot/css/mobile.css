@@ -591,3 +591,19 @@
 .gx-m-spacer { height: 8px; }
 .gx-m-flex { display: flex; align-items: center; gap: 10px; }
 .gx-m-grow { flex: 1; min-width: 0; }
+
+/* segmented tabs of a mobile screen — Abonnements' Suivi / Formules /
+   Encaissements, and the sections of the Réglages next.
+   The prototype draws these with per-button style objects on a re-purposed
+   .gx-m-datebar; named here because a second screen wants them and because a
+   pattern styled inline in two places drifts in one of them. Not .gx-m-seg:
+   that one grew to 44x44 at lot 6 for thumbs on a pointing screen, and these
+   are labels, not targets somebody hits mid-session. */
+.gx-m-tabs { display: flex; gap: 8px; padding: 14px 0 2px; overflow-x: auto; scrollbar-width: none; }
+.gx-m-tabs::-webkit-scrollbar { display: none; }
+.gx-m-tabs button {
+  flex: none; padding: 8px 14px; border-radius: var(--radius-pill); cursor: pointer;
+  font-family: inherit; font-size: var(--text-xs); font-weight: var(--weight-bold);
+  border: 1px solid var(--border-subtle); background: var(--surface-card); color: var(--text-body);
+}
+.gx-m-tabs button.on { border-color: var(--azure-200); background: var(--azure-50); color: var(--azure-800); }

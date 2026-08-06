@@ -184,18 +184,22 @@ public class MemberDetailsPageQueryHandlerTests
             EndsOn = today.AddDays(-25),
             CreditsRemaining = 0,
             CreditsTotal = 10,
-            PriceLabel = pack.FormatPriceLabel()
+            PriceLabel = pack.FormatPriceLabel(),
+            Price = pack.Price
         };
         var member = new Member("Théo", "Garnier") { Subscriptions = [subscription] };
 
         // Both against the cover they paid for: "late" means this subscription
         // is unsettled, so a payment floating free of one cannot make it so.
+        //
+        // The debit bounced and only part of it was settled at the desk, so 60
+        // of the 120 is still owing — a failure alone would not be enough.
         member.Payments =
         [
             new Payment
             {
                 Subscription = subscription,
-                Date = today.AddDays(-40), Label = pack.Name, Amount = 120m,
+                Date = today.AddDays(-40), Label = pack.Name, Amount = 60m,
                 Method = PaymentMethod.Cash, Status = PaymentStatus.Collected
             },
             new Payment
@@ -226,6 +230,57 @@ public class MemberDetailsPageQueryHandlerTests
         // falls back to offering a new subscription.
         result.CurrentSubscription.ShouldBeNull();
         result.Subscriptions.Single().Status.ShouldBe(SubscriptionStatus.Late);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldClearTheArrears_OnceTheBouncedPaymentIsSettled()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(Handle_ShouldClearTheArrears_OnceTheBouncedPaymentIsSettled));
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var pack = TestPlans.Pack();
+        var subscription = new Subscription
+        {
+            Plan = pack,
+            StartedOn = today.AddDays(-90),
+            EndsOn = today.AddDays(-25),
+            CreditsRemaining = 0,
+            CreditsTotal = 10,
+            PriceLabel = pack.FormatPriceLabel(),
+            Price = pack.Price
+        };
+        var member = new Member("Théo", "Garnier") { Subscriptions = [subscription] };
+
+        // The direct debit bounced, and the whole 120 was then taken in cash at
+        // the desk. The failure is still on the record — it happened — but
+        // nothing is owed any more.
+        member.Payments =
+        [
+            new Payment
+            {
+                Subscription = subscription,
+                Date = today.AddDays(-4), Label = pack.Name, Amount = 120m,
+                Method = PaymentMethod.SepaDirectDebit, Status = PaymentStatus.Rejected
+            },
+            new Payment
+            {
+                Subscription = subscription,
+                Date = today.AddDays(-3), Label = pack.Name, Amount = 120m,
+                Method = PaymentMethod.Cash, Status = PaymentStatus.Collected
+            }
+        ];
+
+        dbContext.Members.Add(member);
+        await dbContext.SaveChangesAsync();
+
+        var result = await new GetMemberDetailsPageQueryHandler(dbContext)
+            .Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
+
+        // A row that kept saying "En retard" after the gym took the money would
+        // send somebody to chase it a second time.
+        result.ShouldNotBeNull();
+        result!.Subscriptions.Single().Status.ShouldBe(SubscriptionStatus.Ended);
     }
 
     [Fact]

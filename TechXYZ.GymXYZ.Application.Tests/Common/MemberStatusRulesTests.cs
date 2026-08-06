@@ -92,7 +92,8 @@ public class MemberStatusRulesTests
                         Plan = monthly,
                         StartedOn = Today.AddMonths(-2),
                         EndsOn = Today.AddDays(days),
-                        PriceLabel = monthly.FormatPriceLabel()
+                        PriceLabel = monthly.FormatPriceLabel(),
+                        Price = monthly.Price
                     }
                 ];
             }
@@ -112,7 +113,8 @@ public class MemberStatusRulesTests
                     Plan = monthly,
                     StartedOn = Today.AddDays(20),
                     EndsOn = Today.AddDays(50),
-                    PriceLabel = monthly.FormatPriceLabel()
+                    PriceLabel = monthly.FormatPriceLabel(),
+                        Price = monthly.Price
                 }
             ]
         });
@@ -165,7 +167,8 @@ public class MemberStatusRulesTests
             EndsOn = Today.AddDays(endsInDays),
             CreditsRemaining = creditsRemaining,
             CreditsTotal = pack.CreditCount,
-            PriceLabel = pack.FormatPriceLabel()
+            PriceLabel = pack.FormatPriceLabel(),
+            Price = pack.Price
         };
 
         var member = new Member("Membre", lastName) { Subscriptions = [subscription] };
@@ -207,7 +210,11 @@ public class MemberStatusRulesTests
             CreditsTotal: creditsTotal,
             PriceLabel: "49 € / mois",
             AutoRenew: true,
-            HasOutstandingPayment: hasOutstandingPayment);
+            Price: 49m,
+            // Nothing collected when a failure is being simulated, so the
+            // shortfall half of the rule holds and the cover really is owing.
+            CollectedAmount: hasOutstandingPayment ? 0m : 49m,
+            HasFailedPayment: hasOutstandingPayment);
 
     private static string NameFor(int? endsInDays)
         => endsInDays is { } days ? $"J{days + 100:D3}" : "Aucun";

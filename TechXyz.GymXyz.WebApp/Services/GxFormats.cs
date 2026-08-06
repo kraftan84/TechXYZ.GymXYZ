@@ -44,7 +44,15 @@ public static class GxFormats
 
     /// <summary>"49 €", with the narrow space the French rule asks for.</summary>
     public static string Amount(decimal amount) =>
-        $"{amount.ToString("#,##0.##", Culture).Replace(' ', ' ')}{NarrowNoBreakSpace}€";
+        $"{Number(amount)}{NarrowNoBreakSpace}€";
+
+    /// <summary>
+    /// The figure on its own — "49". For the formule cards, where the currency
+    /// already sits in the unit printed beside it ("€ / mois") and repeating it
+    /// would read "49 € € / mois".
+    /// </summary>
+    public static string Number(decimal amount) =>
+        amount.ToString("#,##0.##", Culture).Replace(' ', ' ');
 
     /// <summary>
     /// How long ago, the way the prototype writes it: "aujourd'hui", "il y a 2 j",
