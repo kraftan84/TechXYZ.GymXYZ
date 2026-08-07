@@ -160,11 +160,11 @@ public static class DbInitializer
             // therefore the only place the lockup's theme switch is exercised.
             LogoDarkPath = "/images/themes/teamtrainers-white.png",
             Email = "contact@teamtrainers.fr",
-            Phone = "04 72 44 18 90",
+            Phone = "04 50 26 84 17",
             Siret = "812 456 903 00027",
-            Street = "27 avenue Jean Jaurès",
-            ZipCode = "69007",
-            City = "Lyon 7ᵉ",
+            Street = "289A Route des Blaves",
+            ZipCode = "74200",
+            City = "Allinges",
             Country = "France",
             Capacity = 120,
             IsSolo = false,
@@ -212,8 +212,9 @@ public static class DbInitializer
             managerName: "Aurélie Siquier",
             managerNickname: "Lily",
             managerRoleLabel: "Gérante",
-            gymName: "Team Trainer's Lyon 7ᵉ",
-            fillGym: FillTeamTrainersGym);
+            gymName: "Team Trainer's Allinges",
+            fillGym: FillTeamTrainersGym,
+            coachLogins: ["marine.debord@teamtrainers.fr", "najate.amzil@teamtrainers.fr"]);
 
         await SeedSmallCustomerAsync(
             serviceProvider, dbContext, tenantContext, leyssa,
@@ -222,7 +223,10 @@ public static class DbInitializer
             managerNickname: "Naj",
             managerRoleLabel: "Coach",
             gymName: "Leyssa Coaching",
-            fillGym: FillLeyssaGym);
+            fillGym: FillLeyssaGym,
+            // She is the customer and she runs the sessions: her manager account
+            // is the account of the Coach row her planning hangs off.
+            managerCoachEmail: "najate@leyssa-coaching.fr");
 
         await SeedInvoicesAsync(dbContext, teamTrainers);
         await SeedInvoicesAsync(dbContext, leyssa);
@@ -240,6 +244,19 @@ public static class DbInitializer
     /// not the tables, gauges, chips and drawers where a hard-coded style would
     /// actually be hiding.
     /// </para>
+    /// <para>
+    /// <paramref name="coachLogins"/> names the coaches of this customer who sign
+    /// in, by the address on their <see cref="Coach"/> row. They hold
+    /// <see cref="GymRoles.Coach"/> — the role whose perimeter the screens now
+    /// enforce, so a client brand needs one to prove the partitioning holds
+    /// somewhere other than GymXYZ.
+    /// </para>
+    /// <para>
+    /// <paramref name="managerCoachEmail"/> links the manager's own account to a
+    /// <see cref="Coach"/> row, for a customer whose manager also runs sessions.
+    /// It is a separate parameter because the two addresses need not match: an
+    /// independent coach signs in as herself and is listed under her business.
+    /// </para>
     /// </summary>
     private static async Task SeedSmallCustomerAsync(
         IServiceProvider serviceProvider,
@@ -251,33 +268,49 @@ public static class DbInitializer
         string managerNickname,
         string managerRoleLabel,
         string gymName,
-        Action<GymDbContext, Gym> fillGym)
+        Action<GymDbContext, Gym> fillGym,
+        string? managerCoachEmail = null,
+        IReadOnlyList<string>? coachLogins = null)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        using (tenantContext.UseTenant(tenant.Id, tenant.Slug))
+        async Task<string> CreateAccountAsync(
+            string email,
+            string displayName,
+            string? nickname,
+            string roleLabel,
+            string role,
+            int lastSeenHoursAgo)
         {
-            var manager = new ApplicationUser
+            var user = new ApplicationUser
             {
-                UserName = managerEmail,
-                Email = managerEmail,
+                UserName = email,
+                Email = email,
                 EmailConfirmed = true,
                 TenantId = tenant.Id,
-                DisplayName = managerName,
-                Nickname = managerNickname,
-                RoleLabel = managerRoleLabel,
-                LastSeenAt = DateTime.UtcNow.AddHours(-9)
+                DisplayName = displayName,
+                Nickname = nickname,
+                RoleLabel = roleLabel,
+                LastSeenAt = DateTime.UtcNow.AddHours(-lastSeenHoursAgo)
             };
 
-            var result = await userManager.CreateAsync(manager, DemoPassword);
+            var result = await userManager.CreateAsync(user, DemoPassword);
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new InvalidOperationException(
-                    $"Could not seed the manager of {tenant.Slug}: {errors}");
+                    $"Could not seed the account {email} of {tenant.Slug}: {errors}");
             }
 
-            await userManager.AddToRoleAsync(manager, GymRoles.GymManager);
+            await userManager.AddToRoleAsync(user, role);
+            return user.Id;
+        }
+
+        using (tenantContext.UseTenant(tenant.Id, tenant.Slug))
+        {
+            var managerUserId = await CreateAccountAsync(
+                managerEmail, managerName, managerNickname, managerRoleLabel,
+                GymRoles.GymManager, lastSeenHoursAgo: 9);
 
             var gym = new Gym(gymName);
             tenant.AddGym(gym);
@@ -285,12 +318,33 @@ public static class DbInitializer
             fillGym(dbContext, gym);
 
             await dbContext.SaveChangesAsync();
+
+            // After the save, so the coaches exist and carry an id.
+            var coaches = await dbContext.Coaches.ToListAsync();
+
+            if (managerCoachEmail is not null
+                && coaches.FirstOrDefault(coach => coach.Email == managerCoachEmail) is { } managerCoach)
+            {
+                managerCoach.UserId = managerUserId;
+            }
+
+            foreach (var (email, hoursAgo) in (coachLogins ?? []).Select((email, index) => (email, 4 + index * 7)))
+            {
+                if (coaches.FirstOrDefault(coach => coach.Email == email) is not { } coach)
+                    continue;
+
+                coach.UserId = await CreateAccountAsync(
+                    email, $"{coach.FirstName} {coach.LastName}", nickname: null,
+                    coach.RoleLabel ?? "Coach", GymRoles.Coach, hoursAgo);
+            }
+
+            await dbContext.SaveChangesAsync();
         }
     }
 
     /// <summary>
-    /// Team Trainer's: a strength-led room in Lyon 7ᵉ. Two coaches, three venues,
-    /// four courses and eighteen members, with the evening classes close to full.
+    /// Team Trainer's: a strength-led room in Allinges, above Thonon. Two coaches,
+    /// three venues, four courses and eighteen members, evening classes near full.
     /// <para>
     /// Sized against its own plan rather than GymXYZ's — the customer is on
     /// "GymXYZ Studio", capped at 150 members, so eighteen leaves the billing
@@ -301,13 +355,13 @@ public static class DbInitializer
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
 
-        var site = new Site("Team Trainer's Lyon 7ᵉ")
+        var site = new Site("Team Trainer's Allinges")
         {
             Address = new Address
             {
-                Street = "27 avenue Jean Jaurès",
-                ZipCode = "69007",
-                City = "Lyon 7ᵉ",
+                Street = "289A Route des Blaves",
+                ZipCode = "74200",
+                City = "Allinges",
                 Country = "France"
             }
         };
@@ -344,42 +398,46 @@ public static class DbInitializer
 
         var coaches = new Dictionary<string, Coach>();
 
-        var marc = new Coach("Marc", "Vidal")
+        var marine = new Coach("Marine", "Debord")
         {
-            RoleLabel = "Coach cross-training · co-gérant",
-            Email = "marc.vidal@teamtrainers.fr",
+            RoleLabel = "Coach cross-training",
+            Email = "marine.debord@teamtrainers.fr",
             Phone = "06 74 12 55 30",
             JoinedOn = today.AddMonths(-41),
             Bio = "Monte les circuits du soir et suit les membres sur la technique. "
-                  + "Marc tient la salle avec Aurélie depuis l'ouverture.",
+                  + "Marine anime le plateau depuis l'ouverture de la salle.",
             AvailableOnMonday = true, AvailableOnTuesday = false, AvailableOnWednesday = true,
             AvailableOnThursday = true, AvailableOnFriday = true, AvailableOnSaturday = true,
             AvailableOnSunday = false
         };
-        marc.AddDiscipline(disciplines["Cross-training"], 0);
-        marc.AddDiscipline(disciplines["HIIT"], 1);
-        marc.AddCertification("BPJEPS AGFF — Haltérophilie & musculation", 0);
-        marc.AddCertification("Préparation physique · FFHM", 1);
+        marine.AddDiscipline(disciplines["Cross-training"], 0);
+        marine.AddDiscipline(disciplines["HIIT"], 1);
+        marine.AddCertification("BPJEPS AGFF — Haltérophilie & musculation", 0);
+        marine.AddCertification("Préparation physique · FFHM", 1);
 
-        var sonia = new Coach("Sonia", "Peyre")
+        // The same person who owns Leyssa Coaching, salaried here — the two
+        // customers are ten minutes apart, which is what makes one coach with two
+        // hats a real case rather than a demo convenience. Two accounts carry the
+        // two hats, because one account holds one tenant and one role.
+        var najate = new Coach("Najate", "Amzil")
         {
             RoleLabel = "Coach renforcement & cardio",
-            Email = "sonia.peyre@teamtrainers.fr",
-            Phone = "06 19 83 41 22",
+            Email = "najate.amzil@teamtrainers.fr",
+            Phone = "06 24 71 08 33",
             JoinedOn = today.AddMonths(-16),
-            Bio = "Anime les formats du midi et les séances cardio. Sonia accompagne "
+            Bio = "Anime les formats du midi et les séances cardio. Najate accompagne "
                   + "surtout les membres qui reprennent après une pause.",
             AvailableOnMonday = true, AvailableOnTuesday = true, AvailableOnWednesday = true,
             AvailableOnThursday = false, AvailableOnFriday = true, AvailableOnSaturday = true,
             AvailableOnSunday = false
         };
-        sonia.AddDiscipline(disciplines["Renforcement"], 0);
-        sonia.AddDiscipline(disciplines["Cardio"], 1);
-        sonia.AddDiscipline(disciplines["Coaching perso"], 2);
-        sonia.AddCertification("BPJEPS AF — Cours collectifs", 0);
-        sonia.AddCertification("PSC1 · premiers secours", 1);
+        najate.AddDiscipline(disciplines["Renforcement"], 0);
+        najate.AddDiscipline(disciplines["Cardio"], 1);
+        najate.AddDiscipline(disciplines["Coaching perso"], 2);
+        najate.AddCertification("BPJEPS AF — Cours collectifs", 0);
+        najate.AddCertification("PSC1 · premiers secours", 1);
 
-        foreach (var coach in new[] { marc, sonia })
+        foreach (var coach in new[] { marine, najate })
         {
             gym.AddCoach(coach);
             coaches[coach.FirstName] = coach;
@@ -436,22 +494,22 @@ public static class DbInitializer
                 "Cross Circuit", disciplines["Cross-training"], 60, 14, functionalRoom,
                 CourseLevel.AllLevels, CourseIntensity.High, price: null,
                 "Circuit en stations, chronométré. Le format qui remplit la salle le soir.",
-                [marc]),
+                [marine]),
             ClientTemplate(
                 "Team Strength", disciplines["Renforcement"], 60, 18, mainFloor,
                 CourseLevel.Beginner, CourseIntensity.Moderate, price: null,
                 "Mouvements de base à charge légère, en groupe. Le cours d'entrée de la salle.",
-                [sonia, marc]),
+                [najate, marine]),
             ClientTemplate(
                 "Cardio Boost", disciplines["Cardio"], 45, 18, mainFloor,
                 CourseLevel.AllLevels, CourseIntensity.High, price: null,
                 "Quarante-cinq minutes de cardio rythmé, sans matériel lourd.",
-                [sonia]),
+                [najate]),
             ClientTemplate(
                 "Coaching duo", disciplines["Coaching perso"], 60, 2, weightsRoom,
                 CourseLevel.Custom, CourseIntensity.Private, price: 60m,
                 "Séance à deux avec un coach, sur le plateau. Réservable directement.",
-                [sonia, marc])
+                [najate, marine])
         }.ToDictionary(template => template.Name);
 
         dbContext.CourseTemplates.AddRange(templates.Values);
@@ -512,12 +570,12 @@ public static class DbInitializer
         // seating anybody twice.
         var schedule = new SeededWeek(
             [
-                new("Team Strength", "Sonia", DayOfWeek.Monday, 12, 30, 11),
-                new("Cross Circuit", "Marc", DayOfWeek.Monday, 18, 30, 14),
-                new("Cardio Boost", "Sonia", DayOfWeek.Tuesday, 19, 0, 15),
-                new("Cross Circuit", "Marc", DayOfWeek.Thursday, 7, 0, 8),
-                new("Team Strength", "Marc", DayOfWeek.Friday, 18, 0, 16),
-                new("Coaching duo", "Sonia", DayOfWeek.Saturday, 10, 0, 2)
+                new("Team Strength", "Najate", DayOfWeek.Monday, 12, 30, 11),
+                new("Cross Circuit", "Marine", DayOfWeek.Monday, 18, 30, 14),
+                new("Cardio Boost", "Najate", DayOfWeek.Tuesday, 19, 0, 15),
+                new("Cross Circuit", "Marine", DayOfWeek.Thursday, 7, 0, 8),
+                new("Team Strength", "Marine", DayOfWeek.Friday, 18, 0, 16),
+                new("Coaching duo", "Najate", DayOfWeek.Saturday, 10, 0, 2)
             ],
             new Dictionary<string, int>
             {
@@ -924,12 +982,17 @@ public static class DbInitializer
     }
 
     /// <summary>
-    /// Who can sign in, as the Réglages hand-off draws it: part of the team and
-    /// part of the members hold an account, one collaborator and one member are
+    /// Who can sign in: part of the team holds an account, one collaborator is
     /// still waiting on their invitation, and the rest have never been asked.
     /// <para>
     /// Deliberately partial. A seed where everybody has an account would show
     /// the « Équipe &amp; accès » panel in the one state it never has to handle.
+    /// </para>
+    /// <para>
+    /// No member signs in. Members are reached by e-mail rather than by an
+    /// account, so seeding a member login would seed a role nothing is allowed
+    /// to hold — and, until the screens were partitioned, that login opened the
+    /// whole management console.
     /// </para>
     /// </summary>
     private static async Task SeedAccessAsync(
@@ -987,26 +1050,9 @@ public static class DbInitializer
                 GymRoles.Coach, hoursAgo);
         }
 
-        // Four of the demo six have opened their espace, one is waiting on an
-        // invitation, and Théo has never been asked.
+        // No member account: Member.UserId stays null on all six, which is what
+        // the « Comptes membres » panel now has to render for everybody.
         var members = await dbContext.Members.ToListAsync();
-
-        foreach (var (email, hoursAgo) in new[]
-                 {
-                     ("laetitia.moriceau@gymxyz.fr", 5),
-                     ("amina.benali@gymxyz.fr", 2),
-                     ("sarah.cohen@gymxyz.fr", 27),
-                     ("lucas.martin@gymxyz.fr", 96)
-                 })
-        {
-            if (members.FirstOrDefault(member => member.Email == email) is not { } member)
-                continue;
-
-            member.UserId = await CreateAccountAsync(
-                email, $"{member.FirstName} {member.LastName}", "Membre",
-                GymRoles.Member, hoursAgo);
-        }
-
         var camille = members.FirstOrDefault(member => member.Email == "camille.durand@gymxyz.fr");
 
         dbContext.Invitations.AddRange(
@@ -1017,7 +1063,9 @@ public static class DbInitializer
                 RoleName = GymRoleNames.Coach,
                 SentOn = now.AddDays(-2)
             },
-            // A member asked to open her espace.
+            // Kept although a member cannot sign in: it is the one row that puts
+            // the « Comptes membres » panel in its "invited" state, and the
+            // e-mail invitation flow will read this table rather than a new one.
             new Invitation
             {
                 Email = "camille.durand@gymxyz.fr",

@@ -2,12 +2,13 @@
 
 @* Inviter quelqu'un — an address and what it will be able to open.
 
-   The role picker offers the three a customer may hand out. PlatformAdmin is not
+   The role picker offers the two a customer may hand out. PlatformAdmin is not
    among them and is not hidden either: it is not assignable, so it is not in the
-   list the command accepts. *@
+   list the command accepts. Member left the list for the same reason — a member
+   has nothing to sign in to. *@
 
 <GxDrawer Title="Inviter"
-          Subtitle="@(MemberName ?? "Ouvrir un accès")"
+          Subtitle="Ouvrir un accès"
           Icon="@GxIconPaths.Mail"
           OnClose="OnClose">
     <ChildContent>
@@ -16,7 +17,6 @@
         <div class="gx-form-field">
             <FluentTextField Label="E-mail" TextFieldType="TextFieldType.Email"
                              @bind-Value="_email" Placeholder="prenom.nom@salle.fr"
-                             Disabled="@(MemberName is not null)"
                              style="width:100%"/>
         </div>
 
@@ -53,26 +53,19 @@
     private string _email = string.Empty;
     private string _role = GymRoleNames.Coach;
 
-    /// <summary>Pre-filled when inviting a member from their row.</summary>
-    [Parameter] public string? Email { get; set; }
-
-    /// <summary>Set when the invitation is a member's, for the drawer subtitle.</summary>
-    [Parameter] public string? MemberName { get; set; }
-
-    [Parameter] public int? MemberId { get; set; }
-
     [Parameter] public string Role { get; set; } = GymRoleNames.Coach;
 
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<InviteInput> OnSave { get; set; }
 
-    protected override void OnParametersSet()
-    {
-        _email = Email ?? string.Empty;
-        _role = Role;
-    }
+    protected override void OnParametersSet() => _role = Role;
 
-    private Task SubmitAsync() => OnSave.InvokeAsync(new InviteInput(_email, _role, MemberId));
+    private Task SubmitAsync() => OnSave.InvokeAsync(new InviteInput(_email, _role));
 
-    public sealed record InviteInput(string Email, string Role, int? MemberId);
+    /// <summary>
+    /// No member id: an invitation raised here is a colleague's. The command
+    /// still accepts one, for the e-mail flow that will invite a member to a
+    /// session without ever opening an account.
+    /// </summary>
+    public sealed record InviteInput(string Email, string Role);
 }

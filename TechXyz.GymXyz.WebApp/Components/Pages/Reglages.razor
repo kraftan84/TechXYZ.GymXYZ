@@ -67,7 +67,6 @@ else
                          OnCancel="Reset"
                          OnTouch="Touch"
                          OnInvite="OpenInviteDrawer"
-                         OnInviteMember="OpenMemberInviteDrawer"
                          OnManageAccess="OpenAccessDrawer"
                          OnManagePlans="GoToPlans"/>
     </div>
@@ -75,10 +74,7 @@ else
 
 @if (_drawer == DrawerMode.Invite)
 {
-    <InviteDrawer Email="_invitingMember?.Email"
-                  MemberName="@_invitingMember?.FullName"
-                  MemberId="_invitingMember?.MemberId"
-                  Role="_inviteRole"
+    <InviteDrawer Role="_inviteRole"
                   OnClose="CloseDrawer"
                   OnSave="InviteAsync"/>
 }
@@ -113,7 +109,6 @@ else if (_drawer == DrawerMode.Access && _managing is not null)
 
     private DrawerMode _drawer = DrawerMode.None;
     private TeamMemberDto? _managing;
-    private MemberAccountDto? _invitingMember;
     private string _inviteRole = GymRoleNames.Coach;
 
     private DateTime _now = DateTime.UtcNow;
@@ -303,14 +298,6 @@ else if (_drawer == DrawerMode.Access && _managing is not null)
     private void OpenInviteDrawer(string role)
     {
         _inviteRole = role;
-        _invitingMember = null;
-        _drawer = DrawerMode.Invite;
-    }
-
-    private void OpenMemberInviteDrawer(MemberAccountDto member)
-    {
-        _inviteRole = GymRoleNames.Member;
-        _invitingMember = member;
         _drawer = DrawerMode.Invite;
     }
 
@@ -324,7 +311,6 @@ else if (_drawer == DrawerMode.Access && _managing is not null)
     {
         _drawer = DrawerMode.None;
         _managing = null;
-        _invitingMember = null;
     }
 
     private async Task InviteAsync(InviteDrawer.InviteInput input)
@@ -332,7 +318,7 @@ else if (_drawer == DrawerMode.Access && _managing is not null)
         await UserFeedback.ExecuteAsync(async () =>
         {
             var invited = await Sender.Send(
-                new InviteTeamMemberCommand(input.Email, input.Role, input.MemberId));
+                new InviteTeamMemberCommand(input.Email, input.Role));
 
             if (!invited)
             {

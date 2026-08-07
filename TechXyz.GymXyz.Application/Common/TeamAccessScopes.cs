@@ -36,12 +36,17 @@ public static class TeamAccessScopes
     /// The roles a gym can hand out from the settings screen. PlatformAdmin is
     /// absent on purpose — a customer must not be able to grant itself the
     /// run of the platform.
+    /// <para>
+    /// Member is absent for a different reason: members do not sign in. They are
+    /// reached by e-mail, so granting the role would create an account that no
+    /// screen is meant to serve. The name survives — invitations carry it, and
+    /// <see cref="Label"/> still answers for it — but nothing can hand it out.
+    /// </para>
     /// </summary>
     public static readonly string[] Assignable =
     [
         GymRoleNames.GymManager,
-        GymRoleNames.Coach,
-        GymRoleNames.Member
+        GymRoleNames.Coach
     ];
 
     public static bool IsAssignable(string? role) => role is not null && Assignable.Contains(role);
