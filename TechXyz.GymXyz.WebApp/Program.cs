@@ -9,6 +9,7 @@ using TechXyz.GymXyz.Persistence.Data;
 using TechXyz.GymXyz.Persistence.Extensions;
 using TechXyz.GymXyz.Persistence.Identity;
 using TechXyz.GymXyz.WebApp.Components;
+using TechXyz.GymXyz.WebApp.Middleware;
 using TechXyz.GymXyz.WebApp.Services;
 
 // The product ships in French only: dates, numbers and the Fluent controls all
@@ -164,6 +165,10 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// After authentication, so the tenant claim exists; before anything renders, so
+// no component has to query for the brand. See TenantResolutionMiddleware.
+app.UseTenantResolution();
 
 app.UseAntiforgery();
 
