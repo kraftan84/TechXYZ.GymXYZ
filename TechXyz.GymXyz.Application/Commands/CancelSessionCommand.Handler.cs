@@ -14,17 +14,20 @@ public sealed class CancelSessionCommandHandler : IRequestHandler<CancelSessionC
     private readonly IEmailSender _emailSender;
     private readonly ITenantContext _tenantContext;
     private readonly IValidator<CancelSessionCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
     public CancelSessionCommandHandler(
         IGymDbContext dbContext,
         IEmailSender emailSender,
         ITenantContext tenantContext,
-        IValidator<CancelSessionCommand> validator)
+        IValidator<CancelSessionCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _emailSender = emailSender;
         _tenantContext = tenantContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<NotificationOutcomeDto> Handle(
@@ -41,6 +44,15 @@ public sealed class CancelSessionCommandHandler : IRequestHandler<CancelSessionC
         if (session is null)
         {
             return NotificationOutcomeDto.NotFound;
+        }
+
+        // Calling off a class tells its members not to come. A coach may do that
+        // for their own; doing it for somebody else's is a manager's call.
+        var scope = CoachScope.For(_currentUser);
+
+        if (!scope.Covers(session))
+        {
+            throw ValidationFailures.Refuse(SessionFieldNames.Coach, CoachScope.NotYourSession);
         }
 
         var reason = AddressHelper.NormalizeOptional(request.Reason);

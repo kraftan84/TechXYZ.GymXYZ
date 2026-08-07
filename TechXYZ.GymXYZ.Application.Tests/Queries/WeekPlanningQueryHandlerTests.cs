@@ -25,7 +25,7 @@ public class WeekPlanningQueryHandlerTests
         Seed(dbContext, "Last Sunday", monday.AddDays(-1), hour: 9);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetWeekPlanningQueryHandler(dbContext);
+        var handler = new GetWeekPlanningQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetWeekPlanningQuery(monday), CancellationToken.None);
 
         result.WeekStart.ShouldBe(monday);
@@ -46,7 +46,7 @@ public class WeekPlanningQueryHandlerTests
         Seed(dbContext, "Monday", monday, hour: 9);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetWeekPlanningQueryHandler(dbContext);
+        var handler = new GetWeekPlanningQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetWeekPlanningQuery(monday.AddDays(4)), CancellationToken.None);
 
         result.WeekStart.ShouldBe(monday);
@@ -74,7 +74,7 @@ public class WeekPlanningQueryHandlerTests
         ];
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetWeekPlanningQueryHandler(dbContext);
+        var handler = new GetWeekPlanningQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetWeekPlanningQuery(monday), CancellationToken.None);
 
         result.Sessions[0].Registered.ShouldBe(2);
@@ -100,7 +100,7 @@ public class WeekPlanningQueryHandlerTests
 
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetWeekPlanningQueryHandler(dbContext);
+        var handler = new GetWeekPlanningQueryHandler(dbContext, TestCurrentUserService.Manager());
 
         var privateOnly = await handler.Handle(
             new GetWeekPlanningQuery(monday) { Format = CourseFormat.Private }, CancellationToken.None);
@@ -130,7 +130,7 @@ public class WeekPlanningQueryHandlerTests
         Seed(dbContext, "Open Gym", monday, hour: 10, capacity: 30);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetWeekPlanningQueryHandler(dbContext);
+        var handler = new GetWeekPlanningQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetWeekPlanningQuery(monday), CancellationToken.None);
 
         result.Sessions[0].CoachShortName.ShouldBeNull();

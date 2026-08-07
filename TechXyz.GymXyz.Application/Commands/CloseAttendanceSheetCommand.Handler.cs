@@ -10,13 +10,16 @@ public sealed class CloseAttendanceSheetCommandHandler : IRequestHandler<CloseAt
 {
     private readonly IGymDbContext _dbContext;
     private readonly IValidator<CloseAttendanceSheetCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
     public CloseAttendanceSheetCommandHandler(
         IGymDbContext dbContext,
-        IValidator<CloseAttendanceSheetCommand> validator)
+        IValidator<CloseAttendanceSheetCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<bool> Handle(CloseAttendanceSheetCommand request, CancellationToken cancellationToken)
@@ -33,6 +36,7 @@ public sealed class CloseAttendanceSheetCommandHandler : IRequestHandler<CloseAt
             return false;
         }
 
+        AttendanceCompositionHelper.GuardOwned(session, CoachScope.For(_currentUser));
         AttendanceCompositionHelper.GuardWritable(session);
 
         var now = DateTime.Now;

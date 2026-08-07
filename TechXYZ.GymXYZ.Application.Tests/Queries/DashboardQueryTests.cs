@@ -267,14 +267,14 @@ public class DashboardQueryTests
     // ---- Helpers -----------------------------------------------------------
 
     private static Task<TechXyz.GymXyz.Application.Models.DashboardDto> Handle(GymDbContext dbContext) =>
-        new GetDashboardQueryHandler(dbContext).Handle(new GetDashboardQuery(), CancellationToken.None);
+        new GetDashboardQueryHandler(dbContext, TestCurrentUserService.Manager()).Handle(new GetDashboardQuery(), CancellationToken.None);
 
     private static Task<TechXyz.GymXyz.Application.Models.SubscriptionOverviewDto> Overview(GymDbContext dbContext) =>
         new GetSubscriptionOverviewQueryHandler(dbContext)
             .Handle(new GetSubscriptionOverviewQuery(), CancellationToken.None);
 
     private static Task<TechXyz.GymXyz.Application.Models.AttendanceOverviewDto> AttendanceOverview(GymDbContext dbContext) =>
-        new GetAttendanceOverviewQueryHandler(dbContext)
+        new GetAttendanceOverviewQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetAttendanceOverviewQuery(), CancellationToken.None);
 
     private static Session SeedSession(

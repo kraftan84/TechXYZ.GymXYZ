@@ -37,7 +37,7 @@ public class SoftDeleteRelationalIntegrationTests
         deleted.ShouldBeTrue();
         dbContext.Members.Single(candidate => candidate.Id == member.Id).IsActive.ShouldBeFalse();
 
-        var queryHandler = new GetMembersQueryHandler(dbContext);
+        var queryHandler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var members = await queryHandler.Handle(new GetMembersQuery(), CancellationToken.None);
         members.Items.ShouldBeEmpty();
         members.TotalCount.ShouldBe(0);

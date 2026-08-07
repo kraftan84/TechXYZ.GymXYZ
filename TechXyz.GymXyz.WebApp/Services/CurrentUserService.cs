@@ -26,6 +26,11 @@ public class CurrentUserService : ICurrentUserService
 
     public bool IsInRole(string role) => User?.IsInRole(role) ?? false;
 
+    public int? CoachId =>
+        int.TryParse(User?.FindFirstValue(GymClaimTypes.CoachId), out var coachId)
+            ? coachId
+            : null;
+
     /// <summary>
     /// Carries the signed-in user into a Blazor circuit, where there is no
     /// HttpContext to read from. Set once by TenantBoundary.

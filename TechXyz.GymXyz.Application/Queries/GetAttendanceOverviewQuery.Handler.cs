@@ -20,10 +20,12 @@ public sealed class GetAttendanceOverviewQueryHandler
     private const int ChaseThreshold = 2;
 
     private readonly IGymDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetAttendanceOverviewQueryHandler(IGymDbContext dbContext)
+    public GetAttendanceOverviewQueryHandler(IGymDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
 
     public async Task<AttendanceOverviewDto> Handle(
@@ -33,10 +35,16 @@ public sealed class GetAttendanceOverviewQueryHandler
         var now = DateTime.Now;
         var today = now.Date;
 
+        // Every figure on this screen is about the same set of sessions. Taken
+        // once so the KPIs, the two lists and the chase card cannot describe
+        // different gyms to the same person.
+        var scope = CoachScope.For(_currentUser);
+
         var (recentFrom, recentTo) = SessionStatistics.RecentAttendanceWindow(now);
         var (weekFrom, weekTo) = SessionStatistics.CurrentWeek(now);
 
-        var recent = await SessionStatistics.LoadAsync(_dbContext, recentFrom, recentTo, cancellationToken);
+        var recent = await SessionStatistics.LoadAsync(
+            _dbContext, recentFrom, recentTo, cancellationToken, scope);
 
         // The month before the one on screen, so the KPI can say which way it is
         // going rather than just where it stands.
@@ -44,9 +52,10 @@ public sealed class GetAttendanceOverviewQueryHandler
             _dbContext,
             recentFrom.AddDays(-SessionStatistics.RecentAttendanceDays),
             recentFrom,
-            cancellationToken);
+            cancellationToken,
+            scope);
 
-        var toPoint = await LoadToPointAsync(now, cancellationToken);
+        var toPoint = await LoadToPointAsync(now, scope, cancellationToken);
 
         // Counted off the list itself rather than off the facts. The facts stop
         // at "now" — that is what a rate is averaged over — so an evening class
@@ -72,9 +81,9 @@ public sealed class GetAttendanceOverviewQueryHandler
             DateOnly.FromDateTime(today),
             kpis,
             toPoint,
-            await LoadPointedAsync(cancellationToken),
+            await LoadPointedAsync(scope, cancellationToken),
             await LoadCourseRatesAsync(recent, cancellationToken),
-            await LoadToChaseAsync(recentFrom, recentTo, cancellationToken));
+            await LoadToChaseAsync(recentFrom, recentTo, scope, cancellationToken));
     }
 
     /// <summary>
@@ -98,15 +107,17 @@ public sealed class GetAttendanceOverviewQueryHandler
     /// </summary>
     private async Task<IReadOnlyList<AttendanceSessionDto>> LoadToPointAsync(
         DateTime now,
+        CoachScope scope,
         CancellationToken cancellationToken) =>
-        await AttendanceRules.OpenSheets(_dbContext, now)
+        await AttendanceRules.OpenSheets(_dbContext, now, scope)
             .OrderBy(session => session.StartsAt)
             .Select(Projection())
             .ToListAsync(cancellationToken);
 
     private async Task<IReadOnlyList<AttendanceSessionDto>> LoadPointedAsync(
+        CoachScope scope,
         CancellationToken cancellationToken) =>
-        await SessionsQuery()
+        await SessionsQuery(scope)
             .Where(session => session.AttendanceClosedAt != null)
             .OrderByDescending(session => session.StartsAt)
             .Take(RecentSheetCount)
@@ -116,10 +127,13 @@ public sealed class GetAttendanceOverviewQueryHandler
     /// <summary>
     /// A cancelled session has no sheet, so it belongs in neither list — the same
     /// exclusion <see cref="SessionStatistics.LoadAsync"/> applies to the figures.
+    /// <para>
+    /// Narrowed separately from <see cref="AttendanceRules.OpenSheets"/>: this is
+    /// the "Séances récentes" list, which that window deliberately does not cover.
+    /// </para>
     /// </summary>
-    private IQueryable<Session> SessionsQuery() =>
-        _dbContext.Sessions
-            .AsNoTracking()
+    private IQueryable<Session> SessionsQuery(CoachScope scope) =>
+        scope.Apply(_dbContext.Sessions.AsNoTracking())
             .Where(session => session.IsActive && session.Status != SessionStatus.Cancelled);
 
     private static System.Linq.Expressions.Expression<Func<Session, AttendanceSessionDto>> Projection() =>
@@ -198,8 +212,15 @@ public sealed class GetAttendanceOverviewQueryHandler
     private async Task<IReadOnlyList<AbsentMemberDto>> LoadToChaseAsync(
         DateTime from,
         DateTime to,
+        CoachScope scope,
         CancellationToken cancellationToken)
     {
+        // Narrowed through the seat's session rather than by CoachScope.Apply:
+        // the query starts from Registrations, and the card names people a coach
+        // has actually had in front of them.
+        var coachId = scope.CoachId;
+        var restricted = scope.IsRestricted;
+
         var seats = await _dbContext.Registrations
             .AsNoTracking()
             .Where(registration =>
@@ -208,7 +229,9 @@ public sealed class GetAttendanceOverviewQueryHandler
                 registration.Session!.IsActive &&
                 registration.Session.Status != SessionStatus.Cancelled &&
                 registration.Session.StartsAt >= from &&
-                registration.Session.StartsAt < to)
+                registration.Session.StartsAt < to &&
+                (!restricted ||
+                 (registration.Session.CoachId != null && registration.Session.CoachId == coachId)))
             .Select(registration => new
             {
                 registration.MemberId,

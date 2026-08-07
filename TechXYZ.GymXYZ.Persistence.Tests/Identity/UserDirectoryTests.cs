@@ -246,6 +246,8 @@ public class UserDirectoryTests
         public string? UserName => "test-user";
 
         public bool IsInRole(string role) => false;
+
+        public int? CoachId => null;
     }
 
     private sealed class TestTenantContext : ITenantContext

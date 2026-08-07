@@ -25,10 +25,13 @@
                   style="width:230px"
                   Value="@Search"
                   ValueChanged="OnSearchChanged"/>
-    <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
-        <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
-        Nouveau cours
-    </FluentButton>
+    @if (CanManage)
+    {
+        <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
+            <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+            Nouveau cours
+        </FluentButton>
+    }
 </PageHead>
 
 <div class="gx-filters">
@@ -181,6 +184,12 @@
     [Parameter] public EventCallback<bool> OnSortByPopularityChanged { get; set; }
     [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
+
+    /// <summary>
+    /// False for a coach: the command behind this button refuses them, so the
+    /// button would only be a refusal with an extra click in front of it.
+    /// </summary>
+    [Parameter] public bool CanManage { get; set; } = true;
 
     /// <summary>
     /// The participle agrees with the count too: the prototype only ever shows

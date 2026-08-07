@@ -17,14 +17,17 @@
         </div>
         <div class="contact">@Summary</div>
     </div>
-    <FluentButton Appearance="Appearance.Outline" @onclick="OnDuplicate">
-        <GxIcon Slot="start" Name="@GxIconPaths.Copy" Size="18"/>
-        Dupliquer
-    </FluentButton>
-    <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
-        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
-        Éditer
-    </FluentButton>
+    @if (CanManage)
+    {
+        <FluentButton Appearance="Appearance.Outline" @onclick="OnDuplicate">
+            <GxIcon Slot="start" Name="@GxIconPaths.Copy" Size="18"/>
+            Dupliquer
+        </FluentButton>
+        <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
+            <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
+            Éditer
+        </FluentButton>
+    }
 </div>
 
 <div class="gx-grid2" style="grid-template-columns:1.3fr 1fr;align-items:start">
@@ -174,6 +177,12 @@
 
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnDuplicate { get; set; }
+
+    /// <summary>
+    /// False for a coach: the commands behind these buttons refuse them, so
+    /// offering them would only be a refusal with an extra click in front.
+    /// </summary>
+    [Parameter] public bool CanManage { get; set; } = true;
     [Parameter] public EventCallback OnPlanning { get; set; }
 
     private IReadOnlyList<Crumb.Part> Crumbs =>

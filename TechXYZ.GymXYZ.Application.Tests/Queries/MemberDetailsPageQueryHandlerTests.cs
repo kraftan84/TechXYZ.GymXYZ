@@ -68,7 +68,7 @@ public class MemberDetailsPageQueryHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         result.ShouldNotBeNull();
@@ -126,7 +126,7 @@ public class MemberDetailsPageQueryHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         result.ShouldNotBeNull();
@@ -162,7 +162,7 @@ public class MemberDetailsPageQueryHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         result.ShouldNotBeNull();
@@ -213,7 +213,7 @@ public class MemberDetailsPageQueryHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         result.ShouldNotBeNull();
@@ -274,7 +274,7 @@ public class MemberDetailsPageQueryHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var result = await new GetMemberDetailsPageQueryHandler(dbContext)
+        var result = await new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         // A row that kept saying "En retard" after the gym took the money would
@@ -287,7 +287,7 @@ public class MemberDetailsPageQueryHandlerTests
     public async Task Handle_ShouldReturnNull_WhenMemberNotFound()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Handle_ShouldReturnNull_WhenMemberNotFound));
-        var handler = new GetMemberDetailsPageQueryHandler(dbContext);
+        var handler = new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager());
 
         var result = await handler.Handle(new GetMemberDetailsPageQuery(12345), CancellationToken.None);
 

@@ -144,7 +144,7 @@ public class CreditDebitCommandHandlerTests
             new MarkAttendanceCommand(session.Registrations!.First().Id, AttendanceStatus.Present),
             CancellationToken.None);
 
-        var whole = new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator());
+        var whole = new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator(), TestCurrentUserService.Manager());
         await whole.Handle(new MarkWholeSheetCommand(session.Id, AttendanceStatus.Present), CancellationToken.None);
         await whole.Handle(new MarkWholeSheetCommand(session.Id, AttendanceStatus.Present), CancellationToken.None);
 
@@ -162,7 +162,7 @@ public class CreditDebitCommandHandlerTests
         var (session, pack) = SeedSheetOnAPack(dbContext, seats: 3, creditsRemaining: 10);
         await dbContext.SaveChangesAsync();
 
-        var whole = new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator());
+        var whole = new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator(), TestCurrentUserService.Manager());
         await whole.Handle(new MarkWholeSheetCommand(session.Id, AttendanceStatus.Present), CancellationToken.None);
         CoversOf(session).ShouldAllBe(cover => cover.CreditsRemaining == 9);
 
@@ -194,7 +194,7 @@ public class CreditDebitCommandHandlerTests
     }
 
     private static MarkAttendanceCommandHandler Mark(GymDbContext dbContext) =>
-        new(dbContext, new MarkAttendanceCommandValidator());
+        new(dbContext, new MarkAttendanceCommandValidator(), TestCurrentUserService.Manager());
 
     private static (Session Session, Subscription Pack) SeedSheetOnAPack(
         GymDbContext dbContext,

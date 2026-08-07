@@ -33,7 +33,8 @@ else if (Responsive.IsMobile)
     <MemberDetailsMobile Member="_member"
                          Today="_today"
                          OnEdit="OpenEditDrawer"
-                         OnHistory="OpenSubscriptionsDrawer"/>
+                         OnHistory="OpenSubscriptionsDrawer"
+                         CanManage="User.IsManager"/>
 }
 else
 {
@@ -43,7 +44,8 @@ else
                               OnEdit="OpenEditDrawer"
                               OnMessage="SendMessage"
                               OnRenew="OpenRenewDrawer"
-                              OnHistory="OpenSubscriptionsDrawer"/>
+                              OnHistory="OpenSubscriptionsDrawer"
+                              CanManage="User.IsManager"/>
     </div>
 }
 
@@ -72,6 +74,8 @@ else
 }
 
 @code {
+    [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+
     private enum DrawerMode
     {
         None,

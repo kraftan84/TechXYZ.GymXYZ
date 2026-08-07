@@ -100,7 +100,7 @@ public class AttendanceCommandHandlerTests
         var session = SeedSession(dbContext, seats: 3, startsAt: DateTime.Now.AddHours(-1), waitlisted: 2);
         await dbContext.SaveChangesAsync();
 
-        await new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator())
+        await new MarkWholeSheetCommandHandler(dbContext, new MarkWholeSheetCommandValidator(), TestCurrentUserService.Manager())
             .Handle(new MarkWholeSheetCommand(session.Id, AttendanceStatus.Present), CancellationToken.None);
 
         session.Registrations!.Count(seat => seat.Status == AttendanceStatus.Present).ShouldBe(3);
@@ -206,10 +206,10 @@ public class AttendanceCommandHandlerTests
     private static GymDbContext CreateDbContext(string name) => TestInfrastructure.CreateDbContext(name);
 
     private static MarkAttendanceCommandHandler Mark(GymDbContext dbContext) =>
-        new(dbContext, new MarkAttendanceCommandValidator());
+        new(dbContext, new MarkAttendanceCommandValidator(), TestCurrentUserService.Manager());
 
     private static CloseAttendanceSheetCommandHandler Close(GymDbContext dbContext) =>
-        new(dbContext, new CloseAttendanceSheetCommandValidator());
+        new(dbContext, new CloseAttendanceSheetCommandValidator(), TestCurrentUserService.Manager());
 
     private static ReopenAttendanceSheetCommandHandler Reopen(GymDbContext dbContext, params string[] roles)
     {

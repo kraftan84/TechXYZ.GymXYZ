@@ -88,7 +88,7 @@ public class SessionRefusalMessageTests
         dbContext.Coaches.Add(coach);
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
 
         return await Should.ThrowAsync<ValidationException>(
             async () => await act(handler, new Seed(template, location, otherLocation, coach)));

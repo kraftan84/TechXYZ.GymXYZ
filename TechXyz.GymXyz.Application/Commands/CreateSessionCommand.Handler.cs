@@ -10,16 +10,30 @@ public sealed class CreateSessionCommandHandler : IRequestHandler<CreateSessionC
 {
     private readonly IGymDbContext _dbContext;
     private readonly IValidator<CreateSessionCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
-    public CreateSessionCommandHandler(IGymDbContext dbContext, IValidator<CreateSessionCommand> validator)
+    public CreateSessionCommandHandler(
+        IGymDbContext dbContext,
+        IValidator<CreateSessionCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<int> Handle(CreateSessionCommand request, CancellationToken cancellationToken)
     {
         await _validator.ValidateAndThrowAsync(request, cancellationToken);
+
+        // A coach adds classes to their own week. Putting one on a colleague's
+        // is scheduling somebody else's work, which is a manager's call.
+        var scope = CoachScope.For(_currentUser);
+
+        if (!scope.CoversCoach(request.CoachId))
+        {
+            throw ValidationFailures.Refuse(SessionFieldNames.Coach, CoachScope.NotYourSession);
+        }
 
         var template = await SessionCompositionHelper.LoadCourseTemplateAsync(
             _dbContext, request.CourseTemplateId, cancellationToken);

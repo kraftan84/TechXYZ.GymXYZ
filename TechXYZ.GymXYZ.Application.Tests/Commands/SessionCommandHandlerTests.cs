@@ -20,7 +20,7 @@ public class SessionCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Create_ShouldCopyTheCapacityOfTheCourse));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         var id = await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
 
@@ -45,7 +45,7 @@ public class SessionCommandHandlerTests
         var (template, location, coach) = await SeedCatalogueAsync(dbContext);
         var start = NextMonday(9);
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, start, coach.Id, recurrenceWeeks: 4),
             CancellationToken.None);
@@ -64,7 +64,7 @@ public class SessionCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Create_ShouldRefuseMorePeopleThanTheVenueHolds));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
 
         var act = () => handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9), capacity: 40),
@@ -80,7 +80,7 @@ public class SessionCommandHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Create_ShouldRefuseAVenueAlreadyTaken));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
 
         await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
@@ -102,7 +102,7 @@ public class SessionCommandHandlerTests
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Create_ShouldAllowBackToBackSessions));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
 
         await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
@@ -122,7 +122,7 @@ public class SessionCommandHandlerTests
         dbContext.Locations.Add(otherStudio);
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9), coach.Id), CancellationToken.None);
 
@@ -146,7 +146,7 @@ public class SessionCommandHandlerTests
         coach.AwayUntil = DateOnly.FromDateTime(DateTime.Today.AddDays(30));
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var handler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         var id = await handler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9), coach.Id), CancellationToken.None);
 
@@ -164,14 +164,14 @@ public class SessionCommandHandlerTests
         var (template, location, coach) = await SeedCatalogueAsync(dbContext);
         var start = NextMonday(9);
 
-        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         await createHandler.Handle(
             new CreateSessionCommand(template.Id, location.Id, start, coach.Id, recurrenceWeeks: 3),
             CancellationToken.None);
 
         var second = dbContext.Sessions.OrderBy(session => session.StartsAt).Skip(1).First();
 
-        var updateHandler = new UpdateSessionCommandHandler(dbContext, new UpdateSessionCommandValidator());
+        var updateHandler = new UpdateSessionCommandHandler(dbContext, new UpdateSessionCommandValidator(), TestCurrentUserService.Manager());
         var updated = await updateHandler.Handle(
             new UpdateSessionCommand(
                 second.Id,
@@ -200,7 +200,7 @@ public class SessionCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Update_ShouldRefuseACapacityBelowTheSeatsTaken));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
 
-        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         var id = await createHandler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
 
@@ -212,7 +212,7 @@ public class SessionCommandHandlerTests
             }));
         await dbContext.SaveChangesAsync();
 
-        var updateHandler = new UpdateSessionCommandHandler(dbContext, new UpdateSessionCommandValidator());
+        var updateHandler = new UpdateSessionCommandHandler(dbContext, new UpdateSessionCommandValidator(), TestCurrentUserService.Manager());
 
         var act = () => updateHandler.Handle(
             new UpdateSessionCommand(id, location.Id, NextMonday(9), capacity: 3), CancellationToken.None);
@@ -232,11 +232,11 @@ public class SessionCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Cancel_ShouldKeepTheRowAndFreeTheSlot));
         var (template, location, _) = await SeedCatalogueAsync(dbContext);
 
-        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         var id = await createHandler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9)), CancellationToken.None);
 
-        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
+        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator(), TestCurrentUserService.Manager());
         var cancelled = await cancelHandler.Handle(
             new CancelSessionCommand(id, "Coach malade"), CancellationToken.None);
 
@@ -259,14 +259,14 @@ public class SessionCommandHandlerTests
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Cancel_ShouldNotReachBackIntoThePast));
         var (template, location, coach) = await SeedCatalogueAsync(dbContext);
 
-        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator());
+        var createHandler = new CreateSessionCommandHandler(dbContext, new CreateSessionCommandValidator(), TestCurrentUserService.Manager());
         await createHandler.Handle(
             new CreateSessionCommand(template.Id, location.Id, NextMonday(9), coach.Id, recurrenceWeeks: 4),
             CancellationToken.None);
 
         var third = dbContext.Sessions.OrderBy(session => session.StartsAt).Skip(2).First();
 
-        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
+        var cancelHandler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator(), TestCurrentUserService.Manager());
         await cancelHandler.Handle(
             new CancelSessionCommand(third.Id, "Fermeture", SessionEditScope.ThisAndFollowing),
             CancellationToken.None);
@@ -288,7 +288,7 @@ public class SessionCommandHandlerTests
     public async Task Cancel_ShouldReturnFalse_WhenSessionNotFound()
     {
         await using var dbContext = TestInfrastructure.CreateDbContext(nameof(Cancel_ShouldReturnFalse_WhenSessionNotFound));
-        var handler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator());
+        var handler = new CancelSessionCommandHandler(dbContext, new TestEmailSender(), new TestTenantContext(TestInfrastructure.DefaultTenantId), new CancelSessionCommandValidator(), TestCurrentUserService.Manager());
 
         var cancelled = await handler.Handle(new CancelSessionCommand(4321), CancellationToken.None);
 

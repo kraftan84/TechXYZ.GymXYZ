@@ -395,10 +395,10 @@ public class AttendanceQueryTests
         Seat(dbContext, member, Yesterday(18).AddDays(-7), AttendanceStatus.Late);
         await dbContext.SaveChangesAsync();
 
-        var row = (await new GetMembersQueryHandler(dbContext)
+        var row = (await new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
 
-        var record = await new GetMemberDetailsPageQueryHandler(dbContext)
+        var record = await new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         row.AttendanceRate.ShouldBe(67);
@@ -424,7 +424,7 @@ public class AttendanceQueryTests
         Seat(dbContext, member, longAgo, AttendanceStatus.Present);
         await dbContext.SaveChangesAsync();
 
-        var row = (await new GetMembersQueryHandler(dbContext)
+        var row = (await new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
 
         row.AttendanceRate.ShouldBeNull();
@@ -445,7 +445,7 @@ public class AttendanceQueryTests
         Seat(dbContext, member, Today(9), AttendanceStatus.Pending);
         await dbContext.SaveChangesAsync();
 
-        var record = await new GetMemberDetailsPageQueryHandler(dbContext)
+        var record = await new GetMemberDetailsPageQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetMemberDetailsPageQuery(member.Id), CancellationToken.None);
 
         var pointed = record.PastSessions.Single(session => session.StartsAt == Yesterday(18));
@@ -471,7 +471,7 @@ public class AttendanceQueryTests
     }
 
     private static async Task<TechXyz.GymXyz.Application.Models.AttendanceOverviewDto> Overview(GymDbContext dbContext) =>
-        await new GetAttendanceOverviewQueryHandler(dbContext)
+        await new GetAttendanceOverviewQueryHandler(dbContext, TestCurrentUserService.Manager())
             .Handle(new GetAttendanceOverviewQuery(), CancellationToken.None);
 
     private static GetSessionRosterQueryHandler Roster(GymDbContext dbContext, params string[] roles)

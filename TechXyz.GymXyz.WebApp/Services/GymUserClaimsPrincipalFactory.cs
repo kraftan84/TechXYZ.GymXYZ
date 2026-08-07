@@ -51,6 +51,13 @@ public sealed class GymUserClaimsPrincipalFactory
         if (brand is not null)
             identity.AddClaim(new Claim(GymClaimTypes.TenantSlug, brand.Slug));
 
+        // Who they are on the planning. Absent for anybody with no coach row —
+        // and a coach account with none is then confined to nothing rather than
+        // widened to everything, which is CoachScope's whole job.
+        var coachId = await _sender.Send(new GetCoachIdForAccountQuery(user.Id, tenantId));
+        if (coachId is { } coach)
+            identity.AddClaim(new Claim(GymClaimTypes.CoachId, coach.ToString()));
+
         return identity;
     }
 }

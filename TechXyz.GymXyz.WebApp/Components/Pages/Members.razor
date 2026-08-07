@@ -27,7 +27,8 @@
                    OnStatusChanged="ApplyStatusAsync"
                    OnPageChanged="GoToPageAsync"
                    OnOpen="OpenMember"
-                   OnCreate="OpenCreateDrawer"/>
+                   OnCreate="OpenCreateDrawer"
+                   CanManage="User.IsManager"/>
 }
 else
 {
@@ -42,7 +43,8 @@ else
                         OnStatusChanged="ApplyStatusAsync"
                         OnPageChanged="GoToPageAsync"
                         OnOpen="OpenMember"
-                        OnCreate="OpenCreateDrawer"/>
+                        OnCreate="OpenCreateDrawer"
+                        CanManage="User.IsManager"/>
     </div>
 }
 
@@ -56,6 +58,8 @@ else
 }
 
 @code {
+    [CascadingParameter] public GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
 
     private MembersPageDto _page = MembersPageDto.Empty;
