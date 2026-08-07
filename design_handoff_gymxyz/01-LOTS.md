@@ -25,6 +25,81 @@ demande de retoucher des écrans, c'est que le lot 0 a échoué).
 
 ---
 
+## Où en est le chantier — 2026-08-07
+
+Lots **0 à 11 livrés et fusionnés**, plus un lot qui n'était pas dans ce plan.
+`main` est à `531c005`, **564 tests au vert**.
+
+| Lot | État |
+|---|---|
+| 0 Socle · 1 Membres · 2 Coachs · 3 Cours · 4 Lieux | ✅ |
+| 5 Planning · 6 Présences · 7 Abonnements | ✅ |
+| 8 Réglages · 9 Administration · 10 Accueil | ✅ |
+| 11 Marques clientes | ✅ (3 PR) |
+| **Rôles & cloisonnement** — hors plan, `LOT-ROLES-BRIEF.md` | ✅ (3 PR) |
+| 12 Portail membre | **hors V1**, voir plus bas |
+
+**Le lot « Rôles & cloisonnement » ne figurait pas ici.** Il s'est intercalé
+après le lot 11 parce qu'une décision produit a vidé le lot 12 de son objet :
+les membres ne se connectent pas. Ce qui restait debout, c'est le rôle `Coach`
+— qui voyait jusque-là le chiffre d'affaires du club et ses réglages. Trois PR :
+retrait des comptes membres du seed, politique par écran et par commande, puis
+cloisonnement des données d'un coach à ses propres séances.
+
+---
+
+## Ce qui reste pour la première version
+
+Séquence arrêtée le 2026-08-07. **Au bout de cette liste, la V1 est complète** —
+tout ce qui n'y est pas est explicitement repoussé (section suivante).
+
+| # | Chantier | Matière disponible |
+|---|---|---|
+| 1 | **Entrée 3 du registre + warnings de compilation** | `LOT-13-BRIEF.md` ; `CS8604` sur `Planning.razor:153`, `BL0008` sur `Login.razor:72` |
+| 2 | **Cloche de notifications + météo des cours extérieurs** | écart README n°2 et décision du lot 4, tous deux tranchés ci-dessous |
+| 3 | **Diffusion du planning en image** | décision du lot 10, tranchée ci-dessous |
+| 4 | **Login & onboarding** | **handoff à fournir** |
+| 5 | **Portail super-admin** | **handoff à fournir** |
+| 6 | **Comptes à casquettes multiples sur plusieurs clients** | entrée 4 du registre, qui décrit déjà le remède et son risque |
+
+**L'ordre porte deux dépendances, pas seulement une préférence.** Le point 6
+arrive **après** les points 4 et 5 parce qu'il touche la fabrique de claims, la
+connexion et l'impersonation : le faire avant obligerait à réécrire ce que
+l'onboarding et la console viennent de poser. Mais il arrive **dans la V1**, et
+pas après, parce que les points 4 et 5 sont précisément ce qui crée des comptes
+et des clients pour de vrai — livrer l'onboarding sur un modèle où un compte ne
+porte qu'un client, c'est écrire une deuxième fois la règle qu'on sait fausse.
+Les deux handoffs doivent donc être lus en sachant que le point 6 suit.
+
+Les points 4 et 5 attendent leur handoff et **ne se commencent pas par
+morceaux** en attendant.
+
+**Un septième chantier ferme la marche, hors de cette liste** : le passage aux
+migrations EF (`EnsureCreated` → `Migrate`, entrée 5 du registre), placé **juste
+avant un déploiement**. Tant que l'onboarding ne tourne qu'en développement, la
+base reste jetable et le modèle peut encore bouger sans payer une migration par
+PR ; la seule chose qui ne se négocie pas, c'est que la bascule soit faite
+**avant la première inscription réelle**.
+
+---
+
+## Décisions prises le 2026-08-07
+
+Elles referment des questions restées ouvertes dans ce document ou dans le
+README du handoff. Chacune est reportée dans le lot concerné plus bas.
+
+| Sujet | Décision |
+|---|---|
+| **Recherche globale** (écart n°1, proposée au lot 1) | **Hors V1.** La barre de la topbar reste inerte. |
+| **Notifications / cloche** (écart n°2) | **Dans la V1**, à destination des **managers et des coachs** uniquement. |
+| **Densité d'affichage** (écart n°5) | **Écartée.** Outil de maquette, non porté en produit. |
+| **Météo des cours extérieurs** (lot 4) | **Prise dans la V1** — l'appel réel, pas seulement le champ « lieu de repli ». |
+| **« Diffuser le planning »** (lot 10) | **Génère une image du planning hebdomadaire**, téléchargeable par le manager pour les réseaux sociaux. Aucun envoi. |
+| **Envoi SMS réel** (lot 8) | **Hors V1.** On s'en tient au stockage des préférences. |
+| **Portail membre** (lot 12) | **Hors V1.** Les membres ne se connectent pas ; à reprendre plus tard, design d'abord. |
+
+---
+
 ## Ordre d'exécution — pourquoi il a changé
 
 L'ordre initial du handoff plaçait l'**Accueil** en lot 1. Le handoff signalait
@@ -110,7 +185,7 @@ copiés (lot 11).
 
 ---
 
-## Lot 1 — Membres + fiche membre
+## Lot 1 — Membres + fiche membre ✅ livré
 
 *Réf. handoff initial : lot 3.* Ne dépend que du lot 0. Débloque les lots 6, 7 et 8.
 
@@ -144,7 +219,7 @@ un état vide jusqu'à leur lot — elles ne sont pas simulées.
 
 ---
 
-## Lot 2 — Coachs
+## Lot 2 — Coachs ✅ livré
 
 *Réf. handoff initial : lot 5.* Ne dépend que du lot 0. Précède Cours et Planning,
 qui référencent tous deux un coach.
@@ -170,7 +245,7 @@ seulement à vérifier.
 
 ---
 
-## Lot 3 — Cours (catalogue de modèles)
+## Lot 3 — Cours (catalogue de modèles) ✅ livré
 
 *Réf. handoff initial : lot 4.* Dépend du lot 2 (coachs rattachés).
 
@@ -197,7 +272,7 @@ calculés depuis les occurrences passées — donc vides jusqu'au lot 5.
 
 ---
 
-## Lot 4 — Lieux / studios
+## Lot 4 — Lieux / studios ✅ livré
 
 *Réf. handoff initial : lot 9.* Ne dépend que du lot 0. Remonté avant le planning,
 qui a besoin d'un lieu portant une capacité.
@@ -227,10 +302,18 @@ reprendre ensuite.
 
 > **Décision attendue** : implémenter réellement la météo + repli automatique, ou
 > se limiter au champ « lieu de repli » (recommandé pour ce lot).
+>
+> **Tranchée le 2026-08-07 : la météo réelle est prise, dans la V1.** Le lot 4 a
+> livré le champ « lieu de repli » seul, comme il le recommandait ; l'appel météo
+> se branche dessus **sans rouvrir le lot** — c'est un service et un affichage sur
+> une fiche existante, pas un changement de modèle. Il part avec la cloche
+> (point 2 de la V1). Reste à décider au plan : le fournisseur, la fenêtre de
+> prévision utile, et si le repli se **propose** ou s'**applique** — le lot 5 a
+> posé que rien ne déplace une séance sans qu'un humain le dise.
 
 ---
 
-## Lot 5 — Planning
+## Lot 5 — Planning ✅ livré
 
 *Réf. handoff initial : lot 2.* Dépend des lots 2, 3 et 4.
 
@@ -272,7 +355,7 @@ séances simultanées (alerte, pas blocage, s'il est marqué indisponible).
 
 ---
 
-## Lot 6 — Présences (pointage)
+## Lot 6 — Présences (pointage) ✅ livré
 
 *Réf. handoff initial : lot 6 — inchangé.* Dépend des lots 1 et 5.
 
@@ -304,7 +387,7 @@ C'est aussi ce lot qui produit enfin les colonnes « dernière venue » et
 
 ---
 
-## Lot 7 — Abonnements & encaissements
+## Lot 7 — Abonnements & encaissements ✅ livré
 
 *Réf. handoff initial : lot 10.* Dépend des lots 1 et 6 (le pointage décrémente les
 carnets).
@@ -342,7 +425,7 @@ Ce lot complète les colonnes « formule » et « crédits » laissées vides au
 
 ---
 
-## Lot 8 — Réglages (côté client)
+## Lot 8 — Réglages (côté client) ✅ livré
 
 *Réf. handoff initial : lot 8 — inchangé.* Dépend des lots 1 et 2.
 
@@ -379,10 +462,13 @@ d'envoi réel : stocker les préférences, brancher l'envoi dans un lot ultérie
 
 > **Décision attendue** : fournisseur SMS et budget, si l'envoi réel doit être
 > chiffré. Sinon, on s'en tient au stockage des préférences.
+>
+> **Tranchée le 2026-08-07 : pas de SMS dans la V1.** On s'en tient au stockage
+> des préférences, tel que livré. Le canal e-mail, lui, existe déjà (Brevo, lot 8).
 
 ---
 
-## Lot 9 — Administration (super-admin TechXYZ)
+## Lot 9 — Administration (super-admin TechXYZ) ✅ livré
 
 *Réf. handoff initial : lot 7.* Ne dépend que du lot 0, mais placé ici parce qu'il
 pilote des clients dont le paramétrage n'a de sens qu'une fois les lots métier
@@ -410,7 +496,7 @@ cet écran ne fait que l'exposer.
 
 ---
 
-## Lot 10 — Accueil / tableau de bord
+## Lot 10 — Accueil / tableau de bord ✅ livré
 
 *Réf. handoff initial : lot 1.* Dépend des lots 5, 6 et 7 — d'où son déplacement en
 fin de parcours.
@@ -440,10 +526,24 @@ réutilise, il n'en invente aucune. C'est tout l'intérêt de l'avoir décalé.
 > prototype affiche « Dernière diffusion : dimanche dernier · vos membres notifiés
 > par e-mail + app ». Si l'envoi réel est attendu, il dépend du canal choisi au
 > lot 8.
+>
+> **Tranchée le 2026-08-07 : le bouton génère une image du planning
+> hebdomadaire**, que le manager télécharge pour la publier sur les réseaux
+> sociaux. **Aucun envoi, aucune notification** — la mention du prototype
+> (« vos membres notifiés par e-mail + app ») ne décrit donc pas la V1 et ne doit
+> pas être reprise telle quelle à l'écran. Le bouton est aujourd'hui rendu
+> désactivé avec sa raison, à l'Accueil (desktop et mobile) **et** en tête du
+> Planning : les trois s'activent ensemble, c'est le point 3 de la V1.
+>
+> À trancher au plan : le rendu se fait **côté serveur** (une image identique
+> pour tout le monde, indépendante du navigateur) ou **côté client** depuis la
+> grille déjà rendue ; et ce que l'image porte de la marque du client — le lot 11
+> a rendu chaque tenant repeignable, une image qui ne suit pas son thème serait le
+> seul endroit du produit qui l'ignore.
 
 ---
 
-## Lot 11 — Marques clientes : Team Trainer's & Leyssa Coaching
+## Lot 11 — Marques clientes : Team Trainer's & Leyssa Coaching ✅ livré
 
 *Réf. handoff initial : lot 11 — inchangé.*
 
@@ -467,7 +567,7 @@ Si les lots précédents ont été faits correctement, ce lot ne touche **aucun 
 
 ---
 
-## Lot 12 — Portail membre (à cadrer avant de coder)
+## Lot 12 — Portail membre ❌ hors V1
 
 *Réf. handoff initial : lot 12 — inchangé.*
 
@@ -478,6 +578,17 @@ paiements. À maquetter d'abord (retour en phase design), puis lot d'implémenta
 
 > **Prérequis** : ce lot n'a pas d'entrée dans le plan tant que le design n'est pas
 > livré. Il ne bloque aucun autre lot.
+
+> **Sorti de la V1 le 2026-08-07, et pour une raison qui n'est pas un report.**
+> Les membres **ne se connecteront pas** : l'absence de maquette n'était pas un
+> retard, c'était une décision. Les quatre comptes `Member` que le seed ouvrait
+> ont été retirés (lot rôles, PR 1) et `TeamAccessScopes.Assignable` ne permet
+> plus d'en créer. Ce que ce lot promettait est repris autrement : les membres
+> sont joints **par e-mail**, et une invitation à un cours se répondra présent /
+> absent **sans connexion**. Ce parcours-là est un lot à part entière — jeton
+> signé par séance et par personne, page publique non authentifiée, décision sur
+> l'expiration — **hors V1 lui aussi**, et à ne pas entamer par morceaux.
+> Si un vrai portail revient un jour, il repart du design.
 
 ---
 
@@ -534,12 +645,33 @@ Aucune de ces règles ne sera inventée.
 | 10 | Comportement exact de « Diffuser le planning » |
 | 12 | Périmètre du portail membre — maquettes d'abord |
 
-## Écarts du README encore ouverts
+**Toutes tranchées.** Celles des lots 1 à 9 l'ont été au plan de leur lot, avant
+d'écrire du code, et sont consignées dans le lot correspondant. Les quatre
+dernières — météo (4), SMS (8), diffusion (10), portail membre (12) — l'ont été
+le 2026-08-07, section « Décisions prises » en tête de document. **Aucune règle
+métier n'a été inventée en chemin.**
 
-1. **Recherche globale** — proposition : lot 1. À confirmer.
-2. **Notifications** (cloche + point rouge) — aucun écran de liste n'existe. La
-   cloche reste inerte depuis le lot 0 ; hors périmètre jusqu'à un lot dédié.
-3. **Portail membre** — lot 12, design d'abord.
-4. **Météo / repli des cours extérieurs** — lot 4.
-5. **Densité d'affichage** — outil de maquette, non porté. Si vous la voulez en
-   produit, c'est une préférence utilisateur, à chiffrer.
+Les décisions qui restent à prendre ne sont plus dans ce tableau : elles
+appartiennent aux deux handoffs à venir (**login & onboarding**, **portail
+super-admin**) et à l'entrée 4 du registre de dette.
+
+## Écarts du README — tous arbitrés le 2026-08-07
+
+Ils étaient les cinq points que la maquette laissait sans réponse. Aucun n'est
+resté ouvert.
+
+1. **Recherche globale** — ~~proposition : lot 1~~ → **hors V1**. La barre de la
+   topbar reste inerte, et c'est désormais un choix affiché, plus une dette : rien
+   ne la promet à l'utilisateur ailleurs qu'en la voyant.
+2. **Notifications** (cloche + point rouge) — **dans la V1**, pour les **managers
+   et les coachs**. Aucun écran de liste n'existe dans la maquette : il est à
+   dessiner, et le périmètre du destinataire n'est pas le même que celui du
+   contenu — un coach est cloisonné à ses séances depuis le lot rôles, ses
+   notifications doivent l'être aussi, sinon la cloche annonce ce que l'écran
+   refuse de montrer. Point 2 de la V1, avec la météo.
+3. **Portail membre** — **hors V1**, les membres ne se connectent pas. Voir le
+   lot 12.
+4. **Météo / repli des cours extérieurs** — **dans la V1**, appel réel. Voir le
+   lot 4.
+5. **Densité d'affichage** — **écartée**. Outil de maquette, non porté ; ce serait
+   une préférence utilisateur, à chiffrer à part si elle revient.

@@ -3,6 +3,12 @@
 Ouvert le 2026-08-06, à la fin du lot 9. `main` est à `c64245d` (lot 9 PR 1),
 la PR 2 est en attente de fusion, **465 tests au vert**.
 
+> **État au 2026-08-07.** `main` est à `531c005`, **564 tests au vert**. Trois
+> entrées ouvertes (**5**, **4**, **3**), deux fermées (2, 1). Les échéances des
+> entrées 3 et 4 ont été révisées le même jour, en arrêtant la séquence de la
+> première version : elles y sont les points 1 et 6, et
+> `design_handoff_gymxyz/01-LOTS.md` porte cette séquence.
+
 Ce document n'est pas un brief de démarrage comme les autres : c'est un
 **registre qui se remplit au fil des lots**. Chaque lot découvre des choses
 qu'il aurait été malhonnête de corriger en passant — parce qu'elles dépassent
@@ -34,12 +40,62 @@ range pas en fin de programme sous prétexte qu'elle est ancienne.
 
 ## Entrées ouvertes
 
+### 5. Aucune migration EF : le schéma est créé, jamais fait évoluer
+
+**Ouverte le 2026-08-07**, en arrêtant la séquence de la V1. **Échéance fixée le
+même jour : en dernier, juste avant un déploiement** — après les six points de
+la V1, et hors d'eux.
+
+C'est un arbitrage, et il tient à une condition : `EnsureCreated` ne coûte rien
+tant que **personne d'autre que nous** ne remplit la base. Tant que l'onboarding
+ne tourne qu'en développement, la base reste jetable et le modèle peut encore
+bouger sans payer une migration par PR. Ce qui doit rester vrai jusque-là : **la
+bascule se fait avant la première inscription réelle**, pas après. Le jour où une
+donnée qu'on refuse de perdre est entrée, la migration initiale n'est plus prise
+sur une base vide et l'entrée change de nature.
+
+Cette entrée déroge à la règle du registre — elle n'est pas née d'un lot qui l'a
+rencontrée, mais d'une décision du lot 0 qu'on écrit ici parce que la V1 vient de
+lui donner une échéance. Elle est consignée comme telle, pas déguisée en
+découverte.
+
+**Observé.** `EnsureCreated` crée la base au démarrage et
+`ResetDatabaseOnStartup` la recrée en développement. Aucune migration EF n'existe
+dans `Persistence`. C'était le bon arbitrage tant que la base était jetable et
+que le seul contenu était du jeu de démonstration : douze lots ont fait bouger le
+modèle presque à chaque PR, et autant de migrations auraient été autant de
+fichiers à relire pour rien.
+
+**Ce qui change.** Les points 4 et 5 de la V1 — onboarding et portail super-admin
+— créent des clients, des comptes et des données que personne n'accepte de perdre
+au prochain démarrage. `EnsureCreated` ne sait pas faire évoluer un schéma
+existant : il crée s'il n'y a rien, et ne fait rien sinon. La première
+modification de modèle après la première vraie inscription est donc soit une
+perte de données, soit du SQL écrit à la main.
+
+**La piste.** Une migration initiale prise sur le schéma courant, puis le passage
+de `EnsureCreated` à `Migrate` — en gardant `ResetDatabaseOnStartup` pour le
+développement, qui reste utile et n'a pas à changer. Le travail n'est pas dans la
+migration initiale, il est dans la bascule : le jour où on la fait, la base de
+développement de chacun doit être recréée une fois, et le seed doit rester
+rejouable.
+
+**Le risque de la corriger.** Aucun sur le code applicatif. Le risque est de le
+faire **après** l'onboarding plutôt qu'avant : à ce moment-là, la migration
+initiale n'est plus prise sur une base vide mais sur une base qui contient déjà
+un client réel.
+
 ### 4. Un compte ne peut porter qu'un client et qu'un rôle
 
 **Ouverte le 2026-08-07**, pendant la PR 1 du lot « Rôles & cloisonnement ».
-**Échéance : avant qu'un vrai client ait deux casquettes.** Aujourd'hui c'est une
-donnée de démonstration ; le jour où c'est une personne qui paie, c'est un
-double mot de passe et une facture en double.
+**Échéance précisée le 2026-08-07 : c'est le point 6 — et le dernier — de la
+V1**, après les deux handoffs. L'entrée disait « avant qu'un vrai client ait deux
+casquettes » ; l'onboarding et le portail super-admin sont précisément ce qui
+crée des comptes pour de vrai, donc l'échéance tombe avec eux et pas après. Elle
+passe **après** eux, et non avant, parce qu'elle touche la fabrique de claims, la
+connexion et l'impersonation : la traiter d'abord obligerait à réécrire ce que
+ces deux chantiers viennent de poser. Les deux handoffs doivent être écrits en
+sachant qu'elle suit.
 
 **Observé.** Najate Amzil est coach salariée chez Team Trainer's **et** gérante
 de Leyssa Coaching. Le modèle ne sait pas l'écrire :
@@ -76,8 +132,17 @@ lire », c'est-à-dire exactement la question dont dépend le filtre global.
 ### 3. `Connection must be valid and open` sur la requête de marque
 
 **Ouverte le 2026-08-06**, en corrigeant l'entrée 1 — dont elle était un
-morceau, à tort. **Échéance : aucune tant qu'elle reste invisible** ; c'est du
-bruit de log, pas une panne.
+morceau, à tort. **Échéance révisée le 2026-08-07 : c'est le point 1 de la V1**,
+donc le prochain travail. L'entrée disait « aucune tant qu'elle reste
+invisible », et c'est toujours vrai — ce qui la fait passer devant n'est pas une
+aggravation mais le calendrier : un log qui contient une exception connue et
+tolérée est un log dans lequel on ne voit plus les nouvelles, et les deux
+chantiers qui suivent (onboarding, super-admin) sont ceux où il faudra le lire.
+Elle part avec les deux warnings de compilation du WebApp — `CS8604` sur
+`Planning.razor:153` (`Slug` possiblement nul passé à `GetTenantBrandQuery`) et
+`BL0008` sur `Login.razor:72` (propriété `[SupplyParameterFromForm]` avec
+initialiseur, écrasable par un `null` au post) — le second touchant l'écran de
+connexion, qui est justement ce que le point 4 rouvre.
 
 **Observé.** `System.InvalidOperationException: Connection must be valid and
 open`, levée dans `MySql.Data`, toujours sur la **même** requête : celle de
