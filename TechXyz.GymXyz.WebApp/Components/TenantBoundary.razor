@@ -32,6 +32,16 @@
         var principal = authenticationState.User;
 
         _brand = await TenantResolver.ResolveAsync(principal);
+
+        // Signed in and belonging to no customer: the console, not a broken
+        // address. The shell needs an identity to paint, and it gets the
+        // platform's own — with tenant 0 behind it, so the global filter lets
+        // no business row through while the admin is outside every customer.
+        if (_brand is null && principal.Identity?.IsAuthenticated == true)
+        {
+            _brand = ConsoleBrand.Instance;
+        }
+
         TenantContext.SetTenant(_brand?.Id ?? 0, _brand?.Slug);
 
         // No HttpContext inside a circuit: carry the user across explicitly so

@@ -72,4 +72,54 @@ public class GxNavigationTests
         items.ShouldNotContain(GxNavigation.Coachs);
         items.ShouldContain(GxNavigation.Reglages);
     }
+
+    [Fact]
+    public void Visible_ShouldOfferNoBusinessSection_WithoutACustomer()
+    {
+        // A platform admin who has entered nobody. Every business screen would
+        // query the ambient tenant — 0 — and come back empty, which reads as a
+        // customer with no data rather than as no customer.
+        var everything = GxNavigation.Groups
+            .SelectMany(group => group.Items)
+            .Concat(GxNavigation.MobileMore)
+            .Distinct();
+
+        var items = GxNavigation.Visible(everything, isSolo: false, hasCustomer: false).ToList();
+
+        items.ShouldBe([GxNavigation.Administration]);
+    }
+
+    [Fact]
+    public void Visible_ShouldDropReglages_WithoutACustomer()
+    {
+        // Réglages is the customer's own settings — its identity, its team, its
+        // e-mail. Named on its own because it sits in the footer rather than in
+        // a group, and is the one business entry easy to forget.
+        GxNavigation.Visible([GxNavigation.Reglages], isSolo: false, hasCustomer: false)
+            .ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Visible_ShouldChangeNothing_ForEveryOtherRole()
+    {
+        // The half of this change that could quietly take access away from a
+        // manager or a coach: anybody inside a customer must see exactly what
+        // they saw before, which is what the default overload keeps promising.
+        foreach (var solo in new[] { true, false })
+        {
+            var items = GxNavigation.Groups.SelectMany(group => group.Items);
+
+            GxNavigation.Visible(items, solo, hasCustomer: true)
+                .ShouldBe(GxNavigation.Visible(items, solo));
+        }
+    }
+
+    [Fact]
+    public void MobileTabsFor_ShouldReplaceTheFourTabs_WithTheConsole()
+    {
+        // Not an empty bar: all four tabs are about a customer, and a tab bar
+        // holding nothing but "Plus" reads as a broken shell.
+        GxNavigation.MobileTabsFor(hasCustomer: false).ShouldBe([GxNavigation.Administration]);
+        GxNavigation.MobileTabsFor(hasCustomer: true).ShouldBe(GxNavigation.MobileTabs);
+    }
 }

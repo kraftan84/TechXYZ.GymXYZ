@@ -7,7 +7,8 @@ public sealed record GxNavItem(
     string Label,
     string Icon,
     string Href,
-    bool HiddenWhenSolo = false)
+    bool HiddenWhenSolo = false,
+    bool NeedsCustomer = true)
 {
     /// <summary>
     /// The label where the box is narrow — « Abos », « Admin. ». Defaults to the
@@ -46,8 +47,13 @@ public static class GxNavigation
     public static readonly GxNavItem Lieux = new("salles", "Lieux", GxIconPaths.Pin, "/lieux");
     public static readonly GxNavItem Reglages = new("reglages", "Réglages", GxIconPaths.Settings, "/reglages");
 
+    /// <summary>
+    /// The one section that belongs to the platform rather than to a customer,
+    /// and therefore the only one still reachable when no customer is chosen.
+    /// </summary>
     public static readonly GxNavItem Administration =
-        new("administration", "Administration", GxIconPaths.Shield, "/administration") { ShortLabel = "Admin." };
+        new("administration", "Administration", GxIconPaths.Shield, "/administration", NeedsCustomer: false)
+        { ShortLabel = "Admin." };
 
     public static readonly IReadOnlyList<GxNavGroup> Groups =
     [
@@ -60,10 +66,36 @@ public static class GxNavigation
     /// <summary>Bottom tab bar. The fifth tab opens the "Plus" sheet.</summary>
     public static readonly IReadOnlyList<GxNavItem> MobileTabs = [Accueil, Planning, Presences, Membres];
 
+    /// <summary>
+    /// The tabs for this viewer. All four are about a customer, so an admin who
+    /// has entered none gets Administration in their place rather than a bar
+    /// holding nothing but "Plus" — which would read as a broken shell instead
+    /// of a console.
+    /// </summary>
+    public static IReadOnlyList<GxNavItem> MobileTabsFor(bool hasCustomer) =>
+        hasCustomer ? MobileTabs : [Administration];
+
     /// <summary>The rest of the navigation, shown in the "Plus" sheet.</summary>
     public static readonly IReadOnlyList<GxNavItem> MobileMore =
         [Coachs, Cours, Abonnements, Lieux, Reglages, Administration];
 
     public static IEnumerable<GxNavItem> Visible(IEnumerable<GxNavItem> items, bool isSolo)
-        => items.Where(item => !(item.HiddenWhenSolo && isSolo));
+        => Visible(items, isSolo, hasCustomer: true);
+
+    /// <summary>
+    /// What this viewer may see. A solo coach has no Coachs section; a platform
+    /// admin who has entered no customer has no business sections at all, because
+    /// there is no customer for them to be about — every one of those screens
+    /// would query the ambient tenant and come back empty.
+    /// <para>
+    /// Hiding them is the readable half of the fix, not the enforcing half: the
+    /// URL still has to answer for itself, which is why the resolver refuses the
+    /// host fallback rather than relying on this.
+    /// </para>
+    /// </summary>
+    public static IEnumerable<GxNavItem> Visible(
+        IEnumerable<GxNavItem> items, bool isSolo, bool hasCustomer)
+        => items.Where(item =>
+            !(item.HiddenWhenSolo && isSolo)
+            && (hasCustomer || !item.NeedsCustomer));
 }

@@ -1,7 +1,7 @@
 @* Five tabs, ≥44px targets. The fifth opens the "Plus" sheet. *@
 
 <nav class="gx-m-tabbar" aria-label="Navigation principale">
-    @foreach (var tab in GxNavigation.MobileTabs)
+    @foreach (var tab in GxNavigation.MobileTabsFor(HasCustomer))
     {
         <NavLink class="gx-m-tab" href="@tab.Href" ActiveClass="on"
                  Match="@(tab.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)"
@@ -29,6 +29,9 @@
 @code {
     [Parameter] public bool PlusActive { get; set; }
     [Parameter] public EventCallback OnPlus { get; set; }
+
+    /// <summary>False for a platform admin outside every customer.</summary>
+    [Parameter] public bool HasCustomer { get; set; } = true;
 
     /// <summary>Sheets waiting to be pointed, or null for no badge at all.</summary>
     [Parameter] public int? SheetsToPoint { get; set; }

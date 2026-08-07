@@ -30,6 +30,18 @@ public sealed class TenantResolver : ITenantResolver
 
     public async Task<TenantBrandDto?> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
     {
+        // An authenticated principal carrying no tenant claim belongs to no
+        // customer — a platform admin who has not entered one. It must NOT fall
+        // through to the host: on localhost, and on the apex domain in
+        // production, that hands back DefaultSlug and the admin silently reads
+        // a real customer's data with no TenantImpersonation row recording it.
+        //
+        // The host fallback exists for the login screen, which has to be dressed
+        // in a brand before anybody has authenticated. That is the only case it
+        // was ever meant to serve, so it is now the only one it does.
+        if (user?.Identity?.IsAuthenticated == true && SlugFromClaims(user) is null)
+            return null;
+
         var slug = SlugFromClaims(user) ?? ResolveSlugFromHost();
 
         await _gate.WaitAsync(cancellationToken);

@@ -10,7 +10,8 @@
         </div>
     </div>
     <div class="gx-m-plusgrid">
-        @foreach (var item in GxNavigation.Visible(GxNavigation.MobileMore, Brand.IsSolo))
+        @foreach (var item in GxNavigation.Visible(
+            GxNavigation.MobileMore, Brand.IsSolo, !ConsoleBrand.IsConsole(Brand)))
         {
             <button type="button" class="gx-m-plusitem" @onclick="() => GoAsync(item.Href)">
                 <span class="si">
