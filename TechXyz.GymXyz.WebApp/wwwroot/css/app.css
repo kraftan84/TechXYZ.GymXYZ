@@ -328,16 +328,30 @@ body {
 .gx-calbar .items { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .gx-cal-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--radius-pill); font-weight: var(--weight-bold); font-size: var(--text-2xs); }
 .gx-cal-pill svg { width: 12px; height: 12px; }
-.gx-cal-pill.ferie { background: var(--azure-50); color: var(--azure-800); }
+/* ------------------------------------------------------------
+   CALENDAR ANNOTATIONS — férié and vacances share one colour.
+   Both read the warning ramp, which no theme re-points, and the
+   ICON tells them apart: a star for a public holiday, a sun for
+   school holidays.
+
+   They used to differ, férié taking the accent ramp. That made it
+   follow the brand — plain grey under Team Trainer's, rose under
+   Leyssa — so in one calendar a holiday could vanish into the
+   chrome while the school-break pill beside it stayed loud. A day
+   can carry both marks at once (15 August sits inside the summer
+   break), which is why the selectors are merged rather than left
+   to the cascade.
+   ------------------------------------------------------------ */
+.gx-cal-pill.ferie,
 .gx-cal-pill.vac { background: var(--warning-50); color: var(--warning-700); }
 
 /* week strip (dashboard) day marks */
 .gx-day { position: relative; }
-.gx-day.ferie { border-color: var(--azure-200); background: var(--azure-50); }
+.gx-day.ferie,
 .gx-day.vac { border-color: var(--warning-100); background: var(--warning-50); }
 .gx-day-mark { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: var(--radius-pill); }
 .gx-day-mark svg { width: 11px; height: 11px; }
-.gx-day-mark.ferie { background: var(--azure-100); color: var(--azure-800); }
+.gx-day-mark.ferie,
 .gx-day-mark.vac { background: var(--warning-100); color: var(--warning-700); }
 
 /* calendar grid header + column marks */
@@ -345,9 +359,12 @@ body {
 .gx-hd-mark { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 4px 4px 0; padding: 1px 5px; border-radius: var(--radius-pill); font-size: 9.5px; font-weight: var(--weight-bold); line-height: 1.5; overflow: hidden; white-space: nowrap; }
 .gx-hd-mark span { overflow: hidden; text-overflow: ellipsis; }
 .gx-hd-mark svg { width: 11px; height: 11px; flex: none; }
-.gx-hd-mark.ferie { background: var(--azure-50); color: var(--azure-800); }
+.gx-hd-mark.ferie,
 .gx-hd-mark.vac { background: var(--warning-50); color: var(--warning-700); }
-.gx-cal .cell.ferie { background: color-mix(in srgb, var(--azure-50) 60%, transparent); }
+/* The two tints stay distinct here on purpose: this is the column wash behind a
+   whole day, and a férié inside a school break would otherwise double up to a
+   noticeably darker column than its neighbours. */
+.gx-cal .cell.ferie { background: color-mix(in srgb, var(--warning-50) 60%, transparent); }
 .gx-cal .cell.vac { background: color-mix(in srgb, var(--warning-50) 55%, transparent); }
 
 /* ============================================================

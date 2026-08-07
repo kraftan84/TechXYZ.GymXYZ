@@ -129,12 +129,17 @@ public static class DbInitializer
     /// describes (<c>GX_THEMES</c>), each with its manager, its brand lockup, its
     /// GymXYZ plan and its invoices.
     /// <para>
-    /// Deliberately thin compared with GymXYZ: a handful of members, and no
-    /// courses, coaches, sessions or takings. The console counts members and
-    /// shows brand and billing, and that is all these two have to answer. What
-    /// they do carry is what GymXYZ cannot demonstrate on its own — a mark with a
-    /// dark variant, a circular mark, a capped plan, and a customer with an area
-    /// instead of an address.
+    /// Smaller than GymXYZ but no longer thin. Each carries what GymXYZ cannot
+    /// demonstrate on its own — a mark with a dark variant, a circular mark, a
+    /// capped plan, a customer with an area instead of an address — and, since
+    /// lot 11, a real catalogue, timetable and membership, so that every screen
+    /// has something on it under all three brands.
+    /// </para>
+    /// <para>
+    /// They stay deliberately unalike. Team Trainer's is a small strength room
+    /// with two coaches and full evening classes; Leyssa is one coach, tiny
+    /// groups and private sessions, whose busiest course seats six. A theme that
+    /// only ever meets one shape of data proves less than one that meets three.
     /// </para>
     /// </summary>
     private static async Task SeedOtherCustomersAsync(
@@ -208,12 +213,7 @@ public static class DbInitializer
             managerNickname: "Lily",
             managerRoleLabel: "Gérante",
             gymName: "Team Trainer's Lyon 7ᵉ",
-            memberNames:
-            [
-                ("Marion", "Delaunay"), ("Kevin", "Boucher"), ("Sofia", "Marchetti"),
-                ("Hugo", "Perrin"), ("Anaïs", "Leroy"), ("Bastien", "Colin"),
-                ("Chloé", "Ferrand"), ("Yanis", "Roussel")
-            ]);
+            fillGym: FillTeamTrainersGym);
 
         await SeedSmallCustomerAsync(
             serviceProvider, dbContext, tenantContext, leyssa,
@@ -222,18 +222,24 @@ public static class DbInitializer
             managerNickname: "Naj",
             managerRoleLabel: "Coach",
             gymName: "Leyssa Coaching",
-            memberNames:
-            [
-                ("Élodie", "Bonnet"), ("Rémi", "Charpentier"), ("Inès", "Nadal")
-            ]);
+            fillGym: FillLeyssaGym);
 
         await SeedInvoicesAsync(dbContext, teamTrainers);
         await SeedInvoicesAsync(dbContext, leyssa);
     }
 
     /// <summary>
-    /// A customer reduced to what the console reads: a manager who can sign in, a
-    /// gym to hang members off, and the members themselves.
+    /// A client customer: a manager who can sign in, and a gym filled by the
+    /// brand's own <paramref name="fillGym"/>.
+    /// <para>
+    /// Until lot 11 this stopped at the manager and a handful of members with no
+    /// subscription, because the console only counts members. That was enough for
+    /// the console and not enough for anything else: with no course, no session
+    /// and no cover, every business screen of both client brands rendered its
+    /// empty state, and a theme review on empty states inspects empty states —
+    /// not the tables, gauges, chips and drawers where a hard-coded style would
+    /// actually be hiding.
+    /// </para>
     /// </summary>
     private static async Task SeedSmallCustomerAsync(
         IServiceProvider serviceProvider,
@@ -245,7 +251,7 @@ public static class DbInitializer
         string managerNickname,
         string managerRoleLabel,
         string gymName,
-        (string First, string Last)[] memberNames)
+        Action<GymDbContext, Gym> fillGym)
     {
         var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
@@ -276,20 +282,521 @@ public static class DbInitializer
             var gym = new Gym(gymName);
             tenant.AddGym(gym);
 
-            var joinedOn = DateOnly.FromDateTime(DateTime.Today).AddMonths(-7);
-
-            foreach (var (first, last) in memberNames)
-            {
-                gym.AddMember(new Member(first, last)
-                {
-                    Email = $"{Slug(first)}.{Slug(last)}@example.fr",
-                    JoinedOn = joinedOn
-                });
-            }
+            fillGym(dbContext, gym);
 
             await dbContext.SaveChangesAsync();
         }
     }
+
+    /// <summary>
+    /// Team Trainer's: a strength-led room in Lyon 7ᵉ. Two coaches, three venues,
+    /// four courses and eighteen members, with the evening classes close to full.
+    /// <para>
+    /// Sized against its own plan rather than GymXYZ's — the customer is on
+    /// "GymXYZ Studio", capped at 150 members, so eighteen leaves the billing
+    /// gauge in the readable middle of its range instead of pinned at either end.
+    /// </para>
+    /// </summary>
+    private static void FillTeamTrainersGym(GymDbContext dbContext, Gym gym)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        var site = new Site("Team Trainer's Lyon 7ᵉ")
+        {
+            Address = new Address
+            {
+                Street = "27 avenue Jean Jaurès",
+                ZipCode = "69007",
+                City = "Lyon 7ᵉ",
+                Country = "France"
+            }
+        };
+
+        var mainFloor = Studio(
+            "Plateau principal", "Cours collectifs", "grid", "brand", 18, 85m, "Rez-de-chaussée",
+            "Grande salle du rez-de-chaussée, où passent tous les formats collectifs du soir.",
+            ["Tapis ×18", "Haltères 2–30 kg", "Kettlebells", "Élastiques", "Sono"]);
+
+        var functionalRoom = Studio(
+            "Salle fonctionnelle", "Cross-training", "dumbbell", "warning", 14, 55m, "Rez-de-chaussée",
+            "Salle dédiée aux circuits et au cross-training. Sol amortissant, matériel au mur.",
+            ["Rameurs ×4", "Assault bikes ×2", "Cordes", "Box plyo", "Barres & disques"]);
+
+        var weightsRoom = Studio(
+            "Espace musculation", "Musculation · accès libre", "dumbbell", "neutral", 20, 100m, "1ᵉʳ étage",
+            "Plateau en accès libre aux heures d'ouverture. Les coachings individuels s'y déroulent aussi.",
+            ["Rack squat ×2", "Bancs", "Poulies", "Haltères 2–40 kg", "Tapis de course ×2"],
+            isOpenAccess: true);
+
+        site.AddLocation(mainFloor);
+        site.AddLocation(functionalRoom);
+        site.AddLocation(weightsRoom);
+        gym.AddSite(site);
+
+        var disciplines = CreateClientDisciplines(
+            ("Cross-training", "dumbbell", "warning"),
+            ("Renforcement", "dumbbell", "brand"),
+            ("Cardio", "trend", "warning"),
+            ("HIIT", "trend", "danger"),
+            ("Coaching perso", "user", "neutral"));
+
+        dbContext.Disciplines.AddRange(disciplines.Values);
+
+        var coaches = new Dictionary<string, Coach>();
+
+        var marc = new Coach("Marc", "Vidal")
+        {
+            RoleLabel = "Coach cross-training · co-gérant",
+            Email = "marc.vidal@teamtrainers.fr",
+            Phone = "06 74 12 55 30",
+            JoinedOn = today.AddMonths(-41),
+            Bio = "Monte les circuits du soir et suit les membres sur la technique. "
+                  + "Marc tient la salle avec Aurélie depuis l'ouverture.",
+            AvailableOnMonday = true, AvailableOnTuesday = false, AvailableOnWednesday = true,
+            AvailableOnThursday = true, AvailableOnFriday = true, AvailableOnSaturday = true,
+            AvailableOnSunday = false
+        };
+        marc.AddDiscipline(disciplines["Cross-training"], 0);
+        marc.AddDiscipline(disciplines["HIIT"], 1);
+        marc.AddCertification("BPJEPS AGFF — Haltérophilie & musculation", 0);
+        marc.AddCertification("Préparation physique · FFHM", 1);
+
+        var sonia = new Coach("Sonia", "Peyre")
+        {
+            RoleLabel = "Coach renforcement & cardio",
+            Email = "sonia.peyre@teamtrainers.fr",
+            Phone = "06 19 83 41 22",
+            JoinedOn = today.AddMonths(-16),
+            Bio = "Anime les formats du midi et les séances cardio. Sonia accompagne "
+                  + "surtout les membres qui reprennent après une pause.",
+            AvailableOnMonday = true, AvailableOnTuesday = true, AvailableOnWednesday = true,
+            AvailableOnThursday = false, AvailableOnFriday = true, AvailableOnSaturday = true,
+            AvailableOnSunday = false
+        };
+        sonia.AddDiscipline(disciplines["Renforcement"], 0);
+        sonia.AddDiscipline(disciplines["Cardio"], 1);
+        sonia.AddDiscipline(disciplines["Coaching perso"], 2);
+        sonia.AddCertification("BPJEPS AF — Cours collectifs", 0);
+        sonia.AddCertification("PSC1 · premiers secours", 1);
+
+        foreach (var coach in new[] { marc, sonia })
+        {
+            gym.AddCoach(coach);
+            coaches[coach.FirstName] = coach;
+        }
+
+        var plans = CreateClientPlans(
+            new Plan
+            {
+                Name = "Illimité mensuel",
+                ShortName = "Illimité",
+                Price = 45m,
+                Unit = "€ / mois",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 1,
+                BillingLabel = "Sans engagement",
+                Description = "Accès illimité aux cours collectifs et au plateau.",
+                Tone = "brand",
+                IsFeatured = true,
+                Rank = 0
+            },
+            new Plan
+            {
+                Name = "Carte 10 séances",
+                ShortName = "Carte 10",
+                Price = 99m,
+                Unit = "€ / carte",
+                Kind = PlanKind.CreditPack,
+                CreditCount = 10,
+                ValidityMonths = 4,
+                BillingLabel = "Paiement unique",
+                Description = "10 entrées valables 4 mois.",
+                Tone = "neutral",
+                Rank = 1
+            },
+            new Plan
+            {
+                Name = "Illimité annuel",
+                ShortName = "Annuel",
+                Price = 450m,
+                Unit = "€ / an",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 12,
+                BillingLabel = "Engagement 12 mois",
+                Description = "Deux mois offerts sur l'année.",
+                Tone = "warning",
+                Rank = 2
+            });
+
+        dbContext.Plans.AddRange(plans.Values);
+
+        var templates = new[]
+        {
+            ClientTemplate(
+                "Cross Circuit", disciplines["Cross-training"], 60, 14, functionalRoom,
+                CourseLevel.AllLevels, CourseIntensity.High, price: null,
+                "Circuit en stations, chronométré. Le format qui remplit la salle le soir.",
+                [marc]),
+            ClientTemplate(
+                "Team Strength", disciplines["Renforcement"], 60, 18, mainFloor,
+                CourseLevel.Beginner, CourseIntensity.Moderate, price: null,
+                "Mouvements de base à charge légère, en groupe. Le cours d'entrée de la salle.",
+                [sonia, marc]),
+            ClientTemplate(
+                "Cardio Boost", disciplines["Cardio"], 45, 18, mainFloor,
+                CourseLevel.AllLevels, CourseIntensity.High, price: null,
+                "Quarante-cinq minutes de cardio rythmé, sans matériel lourd.",
+                [sonia]),
+            ClientTemplate(
+                "Coaching duo", disciplines["Coaching perso"], 60, 2, weightsRoom,
+                CourseLevel.Custom, CourseIntensity.Private, price: 60m,
+                "Séance à deux avec un coach, sur le plateau. Réservable directement.",
+                [sonia, marc])
+        }.ToDictionary(template => template.Name);
+
+        dbContext.CourseTemplates.AddRange(templates.Values);
+
+        // Eighteen members, and deliberately not all in good standing: the
+        // members table and the abonnements screen are where status chips live,
+        // and a table where every row reads "Actif" shows one chip out of four.
+        var members = new List<Member>
+        {
+            ClientMember("Marion", "Delaunay", "teamtrainers.fr", "06 31 44 20 18", 26, today,
+                plans["Illimité mensuel"], -10, 20,
+                notes: "Vient surtout le soir, après le travail."),
+            ClientMember("Kevin", "Boucher", "teamtrainers.fr", "06 52 09 77 41", 22, today,
+                plans["Illimité annuel"], -120, 245),
+            ClientMember("Sofia", "Marchetti", "teamtrainers.fr", "06 27 65 13 09", 19, today,
+                plans["Carte 10 séances"], -30, 6, creditsRemaining: 2),
+            ClientMember("Hugo", "Perrin", "teamtrainers.fr", "06 84 31 52 76", 17, today,
+                plans["Illimité mensuel"], -18, 12),
+            ClientMember("Anaïs", "Leroy", "teamtrainers.fr", "06 60 18 94 23", 15, today,
+                plans["Illimité mensuel"], -5, 25),
+            ClientMember("Bastien", "Colin", "teamtrainers.fr", "06 45 72 30 61", 14, today,
+                plans["Carte 10 séances"], -95, -12, creditsRemaining: 0,
+                notes: "Carte expirée, n'a pas renouvelé depuis le printemps."),
+            ClientMember("Chloé", "Ferrand", "teamtrainers.fr", "06 11 58 42 90", 13, today,
+                plans["Illimité mensuel"], -22, 8),
+            ClientMember("Yanis", "Roussel", "teamtrainers.fr", "06 93 26 71 05", 12, today,
+                plans["Illimité annuel"], -60, 305),
+            ClientMember("Émilie", "Fabre", "teamtrainers.fr", "06 38 90 15 47", 11, today,
+                plans["Illimité mensuel"], -14, 16),
+            ClientMember("Nicolas", "Weber", "teamtrainers.fr", "06 70 43 28 12", 10, today,
+                plans["Illimité mensuel"], -8, 22),
+            ClientMember("Laura", "Guyot", "teamtrainers.fr", "06 24 61 83 55", 9, today,
+                plans["Carte 10 séances"], -20, 40, creditsRemaining: 7),
+            ClientMember("Tristan", "Meyer", "teamtrainers.fr", "06 57 12 39 84", 8, today,
+                plans["Illimité mensuel"], -26, 4),
+            ClientMember("Océane", "Vasseur", "teamtrainers.fr", "06 02 77 46 31", 7, today,
+                plans["Illimité mensuel"], -12, 18),
+            ClientMember("Adrien", "Pichon", "teamtrainers.fr", "06 66 34 09 27", 6, today,
+                plans["Illimité annuel"], -30, 335),
+            ClientMember("Manon", "Leclerc", "teamtrainers.fr", "06 48 21 65 73", 5, today,
+                plans["Illimité mensuel"], -16, 14),
+            ClientMember("Julien", "Barre", "teamtrainers.fr", "06 15 88 52 40", 4, today,
+                plans["Illimité mensuel"], -3, 27),
+            ClientMember("Sarah", "Nguyen", "teamtrainers.fr", "06 79 05 31 68", 3, today,
+                plans["Carte 10 séances"], -45, 30, creditsRemaining: 4),
+            ClientMember("Romain", "Teixeira", "teamtrainers.fr", "06 36 47 90 12", 45, today,
+                plans["Illimité mensuel"], -20, 10, joinedDaysAgo: 21,
+                notes: "Inscrit ce mois-ci, découvre les circuits du mardi.")
+        };
+
+        foreach (var member in members)
+        {
+            gym.AddMember(member);
+        }
+
+        // Six slots, none above fourteen seats: the room tops out at eighteen and
+        // the pool at eighteen members, so a full evening class is full without
+        // seating anybody twice.
+        var schedule = new SeededWeek(
+            [
+                new("Team Strength", "Sonia", DayOfWeek.Monday, 12, 30, 11),
+                new("Cross Circuit", "Marc", DayOfWeek.Monday, 18, 30, 14),
+                new("Cardio Boost", "Sonia", DayOfWeek.Tuesday, 19, 0, 15),
+                new("Cross Circuit", "Marc", DayOfWeek.Thursday, 7, 0, 8),
+                new("Team Strength", "Marc", DayOfWeek.Friday, 18, 0, 16),
+                new("Coaching duo", "Sonia", DayOfWeek.Saturday, 10, 0, 2)
+            ],
+            new Dictionary<string, int>
+            {
+                ["Coaching duo"] = 97,
+                ["Cross Circuit"] = 89,
+                ["Team Strength"] = 83,
+                ["Cardio Boost"] = 76
+            },
+            // Bastien (5), whose card ran out, and Tristan (11). Both offsets
+            // clear 20 so they overlap RegularReliability's 120–220 band: below
+            // that, a member is ranked last in every session they are seated in
+            // and comes out at nought per cent with no last visit — somebody who
+            // never came rather than somebody to chase.
+            new Dictionary<int, int> { [5] = 60, [11] = 90 });
+
+        dbContext.Sessions.AddRange(CreateSessions(templates, coaches, members, schedule));
+    }
+
+    /// <summary>
+    /// Leyssa Coaching: one coach, tiny groups, half of it at the member's home.
+    /// <para>
+    /// The interesting shape here is the opposite of Team Trainer's — nothing is
+    /// ever full because nothing seats more than six, and two of the three
+    /// courses are one-to-one. It is also the only customer whose coach is the
+    /// person who signs in, and whose Coachs section is hidden by
+    /// <c>IsSolo</c> while its sessions still carry her name.
+    /// </para>
+    /// </summary>
+    private static void FillLeyssaGym(GymDbContext dbContext, Gym gym)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        // No Site at all: an itinerant coach has an area, not a building — the
+        // same rule that gives the tenant an AreaLabel instead of a street.
+        var studio = Studio(
+            "Studio Rives", "Petit groupe", "sparkles", "brand", 6, 32m, "Rez-de-chaussée",
+            "Salle louée à l'heure au bord du lac, pour les cours en petit comité.",
+            ["Tapis ×6", "Briques", "Sangles", "Bolsters", "Parquet"]);
+
+        var home = WithEquipment(
+            new Location("À domicile")
+            {
+                Kind = LocationKind.Home,
+                TypeLabel = "Chez le membre",
+                IconKey = "home",
+                Tone = "neutral",
+                Capacity = 1,
+                Note = "Séances individuelles au domicile du membre, dans la zone d'intervention. "
+                       + "Najate apporte son matériel."
+            },
+            ["Matériel apporté par la coach"]);
+
+        var lakeside = WithEquipment(
+            new Location("Quai de Rives")
+            {
+                Kind = LocationKind.Outdoor,
+                TypeLabel = "Plein air · mobilité",
+                IconKey = "tree",
+                Tone = "success",
+                Capacity = 6,
+                Note = "Séances de mobilité au bord du lac dès les beaux jours. "
+                       + "Repli au studio en cas de pluie.",
+                IsWeatherDependent = true,
+                FallbackLocation = studio
+            },
+            ["Tapis transportables", "Élastiques"]);
+
+        dbContext.Locations.AddRange(studio, home, lakeside);
+
+        var disciplines = CreateClientDisciplines(
+            ("Yoga", "sparkles", "success"),
+            ("Pilates", "target", "brand"),
+            ("Mobilité", "target", "success"),
+            ("Coaching perso", "user", "neutral"));
+
+        dbContext.Disciplines.AddRange(disciplines.Values);
+
+        // The coach is the account holder. The Coachs section is hidden for a
+        // solo customer, but her sessions still have to carry a name — which is
+        // exactly the case a hidden navigation entry must not break.
+        var najate = new Coach("Najate", "Amzil")
+        {
+            RoleLabel = "Coach · fondatrice",
+            Email = "najate@leyssa-coaching.fr",
+            Phone = "06 24 71 08 33",
+            JoinedOn = today.AddMonths(-34),
+            Bio = "Coach indépendante à Thonon. Najate travaille en petits groupes et "
+                  + "à domicile, surtout sur la mobilité et le renforcement doux.",
+            AvailableOnMonday = true, AvailableOnTuesday = true, AvailableOnWednesday = true,
+            AvailableOnThursday = true, AvailableOnFriday = true, AvailableOnSaturday = true,
+            AvailableOnSunday = false
+        };
+        najate.AddDiscipline(disciplines["Yoga"], 0);
+        najate.AddDiscipline(disciplines["Pilates"], 1);
+        najate.AddDiscipline(disciplines["Mobilité"], 2);
+        najate.AddDiscipline(disciplines["Coaching perso"], 3);
+        najate.AddCertification("Yoga Alliance 200h", 0);
+        najate.AddCertification("Pilates Mat · niveau 2", 1);
+        najate.AddCertification("PSC1 · premiers secours", 2);
+
+        gym.AddCoach(najate);
+        var coaches = new Dictionary<string, Coach> { ["Najate"] = najate };
+
+        var plans = CreateClientPlans(
+            new Plan
+            {
+                Name = "Suivi mensuel",
+                ShortName = "Suivi",
+                Price = 90m,
+                Unit = "€ / mois",
+                Kind = PlanKind.Recurring,
+                ValidityMonths = 1,
+                BillingLabel = "Sans engagement",
+                Description = "Deux séances par semaine, en groupe ou à domicile.",
+                Tone = "brand",
+                IsFeatured = true,
+                Rank = 0
+            },
+            new Plan
+            {
+                Name = "Carte 5 séances",
+                ShortName = "Carte 5",
+                Price = 250m,
+                Unit = "€ / carte",
+                Kind = PlanKind.CreditPack,
+                CreditCount = 5,
+                ValidityMonths = 3,
+                BillingLabel = "Paiement unique",
+                Description = "5 séances individuelles valables 3 mois.",
+                Tone = "neutral",
+                Rank = 1
+            });
+
+        dbContext.Plans.AddRange(plans.Values);
+
+        var templates = new[]
+        {
+            ClientTemplate(
+                "Yoga doux", disciplines["Yoga"], 60, 6, studio,
+                CourseLevel.AllLevels, CourseIntensity.Gentle, price: null,
+                "Séance lente en petit groupe, respiration et étirements.",
+                [najate]),
+            ClientTemplate(
+                "Mobilité au lac", disciplines["Mobilité"], 45, 6, lakeside,
+                CourseLevel.AllLevels, CourseIntensity.Gentle, price: null,
+                "Mobilité articulaire en extérieur, face au lac. Repli au studio s'il pleut.",
+                [najate]),
+            ClientTemplate(
+                "Coaching individuel", disciplines["Coaching perso"], 60, 1, home,
+                CourseLevel.Custom, CourseIntensity.Private, price: 55m,
+                "Séance individuelle au domicile du membre, adaptée à son objectif.",
+                [najate])
+        }.ToDictionary(template => template.Name);
+
+        dbContext.CourseTemplates.AddRange(templates.Values);
+
+        var members = new List<Member>
+        {
+            ClientMember("Élodie", "Bonnet", "example.fr", "06 82 14 60 37", 20, today,
+                plans["Suivi mensuel"], -9, 21,
+                notes: "Séances à domicile le mardi matin."),
+            ClientMember("Rémi", "Charpentier", "example.fr", "06 47 03 91 25", 16, today,
+                plans["Carte 5 séances"], -40, 50, creditsRemaining: 2),
+            ClientMember("Inès", "Nadal", "example.fr", "06 30 58 27 14", 13, today,
+                plans["Suivi mensuel"], -19, 11),
+            ClientMember("Claire", "Mestre", "example.fr", "06 65 22 84 09", 9, today,
+                plans["Suivi mensuel"], -4, 26),
+            ClientMember("Fanny", "Dorel", "example.fr", "06 08 76 43 51", 6, today,
+                plans["Carte 5 séances"], -80, -6, creditsRemaining: 0,
+                notes: "Carte terminée, doit reprendre à la rentrée."),
+            ClientMember("Antoine", "Ruiz", "example.fr", "06 91 37 15 62", 30, today,
+                plans["Suivi mensuel"], -13, 17, joinedDaysAgo: 34)
+        };
+
+        foreach (var member in members)
+        {
+            gym.AddMember(member);
+        }
+
+        // Four slots for one coach, and none of them big. "Coaching individuel"
+        // seats exactly one, which is what makes a private session read as
+        // private rather than as an empty class.
+        var schedule = new SeededWeek(
+            [
+                new("Yoga doux", "Najate", DayOfWeek.Monday, 9, 30, 5),
+                new("Coaching individuel", "Najate", DayOfWeek.Tuesday, 10, 0, 1),
+                new("Mobilité au lac", "Najate", DayOfWeek.Thursday, 18, 0, 6),
+                new("Yoga doux", "Najate", DayOfWeek.Saturday, 10, 30, 6)
+            ],
+            new Dictionary<string, int>
+            {
+                ["Coaching individuel"] = 100,
+                ["Yoga doux"] = 88,
+                ["Mobilité au lac"] = 80
+            },
+            // Fanny (4), whose card ran out — same overlap rule as Team
+            // Trainer's, and it bites harder here: with four slots and six
+            // members she is seated in nearly everything.
+            new Dictionary<int, int> { [4] = 65 });
+
+        dbContext.Sessions.AddRange(CreateSessions(templates, coaches, members, schedule));
+    }
+
+    /// <summary>
+    /// Builds a client's discipline referential from its own short list. Named
+    /// apart from <see cref="CreateDisciplines"/> on purpose: a params overload
+    /// of the same name would also match the no-argument call GymXYZ makes.
+    /// </summary>
+    private static Dictionary<string, Discipline> CreateClientDisciplines(
+        params (string Name, string IconKey, string Tone)[] specs) =>
+        specs
+            .Select(spec => new Discipline(spec.Name) { IconKey = spec.IconKey, Tone = spec.Tone })
+            .ToDictionary(discipline => discipline.Name);
+
+    /// <summary>Keys a client's formules by name, the way <see cref="CreatePlans"/> does for GymXYZ.</summary>
+    private static Dictionary<string, Plan> CreateClientPlans(params Plan[] plans) =>
+        plans.ToDictionary(plan => plan.Name);
+
+    /// <summary>
+    /// A client's course, taking its venue and coaches as objects rather than by
+    /// name — a small customer's catalogue is short enough to read inline, and
+    /// the lookup dictionaries GymXYZ needs would be more ceremony than help.
+    /// </summary>
+    private static CourseTemplate ClientTemplate(
+        string name,
+        Discipline discipline,
+        int durationMinutes,
+        int capacity,
+        Location defaultLocation,
+        CourseLevel level,
+        CourseIntensity intensity,
+        decimal? price,
+        string description,
+        Coach[] coaches)
+    {
+        var template = new CourseTemplate(name)
+        {
+            Discipline = discipline,
+            DurationMinutes = durationMinutes,
+            Capacity = capacity,
+            DefaultLocation = defaultLocation,
+            Level = level,
+            Intensity = intensity,
+            Price = price,
+            Description = description
+        };
+
+        for (var rank = 0; rank < coaches.Length; rank++)
+        {
+            template.AddCoach(coaches[rank], rank);
+        }
+
+        return template;
+    }
+
+    /// <summary>
+    /// A client's member, with the same cover chain GymXYZ's people get — the
+    /// e-mail domain is the only thing that changes, since a gym's members use
+    /// their own addresses and a solo coach's are private individuals.
+    /// </summary>
+    private static Member ClientMember(
+        string firstName,
+        string lastName,
+        string emailDomain,
+        string phone,
+        int joinedMonthsAgo,
+        DateOnly today,
+        Plan plan,
+        int subscriptionStartsInDays,
+        int subscriptionEndsInDays,
+        int? creditsRemaining = null,
+        string? notes = null,
+        int? joinedDaysAgo = null) =>
+        CreateMember(
+            firstName, lastName,
+            $"{Slug(firstName)}.{Slug(lastName)}@{emailDomain}", phone,
+            joinedMonthsAgo, today, plan,
+            subscriptionStartsInDays, subscriptionEndsInDays,
+            creditsRemaining, autoRenew: true, notes, joinedDaysAgo);
 
     /// <summary>
     /// What the customer owes TechXYZ. One invoice a year at the plan's yearly
@@ -588,7 +1095,7 @@ public static class DbInitializer
             .ToDictionary(template => template.Name);
         dbContext.CourseTemplates.AddRange(courseTemplates.Values);
 
-        dbContext.Sessions.AddRange(CreateSessions(courseTemplates, coaches, members));
+        dbContext.Sessions.AddRange(CreateSessions(courseTemplates, coaches, members, GymXyzWeek));
 
         dbContext.Gyms.Add(gym);
         await dbContext.SaveChangesAsync();
@@ -605,32 +1112,6 @@ public static class DbInitializer
     /// </summary>
     private static Dictionary<string, Location> CreateLocations()
     {
-        Location Studio(
-            string name,
-            string typeLabel,
-            string iconKey,
-            string tone,
-            int capacity,
-            decimal areaSqm,
-            string floor,
-            string note,
-            string[] equipment,
-            bool isOpenAccess = false) =>
-            WithEquipment(
-                new Location(name)
-                {
-                    Kind = LocationKind.Studio,
-                    TypeLabel = typeLabel,
-                    IconKey = iconKey,
-                    Tone = tone,
-                    Capacity = capacity,
-                    AreaSqm = areaSqm,
-                    Floor = floor,
-                    Note = note,
-                    IsOpenAccess = isOpenAccess
-                },
-                equipment);
-
         var studioA = Studio(
             "Studio A", "Cours collectifs", "grid", "brand", 20, 65m, "Rez-de-chaussée",
             "Grande salle polyvalente pour les formats collectifs — renforcement, HIIT, pilates.",
@@ -697,6 +1178,33 @@ public static class DbInitializer
         return new List<Location> { studioA, studioB, studioC, openGym, park, home }
             .ToDictionary(location => location.Name);
     }
+
+    /// <summary>An indoor room, with its kit. Shared by every customer's venues.</summary>
+    private static Location Studio(
+        string name,
+        string typeLabel,
+        string iconKey,
+        string tone,
+        int capacity,
+        decimal areaSqm,
+        string floor,
+        string note,
+        string[] equipment,
+        bool isOpenAccess = false) =>
+        WithEquipment(
+            new Location(name)
+            {
+                Kind = LocationKind.Studio,
+                TypeLabel = typeLabel,
+                IconKey = iconKey,
+                Tone = tone,
+                Capacity = capacity,
+                AreaSqm = areaSqm,
+                Floor = floor,
+                Note = note,
+                IsOpenAccess = isOpenAccess
+            },
+            equipment);
 
     private static Location WithEquipment(Location location, string[] equipment)
     {
@@ -1314,6 +1822,31 @@ public static class DbInitializer
         int Occupancy);
 
     /// <summary>
+    /// Everything about a customer's week that differs from another's: the slots
+    /// themselves, how well each course is attended, and who the chronic
+    /// absentees are.
+    /// <para>
+    /// These three were static fields describing GymXYZ until lot 11 gave the two
+    /// client brands a real timetable of their own. They travel together because
+    /// they are read together — the rates are keyed by the course names the slots
+    /// mention, and the absentee indices point into the same member list the
+    /// slots are filled from.
+    /// </para>
+    /// </summary>
+    private sealed record SeededWeek(
+        WeeklySlot[] Slots,
+        IReadOnlyDictionary<string, int> AttendanceRates,
+        IReadOnlyDictionary<int, int> ChronicAbsentees);
+
+    /// <summary>
+    /// GymXYZ's week, unchanged from lot 1. Its figures are what three lots of
+    /// screenshots were checked against, so nothing here may move when a client
+    /// gets a timetable.
+    /// </summary>
+    private static SeededWeek GymXyzWeek =>
+        new(DemoWeek, CourseAttendanceRates, ChronicAbsentees);
+
+    /// <summary>
     /// The demo week, taken from the coaches' weekly schedules in the prototype.
     /// <para>
     /// Only courses the catalogue actually holds are here. The prototype's
@@ -1429,14 +1962,15 @@ public static class DbInitializer
     private static IEnumerable<Session> CreateSessions(
         IReadOnlyDictionary<string, CourseTemplate> courseTemplates,
         IReadOnlyDictionary<string, Coach> coaches,
-        IReadOnlyList<Member> members)
+        IReadOnlyList<Member> members,
+        SeededWeek schedule)
     {
         var today = DateTime.Today;
         var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
 
-        for (var slotIndex = 0; slotIndex < DemoWeek.Length; slotIndex++)
+        for (var slotIndex = 0; slotIndex < schedule.Slots.Length; slotIndex++)
         {
-            var slot = DemoWeek[slotIndex];
+            var slot = schedule.Slots[slotIndex];
             var template = courseTemplates[slot.CourseName];
             var seriesId = Guid.NewGuid();
 
@@ -1473,6 +2007,12 @@ public static class DbInitializer
                     seats += WaitlistDepth;
                 }
 
+                // Seats are drawn from the member pool by rotation, so asking for
+                // more seats than the customer has members would sit the same
+                // person twice in one room. GymXYZ never comes close — 36 members
+                // against a 24-seat studio — but a small customer easily does.
+                seats = Math.Min(seats, members.Count);
+
                 var offset = (slotIndex * 7 + week + members.Count) % members.Count;
                 for (var seat = 0; seat < seats; seat++)
                 {
@@ -1489,7 +2029,7 @@ public static class DbInitializer
                 // opened.
                 if (startsAt.Date < today)
                 {
-                    MarkAttendance(session, slot.CourseName, offset, members.Count, slotIndex, week);
+                    MarkAttendance(session, slot.CourseName, offset, members.Count, slotIndex, week, schedule);
                 }
 
                 yield return session;
@@ -1521,12 +2061,13 @@ public static class DbInitializer
         int offset,
         int memberCount,
         int slotIndex,
-        int week)
+        int week,
+        SeededWeek schedule)
     {
         var seated = session.Registrations!
             .Select((registration, seat) => (registration, memberIndex: (offset + seat) % memberCount))
             .Where(seat => !seat.registration.IsWaitlisted)
-            .OrderBy(seat => Reliability(seat.memberIndex, slotIndex, week))
+            .OrderBy(seat => Reliability(seat.memberIndex, slotIndex, week, schedule.ChronicAbsentees))
             .ToList();
 
         if (seated.Count == 0)
@@ -1534,7 +2075,7 @@ public static class DbInitializer
             return;
         }
 
-        var rate = CourseAttendanceRates.GetValueOrDefault(courseName, 85);
+        var rate = schedule.AttendanceRates.GetValueOrDefault(courseName, 85);
         var attended = (int)Math.Round(seated.Count * rate / 100d, MidpointRounding.AwayFromZero);
         var absent = seated.Count - attended;
 
@@ -1571,10 +2112,14 @@ public static class DbInitializer
     /// usually misses can still turn up on a good week and a regular can still
     /// skip one — which is what keeps the demo from reading as two castes.
     /// </summary>
-    private static int Reliability(int memberIndex, int slotIndex, int week)
+    private static int Reliability(
+        int memberIndex,
+        int slotIndex,
+        int week,
+        IReadOnlyDictionary<int, int> chronicAbsentees)
     {
         var jitter = ((memberIndex * 13 + slotIndex * 29 + week * 7) % 101 + 101) % 101;
 
-        return jitter + ChronicAbsentees.GetValueOrDefault(memberIndex, RegularReliability);
+        return jitter + chronicAbsentees.GetValueOrDefault(memberIndex, RegularReliability);
     }
 }
