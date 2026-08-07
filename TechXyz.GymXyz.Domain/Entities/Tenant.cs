@@ -84,6 +84,23 @@ public class Tenant : EntityBase<int>
     /// <summary>Solo coach: the Coachs section disappears from the navigation.</summary>
     public bool IsSolo { get; set; }
 
+    /// <summary>
+    /// Whether the school holidays are marked on the planning. A gym with
+    /// children's classes lives by them; a coach training adults sees a yellow
+    /// band across every week for nothing.
+    /// <para>
+    /// On the tenant rather than on <see cref="GymSettings"/> because the
+    /// planning banner needs it at the same moment it needs the postcode, before
+    /// anything else about the customer has loaded — the same reason
+    /// <c>TenantBrandDto</c> already carries the postcode.
+    /// </para>
+    /// <para>
+    /// Public holidays are <b>not</b> covered by this: they close the gym
+    /// whatever its public, and hiding them was asked for by nobody.
+    /// </para>
+    /// </summary>
+    public bool ShowSchoolVacations { get; set; } = true;
+
     // ---- GymXYZ plan (what the customer pays TechXYZ) ------------------------
 
     public string? GymPlan { get; set; }

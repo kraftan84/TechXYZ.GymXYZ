@@ -21,6 +21,19 @@ public sealed record SchoolCalendarDto(
         new(zone, [], []) { IsAvailable = false };
 
     /// <summary>
+    /// The same calendar with the school holidays dropped, for a customer who
+    /// has turned them off. The public holidays stay: they close the gym whoever
+    /// its members are, and the two are separate marks precisely so one can go
+    /// without the other.
+    /// <para>
+    /// <see cref="IsAvailable"/> is carried over untouched — hiding the holidays
+    /// is a choice, and it must not end up reading like a source that is down.
+    /// </para>
+    /// </summary>
+    public SchoolCalendarDto WithoutVacations() =>
+        this with { Vacations = [] };
+
+    /// <summary>
     /// What marks a day on the grid, or null for an ordinary one. A public
     /// holiday wins over school holidays — it is the stronger signal, and the
     /// one that closes the gym.

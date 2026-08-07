@@ -28,9 +28,18 @@ builder.Services.AddMemoryCache();
 
 // The school calendar is the one thing this application fetches from outside.
 // Named client so its own timeout and headers stay off everybody else's.
+builder.Services.Configure<ExternalApiOptions>(
+    builder.Configuration.GetSection(ExternalApiOptions.SectionName));
+
+var externalApiOptions = builder.Configuration.GetSection(ExternalApiOptions.SectionName).Get<ExternalApiOptions>()
+                         ?? new ExternalApiOptions();
+
 builder.Services.AddHttpClient(SchoolCalendarService.HttpClientName, client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(5);
+    // The service cancels itself at the configured budget; this is the backstop
+    // behind it, read from the same setting so raising one cannot leave the
+    // other cutting the call short.
+    client.Timeout = TimeSpan.FromSeconds(externalApiOptions.TimeoutSeconds + 1);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("GymXYZ/1.0");
 });
 builder.Services.AddScoped<ISchoolCalendarService, SchoolCalendarService>();

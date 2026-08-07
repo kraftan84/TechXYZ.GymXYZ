@@ -28,6 +28,61 @@ public class TenantBrandQueriesHandlerTests
         result.IsSolo.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// The planning banner reads this off the brand, so it has to survive the
+    /// projection — and it has to arrive with the postcode, because one without
+    /// the other decides nothing.
+    /// </summary>
+    [Fact]
+    public async Task GetTenantBrand_ShouldCarryTheSchoolHolidaysChoice()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetTenantBrand_ShouldCarryTheSchoolHolidaysChoice));
+        dbContext.Tenants.Add(new Tenant("Team Trainer's", "teamtrainers", "teamtrainers")
+        {
+            ZipCode = "74200",
+            ShowSchoolVacations = false
+        });
+        await dbContext.SaveChangesAsync();
+
+        var result = await new GetTenantBrandQueryHandler(dbContext)
+            .Handle(new GetTenantBrandQuery("teamtrainers"), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.ZipCode.ShouldBe("74200");
+        result.ShowSchoolVacations.ShouldBeFalse();
+        result.MarksSchoolVacations.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// A customer with no address has no département, and the zone table answers
+    /// A for want of anything better. Marking that zone's holidays would be
+    /// showing a calendar nobody chose, so the setting cannot switch on without
+    /// a postcode however it is stored.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetTenantBrand_ShouldNotMarkHolidays_WithoutAPostcode(string? zipCode)
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(
+            nameof(GetTenantBrand_ShouldNotMarkHolidays_WithoutAPostcode) + (zipCode?.Length ?? -1));
+        dbContext.Tenants.Add(new Tenant("Leyssa Coaching", "leyssa", "leyssa")
+        {
+            AreaLabel = "Thonon et alentours",
+            ZipCode = zipCode,
+            ShowSchoolVacations = true
+        });
+        await dbContext.SaveChangesAsync();
+
+        var result = await new GetTenantBrandQueryHandler(dbContext)
+            .Handle(new GetTenantBrandQuery("leyssa"), CancellationToken.None);
+
+        result.ShouldNotBeNull();
+        result.ShowSchoolVacations.ShouldBeTrue();
+        result.MarksSchoolVacations.ShouldBeFalse();
+    }
+
     [Fact]
     public async Task GetTenantBrand_ShouldReturnNull_WhenSlugIsUnknown()
     {

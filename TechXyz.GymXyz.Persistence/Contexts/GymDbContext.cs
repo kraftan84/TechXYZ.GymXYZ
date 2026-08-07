@@ -219,10 +219,6 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
                 .HasForeignKey(location => location.FallbackLocationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Spelled out because the engine defaults would round coordinates
-            // into uselessness.
-            x.Property(location => location.Latitude).HasPrecision(9, 6);
-            x.Property(location => location.Longitude).HasPrecision(9, 6);
             x.Property(location => location.AreaSqm).HasPrecision(7, 2);
         });
 

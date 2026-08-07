@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
@@ -23,27 +24,26 @@ public sealed class SchoolCalendarService : ISchoolCalendarService
 {
     public const string HttpClientName = "school-calendar";
 
-    /// <summary>Both sources publish once a year and never move; a day in memory is conservative.</summary>
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(24);
-
-    /// <summary>A screen is waiting on this. Better no banner than a slow page.</summary>
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(4);
-
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
     private readonly ILogger<SchoolCalendarService> _logger;
+    private readonly ExternalApiOptions _options;
 
     public SchoolCalendarService(
         IHttpClientFactory httpClientFactory,
         IMemoryCache cache,
-        ILogger<SchoolCalendarService> logger)
+        ILogger<SchoolCalendarService> logger,
+        IOptions<ExternalApiOptions> options)
     {
         _httpClientFactory = httpClientFactory;
         _cache = cache;
         _logger = logger;
+        _options = options.Value;
     }
+
+    private TimeSpan CacheDuration => TimeSpan.FromHours(_options.CacheHours);
 
     public async Task<SchoolCalendarDto> GetAsync(
         string? postcode,
@@ -56,7 +56,7 @@ public sealed class SchoolCalendarService : ISchoolCalendarService
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(Timeout);
+            timeout.CancelAfter(TimeSpan.FromSeconds(_options.TimeoutSeconds));
 
             // A span can straddle new year, so both years are asked for.
             var years = Enumerable.Range(from.Year, Math.Max(1, to.Year - from.Year + 1)).ToList();
@@ -90,7 +90,7 @@ public sealed class SchoolCalendarService : ISchoolCalendarService
 
             var client = _httpClientFactory.CreateClient(HttpClientName);
             var payload = await client.GetFromJsonAsync<Dictionary<string, string>>(
-                $"https://calendrier.api.gouv.fr/jours-feries/metropole/{year}.json",
+                _options.PublicHolidaysUrl.Replace("{year}", year.ToString(CultureInfo.InvariantCulture)),
                 JsonOptions,
                 cancellationToken);
 
@@ -123,8 +123,7 @@ public sealed class SchoolCalendarService : ISchoolCalendarService
 
             var client = _httpClientFactory.CreateClient(HttpClientName);
             var payload = await client.GetFromJsonAsync<VacationResponse>(
-                "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/"
-                + $"fr-en-calendrier-scolaire/records?where={where}&order_by=start_date&limit=100",
+                $"{_options.SchoolVacationsUrl}?where={where}&order_by=start_date&limit=100",
                 JsonOptions,
                 cancellationToken);
 

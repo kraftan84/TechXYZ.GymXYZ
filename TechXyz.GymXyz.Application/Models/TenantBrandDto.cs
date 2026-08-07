@@ -29,4 +29,26 @@ public sealed record TenantBrandDto(
     /// about the customer is loaded.
     /// </summary>
     public string? ZipCode { get; init; }
+
+    /// <summary>
+    /// Whether the customer asked for the school holidays on the planning.
+    /// Travels beside the postcode for the same reason: the banner decides what
+    /// to draw from both at once, and a second round-trip for a boolean would
+    /// leave the holidays flashing on before they were hidden.
+    /// </summary>
+    public bool ShowSchoolVacations { get; init; } = true;
+
+    /// <summary>
+    /// Whether the planning actually marks them: the setting <b>and</b> the
+    /// postcode it needs to mean anything.
+    /// <para>
+    /// A customer with no address has no département, and
+    /// <c>SchoolZones.ForPostcode</c> answers zone A for want of anything
+    /// better — which would have an itinerant coach around Thonon reading the
+    /// holidays of a zone nobody chose. Marking nothing is the truthful answer,
+    /// and the settings panel says so rather than leaving it a mystery.
+    /// </para>
+    /// </summary>
+    public bool MarksSchoolVacations =>
+        ShowSchoolVacations && !string.IsNullOrWhiteSpace(ZipCode);
 }

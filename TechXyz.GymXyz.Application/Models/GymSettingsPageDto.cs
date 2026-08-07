@@ -50,10 +50,11 @@ public sealed record GymIdentityDto(
     string? City,
     string? AreaLabel,
     string? Email,
-    string? Phone)
+    string? Phone,
+    bool ShowSchoolVacations)
 {
     public static GymIdentityDto Empty { get; } =
-        new(string.Empty, null, null, null, null, null, null, null, null, null);
+        new(string.Empty, null, null, null, null, null, null, null, null, null, true);
 
     /// <summary>
     /// True for a customer who works on the move — Leyssa Coaching, around

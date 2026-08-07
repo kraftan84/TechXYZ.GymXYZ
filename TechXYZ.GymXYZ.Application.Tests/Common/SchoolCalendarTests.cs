@@ -101,6 +101,37 @@ public class SchoolCalendarTests
         calendar.Outlook(new DateOnly(2026, 5, 1)).ShouldBe(SchoolCalendarOutlookDto.Empty);
     }
 
+    /// <summary>
+    /// A customer who has turned the school holidays off keeps the public ones:
+    /// a jour férié changes the opening hours of any gym, whoever its members
+    /// are, and only the vacations were asked to go.
+    /// </summary>
+    [Fact]
+    public void WithoutVacations_ShouldDropOnlyTheSchoolHolidays()
+    {
+        var calendar = Calendar().WithoutVacations();
+
+        calendar.Vacations.ShouldBeEmpty();
+        calendar.MarkFor(new DateOnly(2026, 4, 20)).ShouldBeNull();
+
+        calendar.MarkFor(new DateOnly(2026, 5, 1))!.Kind.ShouldBe(SchoolDayKind.PublicHoliday);
+        calendar.Outlook(new DateOnly(2026, 4, 1)).NextHoliday.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Hiding them is a choice, not a source that would not answer. If the two
+    /// ended up looking alike the banner would read "Calendrier indisponible" at
+    /// a customer who had simply switched something off.
+    /// </summary>
+    [Fact]
+    public void WithoutVacations_ShouldStayAvailable()
+    {
+        Calendar().WithoutVacations().IsAvailable.ShouldBeTrue();
+
+        // And an unavailable calendar does not become available by being filtered.
+        SchoolCalendarDto.Unavailable("A").WithoutVacations().IsAvailable.ShouldBeFalse();
+    }
+
     private static SchoolCalendarDto Calendar() => new(
         "A",
         [new PublicHolidayDto(new DateOnly(2026, 5, 1), "Fête du Travail")],

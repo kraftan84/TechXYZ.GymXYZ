@@ -44,6 +44,7 @@ public sealed class UpdateGymIdentityCommandHandler : IRequestHandler<UpdateGymI
         tenant.Email = request.Email;
         tenant.Phone = request.Phone;
         tenant.AreaLabel = request.AreaLabel;
+        tenant.ShowSchoolVacations = request.ShowSchoolVacations;
 
         if (request.AreaLabel is not null)
         {
@@ -53,6 +54,12 @@ public sealed class UpdateGymIdentityCommandHandler : IRequestHandler<UpdateGymI
             tenant.Street = null;
             tenant.ZipCode = null;
             tenant.City = null;
+
+            // The school zone is read off the postcode, so without one there is
+            // no calendar to follow. Cleared with the address for the same
+            // reason it is: a setting left on would outlive what made it
+            // meaningful, and the planning would mark a zone nobody chose.
+            tenant.ShowSchoolVacations = false;
         }
         else
         {

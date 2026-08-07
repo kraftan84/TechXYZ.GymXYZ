@@ -156,11 +156,6 @@ body {
 .gx-tb-ic.on { background: var(--color-primary-soft, var(--surface-sunken)); color: var(--color-primary); }
 .gx-tb-div { width: 1px; height: 26px; background: var(--border-subtle); margin: 0 4px; flex: none; }
 .gx-tb-ic svg { width: 20px; height: 20px; }
-.gx-tb-ic .dot {
-  position: absolute; top: 8px; right: 9px; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--color-danger);
-  border: 2px solid var(--surface-card);
-}
 .gx-me { display: flex; align-items: center; gap: 10px; cursor: pointer; padding-left: 6px; }
 .gx-me .nm { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-strong); }
 .gx-me .rl { font-size: var(--text-2xs); color: var(--text-muted); }

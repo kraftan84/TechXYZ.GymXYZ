@@ -34,17 +34,14 @@
                           Mode="@(MobileHeader_.IsSubScreen ? MobileHeaderMode.Sub : MobileHeaderMode.Brand)"
                           Title="@MobileHeader_.Title"
                           OnBack="@(() => MobileHeader_.Back?.Invoke())">
+                @* The avatar is the whole of it: the bell went with the desktop
+                   one, having nothing to announce and a red dot that was always
+                   lit. One button needs no flex row around it. *@
                 <Action>
-                    <div class="gx-m-flex" style="gap:8px">
-                        <button type="button" class="gx-m-iconbtn" aria-label="Notifications">
-                            <GxIcon Name="@GxIconPaths.Bell" Size="20"/>
-                            <span class="dot"></span>
-                        </button>
-                        <button type="button" class="gx-m-iconbtn" aria-label="Profil & plus"
-                                style="padding:0;overflow:hidden" @onclick="OpenPlus">
-                            <GxAvatar Name="@User.DisplayName" Size="sm"/>
-                        </button>
-                    </div>
+                    <button type="button" class="gx-m-iconbtn" aria-label="Profil & plus"
+                            style="padding:0;overflow:hidden" @onclick="OpenPlus">
+                        <GxAvatar Name="@User.DisplayName" Size="sm"/>
+                    </button>
                 </Action>
             </MobileHeader>
 

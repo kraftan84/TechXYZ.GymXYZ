@@ -96,8 +96,12 @@ else
         // Fetched apart from the dashboard, as the planning does: it comes from
         // two government APIs, it swallows its own failures, and the strip has
         // to draw whether or not they answer.
-        _calendar = await SchoolCalendar.GetAsync(
+        var calendar = await SchoolCalendar.GetAsync(
             Brand?.ZipCode, _dashboard.WeekStart, _dashboard.WeekEnd);
+
+        // Hidden here too, or the week strip would keep marking holidays the
+        // planning no longer shows. Public holidays stay in both.
+        _calendar = Brand?.MarksSchoolVacations == false ? calendar.WithoutVacations() : calendar;
     }
 
     /// <summary>
