@@ -69,7 +69,17 @@
 @code {
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
 
-    [SupplyParameterFromForm] private LoginInput Input { get; set; } = new();
+    // No initialiser: a post that binds nothing writes null straight over it
+    // (BL0008). The backing field is what carries the default instead, so the
+    // form always has a model whether or not the post carried one.
+    private LoginInput? _input;
+
+    [SupplyParameterFromForm]
+    private LoginInput Input
+    {
+        get => _input ??= new LoginInput();
+        set => _input = value;
+    }
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 

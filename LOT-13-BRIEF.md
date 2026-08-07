@@ -3,10 +3,14 @@
 Ouvert le 2026-08-06, à la fin du lot 9. `main` est à `c64245d` (lot 9 PR 1),
 la PR 2 est en attente de fusion, **465 tests au vert**.
 
-> **État au 2026-08-07.** `main` est à `531c005`, **564 tests au vert**. Trois
-> entrées ouvertes (**5**, **4**, **3**), deux fermées (2, 1). Les échéances des
-> entrées 3 et 4 ont été révisées le même jour, en arrêtant la séquence de la
-> première version : elles y sont les points 1 et 6, et
+> **État au 2026-08-07, après le lot du log.** `main` est à `2fe1559`,
+> **564 tests au vert**. Deux entrées ouvertes (**5**, **4**), trois fermées
+> (3, 2, 1) et une **retirée** (6). L'entrée 3 est tombée au point 1 de la V1, à
+> l'échéance annoncée. L'entrée 6 a été ouverte en la vérifiant puis retirée le
+> jour même : les deux défauts qu'elle décrivait venaient du volet navigateur, pas
+> de l'application — elle est gardée pour que la fausse alerte ne soit pas
+> rapportée deux fois. L'échéance de l'entrée 4 a été fixée en arrêtant la
+> séquence de la première version — elle y est le point 6, et
 > `design_handoff_gymxyz/01-LOTS.md` porte cette séquence.
 
 Ce document n'est pas un brief de démarrage comme les autres : c'est un
@@ -129,7 +133,135 @@ même mécanisme sous deux noms. Si les deux ne sont pas unifiés d'un coup, on
 obtient deux façons concurrentes de répondre « quel client suis-je en train de
 lire », c'est-à-dire exactement la question dont dépend le filtre global.
 
+## Entrées fermées
+
+### 6. Deux écrans affichent un état vide ou une date absurde — **retirée**
+
+> **Retirée le 2026-08-07, le jour même de son ouverture : les deux défauts
+> n'existent pas.** L'entrée est gardée plutôt que supprimée parce qu'elle a
+> déjà été rapportée une fois, et que ce qui l'a produite se reproduira.
+>
+> **Ce qui a été vérifié**, volet navigateur forcé à 1440×900 :
+>
+> - **Planning** affiche bien la grille de la semaine du 3 au 9 août — 13 blocs
+>   à l'écran, la bande « Zone A · Vacances d'Été », et le trait de l'heure
+>   courante au bon endroit.
+> - **Présences** affiche « 7 août 2026 · 2 séances à pointer », un taux de
+>   présence de 88 %, les deux feuilles du jour et les séances récentes. La date
+>   est juste et le compte s'accorde à la pastille « 2 » de la navigation.
+> - Le rendu SSR récupéré au `curl` était déjà complet et correct **avant même**
+>   d'ouvrir un circuit : la grille entière y figure, sessions comprises.
+>
+> **Ce qui l'a produite.** Le volet navigateur rapportait
+> **`window.innerWidth === 0`**. `ResponsiveModeService` lit cette largeur, un 0
+> passe sous le seuil mobile, et l'écran bascule dans un état de mise en page
+> dégénéré où la grille bureau se rend vide. Rien de tout cela n'appartient à
+> l'application : ni la requête, ni les données, ni le rendu n'étaient en cause —
+> la requête du planning renvoyait bien ses 16 séances, ce qui avait déjà été
+> vérifié en SQL.
+>
+> **Ce qu'il faut en retenir.** Le registre avertissait déjà qu'un écran rend un
+> état vide avant l'arrivée des données ; le piège ici est plus sournois, parce
+> qu'attendre ne le lève pas — l'écran est resté vide 100 secondes. **Avant de
+> croire à un écran vide, lire `window.innerWidth`** : à 0, ce qui est à l'écran
+> ne dit rien de l'application. Comparer avec le HTML servi en SSR (`curl`), qui
+> ne dépend d'aucune mise en page, tranche en une commande.
+>
+> **Ce que la rétractation ne couvre pas.** Elle ne dit pas que ces deux écrans
+> sont exempts de défauts, seulement que **ces deux observations-là** n'en
+> étaient pas.
+
 ### 3. `Connection must be valid and open` sur la requête de marque
+
+> **Fermée le 2026-08-07**, au point 1 de la V1 et donc à l'échéance annoncée.
+> La cause est nommée, et ce n'est aucune des deux pistes que l'entrée listait.
+>
+> **La cause.** `App.razor` et `TenantBoundary` résolvaient tous deux la marque
+> **dans le même scope de requête, pendant la même passe de rendu statique**. Le
+> `SemaphoreSlim` du resolver les sérialise, donc le second attendait le premier.
+> Sur une page qui ouvre aussi un circuit, la requête HTTP se terminait — et son
+> scope était disposé — avant que la requête du premier ne revienne : le
+> `GymDbContext` transient, disposé avec le scope, emportait sa connexion.
+> `CheckState` échouait alors **avant que la commande n'atteigne MySQL**.
+>
+> **Ce qui l'établit**, mesuré et non déduit :
+>
+> - **36 chargements SSR sans circuit : 0 occurrence. Chaque chargement avec
+>   circuit : exactement 1.** Le message a besoin qu'un circuit démarre.
+> - **La connexion n'avait jamais été ouverte** : `state=Closed`, aucun
+>   `ServerThread`, là où toute connexion saine porte `state=Open` et un
+>   identifiant serveur réel. Ce n'est donc pas une connexion périmée rendue par
+>   le pool — il n'y avait aucune connexion physique derrière.
+> - **Le contexte était en cours de disposition** : quelques microsecondes plus
+>   tôt, sur le même thread et le même `DbContext`, une connexion précédente
+>   passait en `disposing`.
+> - **La réponse était déjà terminée** : le même resolver scoped rapportait
+>   `HttpContext` présent au premier envoi, nul au second.
+>
+> **Pourquoi personne ne l'avait vu.** Le gate libérait ensuite `TenantBoundary`,
+> qui rejouait la même requête sur un chemin vivant et réussissait — et comme
+> `TenantResolver` n'affecte `_resolvedSlug` **qu'après** l'await, l'échec ne
+> laissait aucun cache empoisonné. Ce n'était donc pas une reprise de
+> `MySQLExecutionStrategy` : l'exception remontait bel et bien hors de
+> `App.razor.OnInitializedAsync`, et c'est **une passe de rendu jetée** à chaque
+> chargement de page, pas seulement une ligne de log.
+>
+> **Ce qui a été fait.** `TenantResolutionMiddleware` résout la marque une fois
+> par requête, après `UseAuthentication` et avant tout rendu : la requête part
+> alors dans le pipeline, où le scope lui survit par construction. Le resolver
+> étant scoped et déjà porteur de son cache, `App.razor` et le prérendu de
+> `TenantBoundary` sont désormais servis **de mémoire, sans aucune requête**. Le
+> déclencheur est retiré, pas rétréci.
+>
+> Le middleware décide sur **l'endpoint**, pas sur l'en-tête `Accept` : une page
+> d'erreur ré-exécutée et une navigation à la barre d'adresse arrivent toutes
+> deux sans `Accept`, et les sauter laissait justement un composant résoudre en
+> plein rendu. C'est une première version de ce correctif qui l'a montré.
+>
+> **Ce qui a été vérifié**, protocole de l'entrée rejoué sur le build final,
+> instrumentation retirée — 36 chargements SSR sur les neuf écrans du gérant,
+> plus connexion et navigations en circuit interactif sur Planning, Présences,
+> Membres et Réglages :
+>
+> - **0 `Connection must be valid and open`** ;
+> - **0 `Failed executing DbCommand`** — le point qui sépare un correctif d'un
+>   déplacement : **aucune autre requête n'a hérité de l'échec** ;
+> - 0 ligne de niveau Error, 0 `A second operation was started` ;
+> - 564 tests au vert, **0 warning** dans `TechXyz.GymXyz.WebApp` ;
+> - les écrans s'affichent, habillés et garnis.
+>
+> Les requêtes de marque passent de **trois à deux par chargement de page**
+> (une requête, un circuit), et aucune des deux n'est plus émise depuis un rendu.
+>
+> **Les deux pistes de l'entrée, tranchées.** *Le connecteur est mis hors de
+> cause* : `MySql.Data` refuse une connexion qui n'avait jamais été ouverte, ce
+> que ferait n'importe quel fournisseur — **aucun changement de dépendance n'est
+> justifié**, et Pomelo n'aurait fait que le formuler autrement. *La double
+> passe est confirmée mais mal décrite* : la duplication nuisible n'était pas
+> prérendu-contre-circuit à travers deux scopes, mais `App.razor` +
+> `TenantBoundary` **à l'intérieur d'un seul**. La passe du circuit est une
+> troisième requête, et elle réussissait toujours.
+>
+> **La troisième piste, absente de l'entrée, est morte.** Le second appelant de
+> `Planning.razor:153` échouait au même taux qu'un écran sans aucune requête, et
+> n'apparaît dans aucune trace d'échec. Il est retiré quand même — la marque est
+> cascadée comme sur tous les autres écrans — ce qui emporte `CS8604` avec lui.
+>
+> **Ce que la fermeture ne couvre pas.**
+>
+> - **Le comportement en cas de vraie panne change.** Un seul appelant résout
+>   désormais ; si la base est en peine, la requête échoue au lieu d'être
+>   masquée par un second appelant qui réussissait. C'est plus honnête, mais
+>   c'est un changement : une panne se verra maintenant.
+> - **La passe du circuit interroge toujours** une fois par démarrage de
+>   circuit. Elle n'a jamais échoué — le scope d'un circuit vit ce que vit
+>   l'onglet — et la supprimer demanderait `PersistentComponentState`, qui n'a
+>   pas sa place dans un lot sur le log.
+> - **Rien n'a été exercé hors de `localhost`** : les sous-domaines clients
+>   restent non testés, comme le note déjà l'entrée 2.
+> - Les deux anomalies d'écran vues en passant ont été instruites et se sont
+>   révélées être des artefacts du volet navigateur, pas des défauts : voir
+>   l'**entrée 6**, retirée le jour même.
 
 **Ouverte le 2026-08-06**, en corrigeant l'entrée 1 — dont elle était un
 morceau, à tort. **Échéance révisée le 2026-08-07 : c'est le point 1 de la V1**,
@@ -176,8 +308,6 @@ la refermer sans avoir tranché : une entrée qui dit « corrigé » sans savoir
 pourquoi ne vaut rien à la personne qui reverra le message.
 
 ---
-
-## Entrées fermées
 
 ### 2. Un `PlatformAdmin` hors impersonation lit les données de GymXYZ
 
