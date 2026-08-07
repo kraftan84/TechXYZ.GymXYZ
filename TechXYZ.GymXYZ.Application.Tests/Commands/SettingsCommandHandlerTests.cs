@@ -58,6 +58,36 @@ public class SettingsCommandHandlerTests
         // No postcode, so no zone to signal holidays for.
         var settings = await dbContext.GymSettings.SingleAsync();
         settings.SchoolZone.ShouldBeNull();
+
+        // And the holidays go off with it: a setting left on would outlive the
+        // postcode that gave it a meaning, and the planning would mark the
+        // default zone as though somebody had chosen it.
+        tenant.ShowSchoolVacations.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The setting is the customer's to make, and it survives a save that has
+    /// nothing to do with it — the panel writes the whole identity at once.
+    /// </summary>
+    [Fact]
+    public async Task UpdateGymIdentity_ShouldStoreTheSchoolHolidaysChoice()
+    {
+        await using var dbContext = await SeededAsync(nameof(UpdateGymIdentity_ShouldStoreTheSchoolHolidaysChoice));
+
+        var handler = IdentityHandler(dbContext);
+
+        await handler.Handle(
+            Identity(street: "14 rue de la Villette", zipCode: "69003", city: "Lyon 3ᵉ",
+                showSchoolVacations: false),
+            CancellationToken.None);
+
+        (await dbContext.Tenants.SingleAsync()).ShowSchoolVacations.ShouldBeFalse();
+
+        await handler.Handle(
+            Identity(street: "14 rue de la Villette", zipCode: "69003", city: "Lyon 3ᵉ"),
+            CancellationToken.None);
+
+        (await dbContext.Tenants.SingleAsync()).ShowSchoolVacations.ShouldBeTrue();
     }
 
     [Fact]
@@ -397,7 +427,9 @@ public class SettingsCommandHandlerTests
         string? zipCode = null,
         string? city = null,
         string? areaLabel = null,
+        bool showSchoolVacations = true,
         IReadOnlyList<OpeningHoursInput>? hours = null) =>
         new("GymXYZ", "Salle de sport & coaching", 180, "901 234 567 00018",
-            street, zipCode, city, areaLabel, "contact@gymxyz.fr", "04 78 12 34 56", hours);
+            street, zipCode, city, areaLabel, "contact@gymxyz.fr", "04 78 12 34 56",
+            showSchoolVacations, hours);
 }

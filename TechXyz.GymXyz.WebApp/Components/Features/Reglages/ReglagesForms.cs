@@ -36,6 +36,12 @@ public sealed class IdentityForm
     /// </summary>
     public bool WorksFromAnArea { get; set; }
 
+    /// <summary>
+    /// Whether the planning marks the school holidays. On by default, which is
+    /// what every customer saw before the setting existed.
+    /// </summary>
+    public bool ShowSchoolVacations { get; set; } = true;
+
     public static IdentityForm From(GymIdentityDto identity, IReadOnlyList<OpeningHoursDto> hours) => new()
     {
         Name = identity.Name,
@@ -49,6 +55,7 @@ public sealed class IdentityForm
         WorksFromAnArea = identity.WorksFromAnArea,
         Email = identity.Email,
         Phone = identity.Phone,
+        ShowSchoolVacations = identity.ShowSchoolVacations,
         OpeningHours = hours.Select(OpeningHoursForm.From).ToList()
     };
 
@@ -65,6 +72,7 @@ public sealed class IdentityForm
         WorksFromAnArea ? AreaLabel : null,
         Email,
         Phone,
+        ShowSchoolVacations,
         OpeningHours.Select(line => line.ToInput()).ToList());
 }
 

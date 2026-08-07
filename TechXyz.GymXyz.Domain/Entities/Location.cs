@@ -71,15 +71,11 @@ public class Location : EntityBase<int>, ITenantScoped
     /// </summary>
     public Address? Address { get; set; }
 
-    // Coordinates of the meeting point. Stored and seeded but not editable in
-    // this lot: the only thing that reads them is the weather service, which
-    // ships after lot 8, and a field that feeds nothing yet would be a lie.
-    public decimal? Latitude { get; set; }
-    public decimal? Longitude { get; set; }
-
     /// <summary>
-    /// Whether rain calls the session off. Stored here and rendered as a chip;
-    /// nothing calls a forecast before the weather lot.
+    /// Whether rain calls the session off. Stored here and rendered as a chip,
+    /// and that is the whole of it: the weather call was dropped from the first
+    /// version, so this is something the gym records and reads itself rather
+    /// than a trigger. Its coordinates went with it — nothing was reading them.
     /// </summary>
     public bool IsWeatherDependent { get; set; }
 

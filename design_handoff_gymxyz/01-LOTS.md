@@ -56,10 +56,26 @@ tout ce qui n'y est pas est explicitement repoussé (section suivante).
 | # | Chantier | Matière disponible |
 |---|---|---|
 | 1 | **Entrée 3 du registre + warnings de compilation** | `LOT-13-BRIEF.md` ; `CS8604` sur `Planning.razor:153`, `BL0008` sur `Login.razor:72` |
-| 2 | **Cloche de notifications + météo des cours extérieurs** | écart README n°2 et décision du lot 4, tous deux tranchés ci-dessous |
+| 2 | ~~Cloche de notifications + météo des cours extérieurs~~ | **vidé le 2026-08-07** — voir juste en dessous |
 | 3 | **Diffusion du planning en image** | décision du lot 10, tranchée ci-dessous |
 | 4 | **Login & onboarding** | **handoff à fournir** |
 | 5 | **Portail super-admin** | **handoff à fournir** |
+
+> **Le point 2 n'existe plus, et la V1 tient en cinq points.** Ses deux chantiers
+> sont tombés le même jour, pour deux raisons différentes :
+>
+> - **la cloche est reportée hors V1**, « pour le moment » — rien ne stocke une
+>   notification, `NotificationSetting` est une *préférence* et non un événement,
+>   il n'y a donc rien à lister ; et l'écran de liste que ça demanderait n'est pas
+>   maquetté. À revisiter, pas à enterrer ;
+> - **la météo est abandonnée** — trop de plomberie pour ce qu'elle rendait dans
+>   une première version. Le détail est dans la décision du lot 4, plus bas.
+>
+> Ce qui a été livré du point 2 : la cloche **retirée** des deux shells (un point
+> rouge allumé en permanence apprend à ne plus regarder les points rouges), les
+> URL d'API sorties dans `appsettings`, et un réglage « afficher les vacances
+> scolaires » par client. La numérotation ci-dessus est conservée telle quelle
+> pour que les briefs déjà écrits continuent de désigner les mêmes chantiers.
 | 6 | **Comptes à casquettes multiples sur plusieurs clients** | entrée 4 du registre, qui décrit déjà le remède et son risque |
 
 **L'ordre porte deux dépendances, pas seulement une préférence.** Le point 6
@@ -91,9 +107,9 @@ README du handoff. Chacune est reportée dans le lot concerné plus bas.
 | Sujet | Décision |
 |---|---|
 | **Recherche globale** (écart n°1, proposée au lot 1) | **Hors V1.** La barre de la topbar reste inerte. |
-| **Notifications / cloche** (écart n°2) | **Dans la V1**, à destination des **managers et des coachs** uniquement. |
+| **Notifications / cloche** (écart n°2) | **Hors V1, « pour le moment »** (décision du 2026-08-07, qui remplace la précédente). La cloche a été **retirée** des deux shells : rien ne stocke une notification, et son point rouge était allumé en dur. À revisiter, pas à enterrer. |
 | **Densité d'affichage** (écart n°5) | **Écartée.** Outil de maquette, non porté en produit. |
-| **Météo des cours extérieurs** (lot 4) | **Prise dans la V1** — l'appel réel, pas seulement le champ « lieu de repli ». |
+| **Météo des cours extérieurs** (lot 4) | **Abandonnée pour la V1** (décision du 2026-08-07, qui remplace la précédente). Le champ « lieu de repli » livré au lot 4 **reste** : le gérant le renseigne et le lit lui-même. |
 | **« Diffuser le planning »** (lot 10) | **Génère une image du planning hebdomadaire**, téléchargeable par le manager pour les réseaux sociaux. Aucun envoi. |
 | **Envoi SMS réel** (lot 8) | **Hors V1.** On s'en tient au stockage des préférences. |
 | **Portail membre** (lot 12) | **Hors V1.** Les membres ne se connectent pas ; à reprendre plus tard, design d'abord. |
@@ -303,13 +319,35 @@ reprendre ensuite.
 > **Décision attendue** : implémenter réellement la météo + repli automatique, ou
 > se limiter au champ « lieu de repli » (recommandé pour ce lot).
 >
-> **Tranchée le 2026-08-07 : la météo réelle est prise, dans la V1.** Le lot 4 a
-> livré le champ « lieu de repli » seul, comme il le recommandait ; l'appel météo
-> se branche dessus **sans rouvrir le lot** — c'est un service et un affichage sur
-> une fiche existante, pas un changement de modèle. Il part avec la cloche
-> (point 2 de la V1). Reste à décider au plan : le fournisseur, la fenêtre de
-> prévision utile, et si le repli se **propose** ou s'**applique** — le lot 5 a
-> posé que rien ne déplace une séance sans qu'un humain le dise.
+> **Tranchée le 2026-08-07 : on s'en tient au champ « lieu de repli ».** L'appel
+> météo réel a d'abord été pris dans la V1 le matin même, puis **abandonné** le
+> soir après instruction — trop de plomberie pour ce qu'il rendait à ce stade.
+> C'est cette seconde décision qui vaut.
+>
+> **Ce qui reste** : `IsWeatherDependent` et le lieu de repli, tels que le lot 4
+> les a livrés. Le gérant les renseigne et les lit lui-même — « s'il pleut, on se
+> replie au studio A » est une information utile écrite sur la fiche, même sans
+> automatisation. Les coordonnées `Latitude`/`Longitude`, elles, ont été
+> **retirées** : elles n'étaient stockées que pour cet appel, et rien ne les
+> lisait.
+>
+> **Ce qu'il faudrait rouvrir le jour où la question revient** (l'enquête a été
+> faite, autant qu'elle serve) :
+>
+> - **le géocodage est tranché** — API Géoplateforme (`data.geopf.fr/geocodage`,
+>   IGN), sans clé, Licence Ouverte 2.0, testée sur l'adresse réelle du seed ;
+> - **l'État ne publie aucune prévision au point** : les dix API Météo-France
+>   livrent des grilles GRIB, pas « il pleut jeudi à 18 h au parc ». Décoder ça
+>   en .NET est un chantier, pas un branchement ;
+> - **Open-Meteo** a la bonne forme de réponse mais son offre gratuite est
+>   **non commerciale** — l'abonnement payant achète l'extraction du point et le
+>   SLA, pas la donnée, puisqu'il sert déjà `meteofrance_arome_france_hd` ;
+> - **le Bulletin Vigilance** (Météo-France, par département, Licence Ouverte 2.0,
+>   compte et jeton requis) était le candidat retenu avant l'abandon : il répond
+>   « dois-je annuler » plutôt que « quel temps fera-t-il », ce qui est la vraie
+>   question, et sans problème de licence ;
+> - **le repli se proposerait, ne s'appliquerait pas** — le lot 5 a posé que rien
+>   ne déplace une séance sans qu'un humain le dise.
 
 ---
 
@@ -636,7 +674,7 @@ Aucune de ces règles ne sera inventée.
 | 1 | Recherche globale : ici ou lot dédié ? |
 | 3 | Stratégie de reprise des `Lesson` existantes vers `CourseTemplate` |
 | 4 | Nommage `Location` / `Room` face au « Lieu » de la maquette |
-| 4 | Météo : appel réel ou simple champ « lieu de repli » |
+| 4 | ~~Météo : appel réel ou simple champ « lieu de repli »~~ — **tranchée le 2026-08-07 : le champ seul** |
 | 5 | Récurrence : occurrences matérialisées ou règle |
 | 5 | `DuplicateWeekCommand` : utile ? |
 | 6 | Réouverture d'une feuille clôturée : `GymManager` seul, action tracée ? |
@@ -663,15 +701,22 @@ resté ouvert.
 1. **Recherche globale** — ~~proposition : lot 1~~ → **hors V1**. La barre de la
    topbar reste inerte, et c'est désormais un choix affiché, plus une dette : rien
    ne la promet à l'utilisateur ailleurs qu'en la voyant.
-2. **Notifications** (cloche + point rouge) — **dans la V1**, pour les **managers
-   et les coachs**. Aucun écran de liste n'existe dans la maquette : il est à
-   dessiner, et le périmètre du destinataire n'est pas le même que celui du
-   contenu — un coach est cloisonné à ses séances depuis le lot rôles, ses
+2. **Notifications** (cloche + point rouge) — **hors V1, « pour le moment »**
+   (2026-08-07 ; remplace « dans la V1, pour les managers et les coachs »). La
+   cloche a été **retirée** des deux shells plutôt que laissée inerte : son point
+   rouge était allumé en dur et n'annonçait rien, et un point rouge permanent
+   apprend à ne plus regarder les points rouges. Quand elle reviendra, il faudra
+   d'abord trancher ce qu'est une notification — dérivée des alertes déjà
+   calculées par l'Accueil, ou stockée avec un état « lu » — puis faire dessiner
+   l'écran de liste que la maquette ne porte pas. S'y ajoute le périmètre du
+   destinataire : un coach est cloisonné à ses séances depuis le lot rôles, ses
    notifications doivent l'être aussi, sinon la cloche annonce ce que l'écran
-   refuse de montrer. Point 2 de la V1, avec la météo.
+   refuse de montrer.
 3. **Portail membre** — **hors V1**, les membres ne se connectent pas. Voir le
    lot 12.
-4. **Météo / repli des cours extérieurs** — **dans la V1**, appel réel. Voir le
-   lot 4.
+4. **Météo / repli des cours extérieurs** — **abandonnée pour la V1**
+   (2026-08-07 ; remplace « dans la V1, appel réel »). Le champ « lieu de repli »
+   reste et suffit. Voir le lot 4 pour l'enquête, gardée pour le jour où la
+   question reviendra.
 5. **Densité d'affichage** — **écartée**. Outil de maquette, non porté ; ce serait
    une préférence utilisateur, à chiffrer à part si elle revient.

@@ -193,6 +193,12 @@ public static class DbInitializer
             AreaLabel = "Thonon et alentours",
             Country = "France",
             IsSolo = true,
+            // Off, and not merely by taste: with no postcode there is no school
+            // zone to follow, so the setting is locked in the panel and the
+            // planning marks nothing. It is also the customer the setting was
+            // asked for — a solo coach training adults, for whom a yellow band
+            // across every week of August says nothing.
+            ShowSchoolVacations = false,
             GymPlan = "GymXYZ Solo",
             PlanDescription = "Mensuel · jusqu'à 50 membres",
             PlanPrice = 19m,
@@ -1200,8 +1206,6 @@ public static class DbInitializer
                     City = string.Empty,
                     Country = string.Empty
                 },
-                Latitude = 45.78m,
-                Longitude = 4.85m,
                 IsWeatherDependent = true,
                 // Through the navigation, not the key: neither venue has an id
                 // before the insert.

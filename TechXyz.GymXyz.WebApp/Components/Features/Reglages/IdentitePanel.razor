@@ -105,6 +105,43 @@
         <CalendarCard Calendar="Calendar"/>
     }
 
+    @* Outside the card above on purpose: that one disappears with the address,
+       and this setting has something to say precisely when there is none. *@
+    <GxCard Padded="false">
+        <CardHead Title="Vacances scolaires">
+            <FluentSwitch Value="Form.ShowSchoolVacations"
+                          ValueChanged="SetShowSchoolVacationsAsync"
+                          Disabled="Form.WorksFromAnArea"
+                          TValue="bool">
+                Afficher sur le planning
+            </FluentSwitch>
+        </CardHead>
+        <div style="padding:12px 18px 16px">
+            @if (Form.WorksFromAnArea)
+            {
+                @* Locked rather than merely off: the zone comes from the
+                   postcode, and without one SchoolZones answers A for want of
+                   anything better. Marking a zone nobody chose would be worse
+                   than marking nothing — so the switch says what it wants
+                   instead of quietly showing the wrong holidays. *@
+                <div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--text-xs);
+                            line-height:1.5;color:var(--warning-700)">
+                    <GxIcon Name="@GxIconPaths.Alert" Size="16"/>
+                    <span>
+                        Renseignez une adresse pour activer les vacances scolaires : la zone
+                        se déduit du code postal, et sans lui il n'y a pas de calendrier à suivre.
+                    </span>
+                </div>
+            }
+            <p style="margin:@(Form.WorksFromAnArea ? "10px 0 0" : "0");font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+                Une salle avec des cours enfants vit au rythme des vacances ; un coach qui
+                entraîne des adultes n'en a pas l'usage.
+                <b>Les jours fériés restent affichés</b> dans tous les cas — ils changent les
+                horaires d'ouverture quel que soit le public.
+            </p>
+        </div>
+    </GxCard>
+
     <GxCard Padded="false">
         <CardHead Title="Horaires d'ouverture">
             <FluentButton Appearance="Appearance.Stealth" @onclick="AddHours">
@@ -187,6 +224,12 @@
     private async Task SetWorksFromAnAreaAsync(bool worksFromAnArea)
     {
         Form.WorksFromAnArea = worksFromAnArea;
+        await Touch();
+    }
+
+    private async Task SetShowSchoolVacationsAsync(bool showSchoolVacations)
+    {
+        Form.ShowSchoolVacations = showSchoolVacations;
         await Touch();
     }
 

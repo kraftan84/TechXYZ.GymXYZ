@@ -22,7 +22,8 @@ public static class QueryableProjectionExtensions
             tenant.IsSolo)
         {
             City = tenant.City,
-            ZipCode = tenant.ZipCode
+            ZipCode = tenant.ZipCode,
+            ShowSchoolVacations = tenant.ShowSchoolVacations
         });
     }
 

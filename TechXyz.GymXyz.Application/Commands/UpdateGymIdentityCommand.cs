@@ -31,8 +31,10 @@ public sealed class UpdateGymIdentityCommand : IRequest<bool>, IManagerOnly
         string? areaLabel,
         string? email,
         string? phone,
+        bool showSchoolVacations,
         IReadOnlyList<OpeningHoursInput>? openingHours = null)
     {
+        ShowSchoolVacations = showSchoolVacations;
         Name = name.Trim();
         Baseline = Clean(baseline);
         Capacity = capacity;
@@ -63,6 +65,13 @@ public sealed class UpdateGymIdentityCommand : IRequest<bool>, IManagerOnly
 
     public string? Email { get; }
     public string? Phone { get; }
+
+    /// <summary>
+    /// Whether the planning marks the school holidays. Saved with the identity
+    /// because it sits beside the school zone in the same panel, and the panel
+    /// saves as a whole.
+    /// </summary>
+    public bool ShowSchoolVacations { get; }
 
     public IReadOnlyList<OpeningHoursInput> OpeningHours { get; }
 

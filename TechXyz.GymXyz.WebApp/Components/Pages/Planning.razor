@@ -169,8 +169,18 @@ else
         await RefreshCalendarAsync();
     }
 
+    /// <summary>
+    /// The calendar for the week on screen, minus the school holidays when the
+    /// customer has turned them off. Filtered here rather than in the service:
+    /// what a gym wants to look at is a matter for the screen, and Réglages
+    /// still shows the whole calendar so the setting can preview what it hides.
+    /// </summary>
     private async Task RefreshCalendarAsync()
-        => _calendar = await SchoolCalendar.GetAsync(Brand?.ZipCode, _weekStart, _weekStart.AddDays(6));
+    {
+        var calendar = await SchoolCalendar.GetAsync(Brand?.ZipCode, _weekStart, _weekStart.AddDays(6));
+
+        _calendar = Brand?.MarksSchoolVacations == false ? calendar.WithoutVacations() : calendar;
+    }
 
     private async Task ShiftWeekAsync(int days)
     {

@@ -64,7 +64,8 @@ public sealed class GetGymSettingsQueryHandler : IRequestHandler<GetGymSettingsQ
         tenant.City,
         tenant.AreaLabel,
         tenant.Email,
-        tenant.Phone);
+        tenant.Phone,
+        tenant.ShowSchoolVacations);
 
     private static IReadOnlyList<OpeningHoursDto> OpeningHours(GymSettings? settings) =>
         settings?.OpeningHours?

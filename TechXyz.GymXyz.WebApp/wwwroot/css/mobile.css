@@ -84,7 +84,6 @@
 }
 .gx-m-iconbtn:active { transform: scale(.96); }
 .gx-m-iconbtn svg { width: 20px; height: 20px; }
-.gx-m-iconbtn .dot { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); border: 2px solid var(--surface-card); }
 
 /* greeting block (home) */
 .gx-m-greet { padding: 4px 2px 2px; }
