@@ -1,5 +1,6 @@
 using Bogus;
 using Microsoft.EntityFrameworkCore;
+using TechXyz.GymXyz.Application.Common;
 using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Persistence.Contexts;
 
@@ -38,5 +39,19 @@ internal sealed class TestCurrentUserService : ICurrentUserService
 
     public string[] Roles { get; set; }
 
+    /// <summary>
+    /// The coach this account is. Null by default, which for a role-less test
+    /// user means "restricted to nothing" — so a test that means to be a coach
+    /// has to say which one, and cannot pass by accident.
+    /// </summary>
+    public int? CoachId { get; set; }
+
     public bool IsInRole(string role) => Roles.Contains(role);
+
+    /// <summary>Somebody who runs the gym: sees and writes everything.</summary>
+    public static TestCurrentUserService Manager() => new(GymRoleNames.GymManager);
+
+    /// <summary>A salaried coach, linked to their roster entry.</summary>
+    public static TestCurrentUserService Coach(int coachId) =>
+        new(GymRoleNames.Coach) { CoachId = coachId };
 }

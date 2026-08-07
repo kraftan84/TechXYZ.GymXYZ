@@ -19,7 +19,8 @@
 {
     <CoursMobile Page="_page"
                  OnOpen="OpenCourse"
-                 OnCreate="OpenCreateDrawer"/>
+                 OnCreate="OpenCreateDrawer"
+                   CanManage="User.IsManager"/>
 }
 else
 {
@@ -34,7 +35,8 @@ else
                       SortByPopularity="_sortByPopularity"
                       OnSortByPopularityChanged="ApplyPopularitySortAsync"
                       OnOpen="OpenCourse"
-                      OnCreate="OpenCreateDrawer"/>
+                      OnCreate="OpenCreateDrawer"
+                      CanManage="User.IsManager"/>
     </div>
 }
 

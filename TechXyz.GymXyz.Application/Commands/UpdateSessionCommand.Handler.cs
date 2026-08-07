@@ -13,11 +13,16 @@ public sealed class UpdateSessionCommandHandler : IRequestHandler<UpdateSessionC
 {
     private readonly IGymDbContext _dbContext;
     private readonly IValidator<UpdateSessionCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
-    public UpdateSessionCommandHandler(IGymDbContext dbContext, IValidator<UpdateSessionCommand> validator)
+    public UpdateSessionCommandHandler(
+        IGymDbContext dbContext,
+        IValidator<UpdateSessionCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<bool> Handle(UpdateSessionCommand request, CancellationToken cancellationToken)
@@ -32,6 +37,16 @@ public sealed class UpdateSessionCommandHandler : IRequestHandler<UpdateSessionC
         if (session is null)
         {
             return false;
+        }
+
+        // Both ends of the move: the session has to be theirs to start with, and
+        // it has to stay theirs. Handing a class to a colleague is rostering, and
+        // a coach who did it would then be unable to undo it.
+        var scope = CoachScope.For(_currentUser);
+
+        if (!scope.Covers(session) || !scope.CoversCoach(request.CoachId))
+        {
+            throw ValidationFailures.Refuse(SessionFieldNames.Coach, CoachScope.NotYourSession);
         }
 
         var location = await SessionCompositionHelper.LoadLocationAsync(

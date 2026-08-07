@@ -121,7 +121,7 @@ public class MemberStatusRulesTests
 
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var everyone = await handler.Handle(new GetMembersQuery { PageSize = 200 }, CancellationToken.None);
 
         everyone.Items.Count.ShouldBe(boundaries.Length + 4);

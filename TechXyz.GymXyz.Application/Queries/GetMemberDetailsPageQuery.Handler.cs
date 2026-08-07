@@ -10,16 +10,22 @@ namespace TechXyz.GymXyz.Application.Queries;
 public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMemberDetailsPageQuery, MemberDetailsPageDto?>
 {
     private readonly IGymDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetMemberDetailsPageQueryHandler(IGymDbContext dbContext)
+    public GetMemberDetailsPageQueryHandler(IGymDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
 
     public async Task<MemberDetailsPageDto?> Handle(GetMemberDetailsPageQuery request, CancellationToken cancellationToken)
     {
-        var member = await _dbContext.Members
-            .AsNoTracking()
+        var scope = CoachScope.For(_currentUser);
+
+        // Narrowed the same way the list is, so a member nobody put on this
+        // coach's roster answers "not found" rather than opening by URL.
+        var member = await scope
+            .ApplyToMembers(_dbContext.Members.AsNoTracking())
             .Where(candidate => candidate.Id == request.MemberId && candidate.IsActive)
             .Select(candidate => new
             {
@@ -163,6 +169,42 @@ public sealed class GetMemberDetailsPageQueryHandler : IRequestHandler<GetMember
         // would be worse than either.
         var fact = attendance.GetValueOrDefault(member.Id);
         var stats = new MemberStatsDto(pastSessions.Count, fact?.Rate, fact?.LastVisitOnDate);
+
+        // What a coach is shown of somebody they teach: enough to reach them and
+        // to know whether they are covered. Not their address, not their date of
+        // birth, not the gym's notes about them, and not what they have paid —
+        // /abonnements is closed to a coach, and a fiche must not be the way
+        // round it.
+        //
+        // Dropped here rather than in the markup: a value the browser never
+        // receives cannot be read off the page.
+        if (scope.IsRestricted)
+        {
+            // The cover keeps its plan, its dates and its credits — that is what
+            // "is this person entitled to be in my class" is made of — but not
+            // its price. PriceLabel is the one field on it that is money.
+            var cover = currentSubscription is null
+                ? null
+                : currentSubscription with { PriceLabel = string.Empty };
+
+            return new MemberDetailsPageDto(
+                member.Id,
+                member.FirstName,
+                member.LastName,
+                member.Email,
+                member.Phone,
+                member.JoinedOn,
+                BirthDate: null,
+                Notes: null,
+                Address: null,
+                MemberStatusRules.Resolve(covers, today, horizon),
+                cover,
+                Subscriptions: [],
+                upcomingSessions,
+                pastSessions,
+                Payments: [],
+                stats);
+        }
 
         return new MemberDetailsPageDto(
             member.Id,

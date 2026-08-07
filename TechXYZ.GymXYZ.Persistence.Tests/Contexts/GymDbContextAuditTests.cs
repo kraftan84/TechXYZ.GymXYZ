@@ -68,6 +68,8 @@ public class GymDbContextAuditTests
         public string? UserName { get; set; }
 
         public bool IsInRole(string role) => false;
+
+        public int? CoachId => null;
     }
 
     private sealed class TestTenantContext : ITenantContext

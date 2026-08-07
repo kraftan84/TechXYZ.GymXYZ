@@ -22,10 +22,13 @@
         <GxIcon Slot="start" Name="@GxIconPaths.Mail" Size="18"/>
         Message
     </FluentButton>
-    <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
-        <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
-        Éditer
-    </FluentButton>
+    @if (CanManage)
+    {
+        <FluentButton Appearance="Appearance.Accent" @onclick="OnEdit">
+            <GxIcon Slot="start" Name="@GxIconPaths.Settings" Size="18"/>
+            Éditer
+        </FluentButton>
+    }
 </div>
 
 <div class="gx-grid2" style="align-items:start">
@@ -48,8 +51,13 @@
                             Label="@($"{RemainingDays(subscription)} j")"
                             Size="88"/>
                     <div style="flex:1">
+                        @* The price is absent for a coach, and a plan name
+                           trailing a lone separator reads as a missing value
+                           rather than as one deliberately not shown. *@
                         <div style="font-size:var(--text-sm);color:var(--text-strong);font-weight:600;margin-bottom:4px">
-                            @subscription.PlanName · @subscription.PriceLabel
+                            @subscription.PlanName@(string.IsNullOrWhiteSpace(subscription.PriceLabel)
+                                                        ? string.Empty
+                                                        : $" · {subscription.PriceLabel}")
                         </div>
                         <div style="font-size:var(--text-sm);color:var(--text-body);margin-bottom:8px">
                             Débuté le @GxFormats.Date(subscription.StartedOn) ·
@@ -67,10 +75,13 @@
                                 Renouvellement automatique
                             </div>
                         }
-                        <div style="margin-top:12px;display:flex;gap:8px">
-                            <FluentButton Appearance="Appearance.Outline" @onclick="OnRenew">Renouveler</FluentButton>
-                            <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
-                        </div>
+                        @if (CanManage)
+                        {
+                            <div style="margin-top:12px;display:flex;gap:8px">
+                                <FluentButton Appearance="Appearance.Outline" @onclick="OnRenew">Renouveler</FluentButton>
+                                <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -80,19 +91,27 @@
                     <div style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:12px">
                         Aucun abonnement en cours.
                     </div>
-                    <div style="display:flex;gap:8px">
-                        <FluentButton Appearance="Appearance.Accent" @onclick="OnRenew">
-                            Ajouter un abonnement
-                        </FluentButton>
-                        @if (Member.Subscriptions.Count > 0)
-                        {
-                            <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
-                        }
-                    </div>
+                    @if (CanManage)
+                    {
+                        <div style="display:flex;gap:8px">
+                            <FluentButton Appearance="Appearance.Accent" @onclick="OnRenew">
+                                Ajouter un abonnement
+                            </FluentButton>
+                            @if (Member.Subscriptions.Count > 0)
+                            {
+                                <FluentButton Appearance="Appearance.Stealth" @onclick="OnHistory">Historique</FluentButton>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </GxCard>
 
+    @* Not rendered at all for a coach. An empty payments card would read as
+       "this member has never paid", which is a claim about them rather than
+       about what the reader is allowed to see — and a false one. *@
+    @if (CanManage)
+    {
         <GxCard Padded="false">
             <CardHead Title="Paiements"/>
             <div style="padding:4px 18px 12px">
@@ -122,6 +141,7 @@
                 }
             </div>
         </GxCard>
+    }
     </div>
 
     <div class="gx-col">
@@ -207,6 +227,12 @@
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnMessage { get; set; }
     [Parameter] public EventCallback OnRenew { get; set; }
+
+    /// <summary>
+    /// False for a coach: the commands behind these buttons refuse them, so
+    /// offering them would only be a refusal with an extra click in front.
+    /// </summary>
+    [Parameter] public bool CanManage { get; set; } = true;
     [Parameter] public EventCallback OnHistory { get; set; }
 
     private IReadOnlyList<Crumb.Part> Crumbs =>

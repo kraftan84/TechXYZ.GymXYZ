@@ -10,13 +10,16 @@ public sealed class MarkWholeSheetCommandHandler : IRequestHandler<MarkWholeShee
 {
     private readonly IGymDbContext _dbContext;
     private readonly IValidator<MarkWholeSheetCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
     public MarkWholeSheetCommandHandler(
         IGymDbContext dbContext,
-        IValidator<MarkWholeSheetCommand> validator)
+        IValidator<MarkWholeSheetCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<bool> Handle(MarkWholeSheetCommand request, CancellationToken cancellationToken)
@@ -33,6 +36,7 @@ public sealed class MarkWholeSheetCommandHandler : IRequestHandler<MarkWholeShee
             return false;
         }
 
+        AttendanceCompositionHelper.GuardOwned(session, CoachScope.For(_currentUser));
         AttendanceCompositionHelper.GuardWritable(session);
 
         var seats = await _dbContext.Registrations

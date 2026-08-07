@@ -24,10 +24,12 @@ namespace TechXyz.GymXyz.Application.Queries;
 public sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, DashboardDto>
 {
     private readonly IGymDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetDashboardQueryHandler(IGymDbContext dbContext)
+    public GetDashboardQueryHandler(IGymDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
 
     public async Task<DashboardDto> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
@@ -39,14 +41,17 @@ public sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery
         var from = weekStart.ToDateTime(TimeOnly.MinValue);
         var to = from.AddDays(7);
 
+        // The same week a coach sees on the Planning. Two pages describing "this
+        // week" differently is how somebody concludes a session went missing.
+        var scope = CoachScope.For(_currentUser);
+
         // One pass over the week: the seven counts and today's rows come out of
         // the same list, so the strip and the card underneath cannot disagree.
         //
         // Cancelled sessions are left out. « 4 cours » answers how many classes
         // run that day, and a called-off one does not — the same exclusion the
         // attendance figures make.
-        var week = await _dbContext.Sessions
-            .AsNoTracking()
+        var week = await scope.Apply(_dbContext.Sessions.AsNoTracking())
             .Where(session =>
                 session.IsActive &&
                 session.Status != SessionStatus.Cancelled &&
@@ -65,18 +70,34 @@ public sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery
                 session.Capacity))
             .ToListAsync(cancellationToken);
 
-        var horizon = SubscriptionStatusRules.HorizonFrom(today);
-        var standing = await SubscriptionStanding.LoadAsync(_dbContext, today, horizon, cancellationToken);
+        // Counted, not listed: the Accueil says how many, the Présences screen is
+        // where they are worked through.
+        var sheetsToPoint = await AttendanceRules
+            .OpenSheets(_dbContext, now, scope)
+            .CountAsync(cancellationToken);
 
-        var late = standing.Where(row => row.Status == SubscriptionStatus.Late).ToList();
+        // A coach is not shown what the club is owed. The query is skipped rather
+        // than filtered afterwards: the amount must not reach the browser at all,
+        // and there is nothing here to compute for somebody who cannot act on it.
+        DashboardAlertsDto alerts;
 
-        var alerts = new DashboardAlertsDto(
-            standing.Count(row => row.Status == SubscriptionStatus.ExpiringSoon),
-            late.Count,
-            late.Sum(row => row.Price),
-            // Counted, not listed: the Accueil says how many, the Présences
-            // screen is where they are worked through.
-            await AttendanceRules.OpenSheets(_dbContext, now).CountAsync(cancellationToken));
+        if (scope.IsRestricted)
+        {
+            alerts = new DashboardAlertsDto(0, 0, 0m, sheetsToPoint);
+        }
+        else
+        {
+            var horizon = SubscriptionStatusRules.HorizonFrom(today);
+            var standing = await SubscriptionStanding.LoadAsync(_dbContext, today, horizon, cancellationToken);
+
+            var late = standing.Where(row => row.Status == SubscriptionStatus.Late).ToList();
+
+            alerts = new DashboardAlertsDto(
+                standing.Count(row => row.Status == SubscriptionStatus.ExpiringSoon),
+                late.Count,
+                late.Sum(row => row.Price),
+                sheetsToPoint);
+        }
 
         return new DashboardDto(
             today,

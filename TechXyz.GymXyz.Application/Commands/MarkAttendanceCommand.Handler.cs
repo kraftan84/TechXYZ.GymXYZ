@@ -10,13 +10,16 @@ public sealed class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanc
 {
     private readonly IGymDbContext _dbContext;
     private readonly IValidator<MarkAttendanceCommand> _validator;
+    private readonly ICurrentUserService _currentUser;
 
     public MarkAttendanceCommandHandler(
         IGymDbContext dbContext,
-        IValidator<MarkAttendanceCommand> validator)
+        IValidator<MarkAttendanceCommand> validator,
+        ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
         _validator = validator;
+        _currentUser = currentUser;
     }
 
     public async Task<bool> Handle(MarkAttendanceCommand request, CancellationToken cancellationToken)
@@ -38,6 +41,7 @@ public sealed class MarkAttendanceCommandHandler : IRequestHandler<MarkAttendanc
             registration.SessionId,
             cancellationToken);
 
+        AttendanceCompositionHelper.GuardOwned(session, CoachScope.For(_currentUser));
         AttendanceCompositionHelper.GuardWritable(session);
 
         // The cover is read on the day of the session, not on today: a sheet

@@ -11,4 +11,16 @@ public interface ICurrentUserService
     /// button is courtesy; this is the rule.
     /// </summary>
     bool IsInRole(string role);
+
+    /// <summary>
+    /// The <c>Coach</c> this account is, or null for anybody who is not one.
+    /// <para>
+    /// Read from a claim written at sign-in rather than looked up per query: a
+    /// Blazor circuit has no HttpContext to re-read from, and the Présences
+    /// screen asks this question on every render. The cost is that linking a
+    /// coach to their account mid-session takes effect at their next sign-in —
+    /// the same bargain the tenant claim already makes.
+    /// </para>
+    /// </summary>
+    int? CoachId { get; }
 }

@@ -56,13 +56,19 @@ public static class AttendanceRules
     /// A cancelled session has no sheet, so it is in neither — the same
     /// exclusion <see cref="SessionStatistics.LoadAsync"/> applies to the figures.
     /// </para>
+    /// <para>
+    /// <paramref name="scope"/> is why the three still agree now that a coach
+    /// only points their own: narrowing here narrows the list, the counter and
+    /// the badge in one edit. A badge reading two over a list of one would look
+    /// like a lost session rather than like a perimeter.
+    /// </para>
     /// </summary>
-    public static IQueryable<Session> OpenSheets(IGymDbContext dbContext, DateTime now)
+    public static IQueryable<Session> OpenSheets(
+        IGymDbContext dbContext, DateTime now, CoachScope scope)
     {
         var (from, to) = OpenSheetWindow(now);
 
-        return dbContext.Sessions
-            .AsNoTracking()
+        return scope.Apply(dbContext.Sessions.AsNoTracking())
             .Where(session =>
                 session.IsActive &&
                 session.Status != SessionStatus.Cancelled &&

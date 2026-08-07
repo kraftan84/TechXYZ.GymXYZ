@@ -140,5 +140,6 @@ public class CancellationNoticeTests
         new(dbContext,
             sender,
             new TestTenantContext(TestInfrastructure.DefaultTenantId),
-            new CancelSessionCommandValidator());
+            new CancelSessionCommandValidator(),
+            TestCurrentUserService.Manager());
 }

@@ -10,10 +10,12 @@ namespace TechXyz.GymXyz.Application.Queries;
 public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, MembersPageDto>
 {
     private readonly IGymDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetMembersQueryHandler(IGymDbContext dbContext)
+    public GetMembersQueryHandler(IGymDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
 
     public async Task<MembersPageDto> Handle(GetMembersQuery request, CancellationToken cancellationToken)
@@ -21,11 +23,14 @@ public sealed class GetMembersQueryHandler : IRequestHandler<GetMembersQuery, Me
         var today = DateOnly.FromDateTime(DateTime.Today);
         var horizon = MemberStatusRules.HorizonFrom(today);
 
-        var searched = ApplySearch(
-            _dbContext.Members
-                .AsNoTracking()
-                .Where(member => member.IsActive),
-            request.Search);
+        // Narrowed before the search and before the chip counts, so a coach's
+        // « 36 membres » becomes their own number rather than the gym's with a
+        // shorter list underneath it.
+        var visible = CoachScope.For(_currentUser)
+            .ApplyToMembers(_dbContext.Members.AsNoTracking())
+            .Where(member => member.IsActive);
+
+        var searched = ApplySearch(visible, request.Search);
 
         // The chip counts follow the search, so switching standing never shows a
         // count the list cannot produce.

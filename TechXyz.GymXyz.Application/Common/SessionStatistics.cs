@@ -97,14 +97,20 @@ public static class SessionStatistics
     /// stops translating, and the window is a few hundred rows at most.
     /// </para>
     /// </summary>
+    /// <param name="scope">
+    /// Whose sessions to count. Defaults to the whole gym, which is right for
+    /// every caller drawing a room, a coach or a course — those screens are a
+    /// manager's. The Présences figures pass a real scope, so a coach's rate is
+    /// their own rather than the gym's average shown under their name.
+    /// </param>
     public static async Task<List<SessionFact>> LoadAsync(
         IGymDbContext dbContext,
         DateTime from,
         DateTime to,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        CoachScope scope = default)
     {
-        return await dbContext.Sessions
-            .AsNoTracking()
+        return await scope.Apply(dbContext.Sessions.AsNoTracking())
             .Where(session =>
                 session.IsActive &&
                 session.Status != SessionStatus.Cancelled &&

@@ -28,14 +28,17 @@
                 <span class="b"><GxIcon Name="@GxIconPaths.Mail" Size="20"/></span>
                 <span class="cl">E-mail</span>
             </a>
-            <button type="button" class="gx-m-circbtn" @onclick="OnHistory">
-                <span class="b"><GxIcon Name="@GxIconPaths.Card" Size="20"/></span>
-                <span class="cl">Abonnement</span>
-            </button>
-            <button type="button" class="gx-m-circbtn" @onclick="OnEdit">
-                <span class="b"><GxIcon Name="@GxIconPaths.Settings" Size="20"/></span>
-                <span class="cl">Éditer</span>
-            </button>
+            @if (CanManage)
+            {
+                <button type="button" class="gx-m-circbtn" @onclick="OnHistory">
+                    <span class="b"><GxIcon Name="@GxIconPaths.Card" Size="20"/></span>
+                    <span class="cl">Abonnement</span>
+                </button>
+                <button type="button" class="gx-m-circbtn" @onclick="OnEdit">
+                    <span class="b"><GxIcon Name="@GxIconPaths.Settings" Size="20"/></span>
+                    <span class="cl">Éditer</span>
+                </button>
+            }
         </div>
     </div>
 
@@ -128,6 +131,10 @@
         }
     </div>
 
+    @* Hidden for a coach rather than emptied: "aucun encaissement" would be a
+       false statement about the member instead of a true one about the reader. *@
+    @if (CanManage)
+    {
     <div class="gx-m-sec"><span class="t">Paiements</span></div>
     <div class="gx-m-card">
         @if (Member.Payments.Count == 0)
@@ -155,6 +162,7 @@
             }
         }
     </div>
+    }
 </div>
 
 @code {
@@ -162,5 +170,11 @@
     [Parameter] public DateOnly Today { get; set; }
 
     [Parameter] public EventCallback OnEdit { get; set; }
+
+    /// <summary>
+    /// False for a coach: the money is not theirs to read, and the commands
+    /// behind the write buttons refuse them anyway.
+    /// </summary>
+    [Parameter] public bool CanManage { get; set; } = true;
     [Parameter] public EventCallback OnHistory { get; set; }
 }

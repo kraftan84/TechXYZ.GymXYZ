@@ -28,6 +28,25 @@ public static class AttendanceCompositionHelper
     }
 
     /// <summary>
+    /// Refuses a write to somebody else's session. A coach points the classes
+    /// they run; the sheet of the class next door is not theirs to correct.
+    /// <para>
+    /// Refused as "not found" rather than "not yours": the caller cannot see the
+    /// session on any of their screens, so confirming it exists would answer a
+    /// question the perimeter already declined.
+    /// </para>
+    /// </summary>
+    public static void GuardOwned(Session session, CoachScope scope)
+    {
+        if (!scope.Covers(session))
+        {
+            throw ValidationFailures.Refuse(
+                AttendanceFieldNames.Session,
+                AttendanceRules.SessionNotFound);
+        }
+    }
+
+    /// <summary>
     /// Refuses any write to a sheet that cannot take one: a cancelled session
     /// never had a sheet, and a validated one is closed until a manager reopens
     /// it.

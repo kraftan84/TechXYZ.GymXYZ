@@ -22,7 +22,7 @@ public class MemberQueriesHandlerTests
             new Member(faker.Name.FirstName(), "Zimmer") { IsActive = false });
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
 
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
@@ -45,7 +45,7 @@ public class MemberQueriesHandlerTests
             new Member(faker.Name.FirstName(), "NoSubscription"));
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
         StandingOf(result, "Active").ShouldBe(MemberStatus.Active);
@@ -81,7 +81,7 @@ public class MemberQueriesHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
         StandingOf(result, "Overlap").ShouldBe(MemberStatus.Active);
@@ -104,7 +104,7 @@ public class MemberQueriesHandlerTests
         dbContext.Members.Add(member);
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
         StandingOf(result, "Cancelled").ShouldBe(MemberStatus.Inactive);
@@ -126,7 +126,7 @@ public class MemberQueriesHandlerTests
             ExpiredMember(faker.Name.FirstName(), "Expired"));
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMembersQuery { Status = status }, CancellationToken.None);
 
         result.Items.Count.ShouldBe(1);
@@ -147,7 +147,7 @@ public class MemberQueriesHandlerTests
             new Member("Lucas", "Martin") { Email = "lucas.martin@gymxyz.fr", Phone = "06 80 45 12 33" });
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
 
         (await handler.Handle(new GetMembersQuery { Search = "Moriceau" }, CancellationToken.None))
             .Items.Single().FirstName.ShouldBe("Laetitia");
@@ -176,7 +176,7 @@ public class MemberQueriesHandlerTests
 
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
 
         var firstPage = await handler.Handle(new GetMembersQuery { Page = 1, PageSize = 3 }, CancellationToken.None);
         firstPage.Items.Count.ShouldBe(3);
@@ -196,7 +196,7 @@ public class MemberQueriesHandlerTests
         dbContext.Members.Add(ActiveMember("Laetitia", "Moriceau"));
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var member = (await handler.Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
 
         // A recurring plan counts no entries, so the gauge is full and the
@@ -233,7 +233,7 @@ public class MemberQueriesHandlerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var member = (await handler.Handle(new GetMembersQuery(), CancellationToken.None)).Items.Single();
 
         member.PlanLabel.ShouldBe("Carte 10 séances");
@@ -261,7 +261,7 @@ public class MemberQueriesHandlerTests
             await dbContext.SaveChangesAsync();
         }
 
-        var handler = new GetMembersQueryHandler(dbContext);
+        var handler = new GetMembersQueryHandler(dbContext, TestCurrentUserService.Manager());
         var result = await handler.Handle(new GetMembersQuery(), CancellationToken.None);
 
         result.Items.Count.ShouldBe(1);

@@ -18,6 +18,18 @@ public static class GymClaimTypes
     public const string RoleLabel = "gymxyz:role_label";
 
     /// <summary>
+    /// The <c>Coach</c> row this account is, when it is one. Present for a
+    /// manager too if they also coach — it says who they are on the planning,
+    /// not what they may open.
+    /// <para>
+    /// In the cookie rather than looked up per request for the reason the tenant
+    /// is: inside a Blazor circuit there is no HttpContext to read from, and
+    /// "whose sessions are these" is asked on every render of Présences.
+    /// </para>
+    /// </summary>
+    public const string CoachId = "gymxyz:coach_id";
+
+    /// <summary>
     /// Present only while a platform admin is inside a customer. Holds the id of
     /// the <c>TenantImpersonation</c> row the visit opened, so leaving closes the
     /// exact row it opened.

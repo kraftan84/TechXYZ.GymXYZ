@@ -13,11 +13,14 @@
             <div class="hi">Cours</div>
             <div class="sub">@Subtitle</div>
         </div>
-        <div style="flex:none;padding-top:4px">
-            <button type="button" class="gx-m-iconbtn" aria-label="Nouveau cours" @onclick="OnCreate">
-                <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
-            </button>
-        </div>
+        @if (CanManage)
+        {
+            <div style="flex:none;padding-top:4px">
+                <button type="button" class="gx-m-iconbtn" aria-label="Nouveau cours" @onclick="OnCreate">
+                    <GxIcon Name="@GxIconPaths.Plus" Size="20"/>
+                </button>
+            </div>
+        }
     </div>
 
     @if (Page.Items.Count == 0)
@@ -66,6 +69,12 @@
 
     [Parameter] public EventCallback<CourseTemplateListItemDto> OnOpen { get; set; }
     [Parameter] public EventCallback OnCreate { get; set; }
+
+    /// <summary>
+    /// False for a coach: the command behind this button refuses them, so the
+    /// button would only be a refusal with an extra click in front of it.
+    /// </summary>
+    [Parameter] public bool CanManage { get; set; } = true;
 
     /// <summary>The prototype writes "8 modèles de cours".</summary>
     private string Subtitle => GxFormats.Plural(Page.TotalCount, "modèle de cours", "modèles de cours");

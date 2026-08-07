@@ -9,10 +9,12 @@ namespace TechXyz.GymXyz.Application.Queries;
 public sealed class GetWeekPlanningQueryHandler : IRequestHandler<GetWeekPlanningQuery, WeekPlanningDto>
 {
     private readonly IGymDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetWeekPlanningQueryHandler(IGymDbContext dbContext)
+    public GetWeekPlanningQueryHandler(IGymDbContext dbContext, ICurrentUserService currentUser)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
 
     public async Task<WeekPlanningDto> Handle(GetWeekPlanningQuery request, CancellationToken cancellationToken)
@@ -21,8 +23,11 @@ public sealed class GetWeekPlanningQueryHandler : IRequestHandler<GetWeekPlannin
         var from = weekStart.ToDateTime(TimeOnly.MinValue);
         var to = from.AddDays(7);
 
-        var query = _dbContext.Sessions
-            .AsNoTracking()
+        // The floor, applied before the request is consulted. Request.CoachId is
+        // a toolbar chip the caller chooses — it can narrow this further, never
+        // widen it, which is the difference between a filter and a perimeter.
+        var query = CoachScope.For(_currentUser)
+            .Apply(_dbContext.Sessions.AsNoTracking())
             .Where(session =>
                 session.IsActive &&
                 session.StartsAt >= from &&
