@@ -34,6 +34,45 @@ range pas en fin de programme sous prétexte qu'elle est ancienne.
 
 ## Entrées ouvertes
 
+### 4. Un compte ne peut porter qu'un client et qu'un rôle
+
+**Ouverte le 2026-08-07**, pendant la PR 1 du lot « Rôles & cloisonnement ».
+**Échéance : avant qu'un vrai client ait deux casquettes.** Aujourd'hui c'est une
+donnée de démonstration ; le jour où c'est une personne qui paie, c'est un
+double mot de passe et une facture en double.
+
+**Observé.** Najate Amzil est coach salariée chez Team Trainer's **et** gérante
+de Leyssa Coaching. Le modèle ne sait pas l'écrire :
+
+- `ApplicationUser.TenantId` est un `int?` **scalaire** (`ApplicationUser.cs:12`) ;
+- le rôle Identity est porté **globalement** par le compte, pas par le couple
+  compte × client (`AspNetUserRoles`) ;
+- le cookie ne transporte qu'un `gymxyz:tenant_id`
+  (`GymUserClaimsPrincipalFactory.cs:45-52`) ;
+- `RequireUniqueEmail = true` (`Program.cs:94`) interdit même de réutiliser
+  l'adresse.
+
+**Ce qui a été fait à la place.** Deux comptes, deux adresses :
+`najate.amzil@teamtrainers.fr` en `Coach`, `najate.amzil@leyssa-coaching.fr` en
+`GymManager`. Elle se déconnecte pour changer de casquette. Le seed le pose et
+`DbInitializerAccessTests.Seed_ShouldGiveNajateOneAccountPerHat` **l'épingle
+comme un troc, pas comme une vérité** — le test dit ce qu'on abandonne le jour
+où on le corrige.
+
+**Pourquoi pas sur place.** C'est un lot, pas un correctif : une table
+`UserTenantMembership (UserId, TenantId, Role)` remplace à la fois
+`ApplicationUser.TenantId` et le rôle global, donc elle touche la fabrique de
+claims, `TenantResolver`, l'impersonation du super-admin (qui est déjà une
+forme de « changer de client »), `UserDirectory`, l'écran Équipe et la
+connexion — plus un sélecteur de client à l'écran, qui est du dessin, pas du
+code. Le glisser dans le lot rôles aurait fait passer le cloisonnement coach
+derrière lui.
+
+**Le risque de la corriger.** L'impersonation et l'appartenance deviennent le
+même mécanisme sous deux noms. Si les deux ne sont pas unifiés d'un coup, on
+obtient deux façons concurrentes de répondre « quel client suis-je en train de
+lire », c'est-à-dire exactement la question dont dépend le filtre global.
+
 ### 3. `Connection must be valid and open` sur la requête de marque
 
 **Ouverte le 2026-08-06**, en corrigeant l'entrée 1 — dont elle était un
