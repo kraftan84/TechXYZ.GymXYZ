@@ -34,12 +34,29 @@ public class TeamAccessScopesTests
     }
 
     [Fact]
-    public void IsAssignable_ShouldAcceptTheThreeRolesTheSettingsScreenOffers()
+    public void IsAssignable_ShouldAcceptTheTwoRolesTheSettingsScreenOffers()
     {
         TeamAccessScopes.IsAssignable(GymRoleNames.GymManager).ShouldBeTrue();
         TeamAccessScopes.IsAssignable(GymRoleNames.Coach).ShouldBeTrue();
-        TeamAccessScopes.IsAssignable(GymRoleNames.Member).ShouldBeTrue();
         TeamAccessScopes.IsAssignable("Accueil").ShouldBeFalse();
         TeamAccessScopes.IsAssignable(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Assignable_ShouldNotLetAGymGrantTheMemberRole()
+    {
+        // Members are reached by e-mail and never sign in, so an account
+        // carrying this role has no screen to open. The name survives for the
+        // invitations that already carry it — being grantable does not.
+        TeamAccessScopes.Assignable.ShouldNotContain(GymRoleNames.Member);
+        TeamAccessScopes.IsAssignable(GymRoleNames.Member).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Label_ShouldStillAnswerForTheMemberRole()
+    {
+        // Withdrawn from the pickers, not from the vocabulary: a row seeded or
+        // invited before the withdrawal still has to render a scope.
+        TeamAccessScopes.Label(GymRoleNames.Member).ShouldBe(TeamAccessScopes.Member);
     }
 }

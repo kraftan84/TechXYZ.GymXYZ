@@ -295,6 +295,12 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         modelBuilder.Entity<Member>()
             .HasIndex(member => member.UserId);
 
+        // Read on the way in rather than on the way out: resolving the signed-in
+        // account to its coach is what decides whose sessions a coach may see, so
+        // it happens on screens that are opened all day.
+        modelBuilder.Entity<Coach>()
+            .HasIndex(coach => coach.UserId);
+
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Slug)
             .IsUnique();

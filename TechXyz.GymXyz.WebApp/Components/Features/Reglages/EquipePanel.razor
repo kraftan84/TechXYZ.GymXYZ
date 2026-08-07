@@ -14,15 +14,18 @@
 <div class="gx-set-panel">
     <div class="gx-pagehead" style="margin-bottom:0;align-items:center">
         <p class="gx-set-intro" style="margin:0;flex:1">
-            Gérez qui peut se connecter : votre équipe côté gestion, et les membres
-            qui accèdent à leur espace personnel.
+            Gérez qui peut se connecter : votre équipe côté gestion. Les membres
+            n'ont pas de compte — ils sont contactés par e-mail.
         </p>
-        <div class="right">
-            <FluentButton Appearance="Appearance.Accent" @onclick="() => OnInvite.InvokeAsync(DefaultRole)">
-                <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
-                @(Scope == TeamScope.Gestion ? "Inviter un collaborateur" : "Inviter un membre")
-            </FluentButton>
-        </div>
+        @if (Scope == TeamScope.Gestion)
+        {
+            <div class="right">
+                <FluentButton Appearance="Appearance.Accent" @onclick="() => OnInvite.InvokeAsync(DefaultRole)">
+                    <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
+                    Inviter un collaborateur
+                </FluentButton>
+            </div>
+        }
     </div>
 
     <div class="gx-seg" style="align-self:flex-start">
@@ -129,6 +132,11 @@
         <GxCard Padded="false">
             <CardHead Title="Accès à l'espace membre"/>
 
+            <div style="padding:14px 18px 0;font-size:var(--text-sm);color:var(--text-muted)">
+                L'espace membre n'est pas encore ouvert : personne ne se connecte ici.
+                Les invitations aux séances partiront par e-mail, sans compte à créer.
+            </div>
+
             @if (Access.MemberAccounts.Count == 0)
             {
                 <div style="padding:18px;font-size:var(--text-sm);color:var(--text-muted)">
@@ -153,20 +161,10 @@
                                 ? $"Connecté {SettingsLabels.LastSeen(account.LastSeenAt, Now)}"
                                 : string.Empty)
                         </span>
-                        @if (account.State == MemberAccessState.None)
-                        {
-                            <FluentButton Appearance="Appearance.Outline"
-                                          @onclick="() => OnInviteMember.InvokeAsync(account)">
-                                Inviter
-                            </FluentButton>
-                        }
-                        else
-                        {
-                            <FluentButton Appearance="Appearance.Stealth" Disabled="true"
-                                          Title="Le compte se gère depuis la fiche du membre.">
-                                <GxIcon Name="@GxIconPaths.Settings" Size="16"/>
-                            </FluentButton>
-                        }
+                        <FluentButton Appearance="Appearance.Stealth" Disabled="true"
+                                      Title="Les membres ne se connectent pas : ils sont contactés par e-mail.">
+                            <GxIcon Name="@GxIconPaths.Settings" Size="16"/>
+                        </FluentButton>
                     </div>
                 }
             }
@@ -191,11 +189,14 @@
 
     [Parameter] public EventCallback<TeamScope> OnSelectScope { get; set; }
     [Parameter] public EventCallback<string> OnInvite { get; set; }
-    [Parameter] public EventCallback<MemberAccountDto> OnInviteMember { get; set; }
     [Parameter] public EventCallback<TeamMemberDto> OnManage { get; set; }
 
-    private string DefaultRole =>
-        Scope == TeamScope.Gestion ? GymRoleNames.Coach : GymRoleNames.Member;
+    /// <summary>
+    /// Coach: the role a gym hands out most, and now the only one the invite
+    /// drawer opens on — Member is no longer assignable, because a member has
+    /// nothing to sign in to.
+    /// </summary>
+    private static string DefaultRole => GymRoleNames.Coach;
 
     private Task SelectScope(TeamScope scope) => OnSelectScope.InvokeAsync(scope);
 
