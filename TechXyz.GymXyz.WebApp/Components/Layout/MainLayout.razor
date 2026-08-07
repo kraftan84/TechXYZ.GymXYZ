@@ -50,11 +50,15 @@
 
             <main class="gx-m-body">
                 <ErrorBoundary>
-                    @Body
+                    <CustomerScope Brand="Brand">
+                        @Body
+                    </CustomerScope>
                 </ErrorBoundary>
             </main>
 
-            <MobileTabBar PlusActive="_plusOpen" OnPlus="TogglePlus" SheetsToPoint="Badge.SheetsToPoint"/>
+            <MobileTabBar PlusActive="_plusOpen" OnPlus="TogglePlus"
+                          SheetsToPoint="Badge.SheetsToPoint"
+                          HasCustomer="@(!ConsoleBrand.IsConsole(Brand))"/>
 
             @if (_plusOpen)
             {
@@ -74,7 +78,9 @@
                 <main class="gx-content">
                     <div class="gx-wrap">
                         <ErrorBoundary>
-                            @Body
+                            <CustomerScope Brand="Brand">
+                                @Body
+                            </CustomerScope>
                         </ErrorBoundary>
                     </div>
                 </main>

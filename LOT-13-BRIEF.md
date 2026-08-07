@@ -34,7 +34,74 @@ range pas en fin de programme sous prétexte qu'elle est ancienne.
 
 ## Entrées ouvertes
 
+### 3. `Connection must be valid and open` sur la requête de marque
+
+**Ouverte le 2026-08-06**, en corrigeant l'entrée 1 — dont elle était un
+morceau, à tort. **Échéance : aucune tant qu'elle reste invisible** ; c'est du
+bruit de log, pas une panne.
+
+**Observé.** `System.InvalidOperationException: Connection must be valid and
+open`, levée dans `MySql.Data`, toujours sur la **même** requête : celle de
+`GetTenantBrandQuery` (`SELECT ... FROM Tenants WHERE Slug = 'gymxyz'`). Aucune
+autre requête ne tombe.
+
+**Ce qui a été mesuré, et qui la sépare de l'entrée 1.** La fabrique de contexte
+ne la change pas :
+
+| Build | `A second operation was started` | `Connection must be valid and open` |
+|---|---|---|
+| `main` sans le correctif | absent sous cette charge | **présent** |
+| avec la fabrique | absent | **présent, à l'identique** |
+
+Même charge de part et d'autre : connexion, puis 32 chargements de page lus
+jusqu'au bout sur les huit écrans, plus des navigations réelles (circuit
+interactif) sur Planning, Présences, Membres et Administration. Le symptôme est
+donc **antérieur et indépendant** du contexte partagé : il n'était pas causé par
+ce que l'entrée 1 décrivait.
+
+**Pourquoi ça ne casse rien aujourd'hui.** Les pages s'affichent complètes et
+correctement habillées, et le log fait suivre l'échec d'un `Executed DbCommand`
+réussi sur la même requête. Rien à l'écran ne le laisse voir — c'est pour ça
+qu'il a pu vivre plusieurs lots dans le log sans que personne le remarque
+autrement qu'en le lisant.
+
+**Ce qui n'est pas su.** La cause. Deux pistes non départagées : le connecteur
+`MySql.Data` qui rend une connexion du pool pas encore ouverte, et la double
+passe de `TenantBoundary.OnInitializedAsync` (prérendu puis circuit). Ne pas
+la refermer sans avoir tranché : une entrée qui dit « corrigé » sans savoir
+pourquoi ne vaut rien à la personne qui reverra le message.
+
+---
+
+## Entrées fermées
+
 ### 2. Un `PlatformAdmin` hors impersonation lit les données de GymXYZ
+
+> **Fermée le 2026-08-07**, dans le lot 11 et donc à l'échéance annoncée —
+> corrigée en **A + B**, C écarté pour la raison donnée plus bas. La décision
+> produit a été prise au moment du plan du lot, avant d'écrire du code, comme
+> l'entrée le demandait.
+>
+> **Ce qui a été fait.** `TenantResolver` ne replie plus sur l'hôte pour un
+> principal authentifié sans claim de tenant : le tenant ambiant reste 0 et le
+> filtre global ne laisse rien passer. La navigation métier disparaît — Réglages
+> compris, ce sont les réglages du client — et il ne reste qu'Administration.
+> L'URL directe répond pour elle-même via `CustomerScope`, qui affiche
+> « Aucun client sélectionné » plutôt qu'un état vide mensonger. La console porte
+> désormais la marque `ConsoleBrand` (TechXYZ, tenant 0) au lieu d'emprunter
+> celle de GymXYZ.
+>
+> **Ce qui a été vérifié**, l'entrée demandant de prouver qu'aucun autre rôle ne
+> perd l'accès : l'admin sans client ne voit plus aucune donnée et garde sa
+> console ; l'admin entré chez Leyssa voit les six membres, le bandeau, et la
+> ligne `TenantImpersonation` est ouverte — c'est la **ligne 1**, tout ce qui
+> précède l'entrée n'ayant rien lu ; le gérant GymXYZ voit ses 36 membres ; le
+> coach voit tout son écran ; l'anonyme garde le repli par hôte, seul cas pour
+> lequel il avait été écrit.
+>
+> **Ce que la fermeture ne couvre pas.** Le repli par hôte reste le chemin des
+> sous-domaines clients en production ; il n'a pas été exercé ailleurs qu'en
+> test, faute d'un DNS de développement.
 
 **Échéance proposée : avant le lot 11** (marques clientes), qui multiplie les
 clients et donc l'exposition. **Demande une décision produit avant de coder.**
@@ -82,47 +149,6 @@ navigation), moyen en vérification : c'est un changement d'autorisation de fait
 et il faut prouver qu'aucun autre rôle ne perd l'accès au passage.
 
 ---
-
-### 3. `Connection must be valid and open` sur la requête de marque
-
-**Ouverte le 2026-08-06**, en corrigeant l'entrée 1 — dont elle était un
-morceau, à tort. **Échéance : aucune tant qu'elle reste invisible** ; c'est du
-bruit de log, pas une panne.
-
-**Observé.** `System.InvalidOperationException: Connection must be valid and
-open`, levée dans `MySql.Data`, toujours sur la **même** requête : celle de
-`GetTenantBrandQuery` (`SELECT ... FROM Tenants WHERE Slug = 'gymxyz'`). Aucune
-autre requête ne tombe.
-
-**Ce qui a été mesuré, et qui la sépare de l'entrée 1.** La fabrique de contexte
-ne la change pas :
-
-| Build | `A second operation was started` | `Connection must be valid and open` |
-|---|---|---|
-| `main` sans le correctif | absent sous cette charge | **présent** |
-| avec la fabrique | absent | **présent, à l'identique** |
-
-Même charge de part et d'autre : connexion, puis 32 chargements de page lus
-jusqu'au bout sur les huit écrans, plus des navigations réelles (circuit
-interactif) sur Planning, Présences, Membres et Administration. Le symptôme est
-donc **antérieur et indépendant** du contexte partagé : il n'était pas causé par
-ce que l'entrée 1 décrivait.
-
-**Pourquoi ça ne casse rien aujourd'hui.** Les pages s'affichent complètes et
-correctement habillées, et le log fait suivre l'échec d'un `Executed DbCommand`
-réussi sur la même requête. Rien à l'écran ne le laisse voir — c'est pour ça
-qu'il a pu vivre plusieurs lots dans le log sans que personne le remarque
-autrement qu'en le lisant.
-
-**Ce qui n'est pas su.** La cause. Deux pistes non départagées : le connecteur
-`MySql.Data` qui rend une connexion du pool pas encore ouverte, et la double
-passe de `TenantBoundary.OnInitializedAsync` (prérendu puis circuit). Ne pas
-la refermer sans avoir tranché : une entrée qui dit « corrigé » sans savoir
-pourquoi ne vaut rien à la personne qui reverra le message.
-
----
-
-## Entrées fermées
 
 ### 1. Un seul `DbContext` par circuit, partagé par tout l'écran
 

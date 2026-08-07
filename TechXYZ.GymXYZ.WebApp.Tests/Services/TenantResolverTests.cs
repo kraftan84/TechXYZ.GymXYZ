@@ -81,6 +81,58 @@ public class TenantResolverTests
         sender.LastSlug.ShouldBe("teamtrainers");
     }
 
+    [Fact]
+    public async Task ResolveAsync_ShouldResolveNothing_ForAnAuthenticatedUserWithNoTenant()
+    {
+        // A platform admin who has entered no customer. Before lot 11 this fell
+        // through to the host, which on localhost — and on the apex domain in
+        // production — answers DefaultSlug: the admin read a real customer's
+        // members and e-mail addresses with no TenantImpersonation row recording
+        // it, and no banner saying whose data it was.
+        var sender = new RecordingSender();
+        var resolver = CreateResolver("gymxyz.fr", sender);
+        var admin = CreatePrincipal(("Console TechXYZ", ClaimTypes.Name));
+
+        var brand = await resolver.ResolveAsync(admin);
+
+        brand.ShouldBeNull();
+        sender.LastSlug.ShouldBeNull("No brand may be queried at all for an admin outside every customer.");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ShouldResolveNothing_EvenOnACustomerSubdomain()
+    {
+        // The host is not a grant. An admin who lands on teamtrainers.gymxyz.fr
+        // without entering that customer is still outside it — otherwise the
+        // fallback would just move from the default slug to whichever hostname
+        // was typed, which is the same hole with a different key.
+        var sender = new RecordingSender();
+        var resolver = CreateResolver("teamtrainers.gymxyz.fr", sender);
+
+        var brand = await resolver.ResolveAsync(CreatePrincipal(("Console TechXYZ", ClaimTypes.Name)));
+
+        brand.ShouldBeNull();
+        sender.LastSlug.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ShouldStillUseTheClaim_WhenAnAdminHasEnteredACustomer()
+    {
+        // Impersonation writes TenantId, TenantSlug and Impersonation onto the
+        // principal. The admin is then inside that customer for real, and the
+        // refusal above must not follow them in.
+        var sender = new RecordingSender();
+        var resolver = CreateResolver("localhost", sender);
+        var admin = CreatePrincipal(
+            ("Console TechXYZ", ClaimTypes.Name),
+            ("leyssa", GymClaimTypes.TenantSlug),
+            ("42", GymClaimTypes.Impersonation));
+
+        await resolver.ResolveAsync(admin);
+
+        sender.LastSlug.ShouldBe("leyssa");
+    }
+
     private static TenantResolver CreateResolver(string host, ISender? sender = null)
     {
         var httpContext = new DefaultHttpContext();

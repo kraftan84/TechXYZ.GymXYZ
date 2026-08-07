@@ -6,7 +6,7 @@
 
     @foreach (var group in GxNavigation.Groups)
     {
-        var items = GxNavigation.Visible(group.Items, Brand.IsSolo).ToList();
+        var items = GxNavigation.Visible(group.Items, Brand.IsSolo, HasCustomer).ToList();
         if (items.Count == 0)
         {
             continue;
@@ -43,6 +43,12 @@
 
 @code {
     [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
+
+    /// <summary>
+    /// False for a platform admin outside every customer: the business sections
+    /// disappear and only Administration is left in the footer.
+    /// </summary>
+    private bool HasCustomer => !ConsoleBrand.IsConsole(Brand);
 
     /// <summary>Sheets waiting to be pointed, or null for no chip at all.</summary>
     [Parameter] public int? SheetsToPoint { get; set; }
