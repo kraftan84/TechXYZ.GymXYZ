@@ -62,6 +62,34 @@ public class BrandThemeTests
         BrandTheme.For(null).Key.ShouldBe("techxyz");
     }
 
+    [Theory]
+    [InlineData("app.css")]
+    [InlineData("mobile.css")]
+    public void CalendarAnnotations_ShouldNotReadTheAccentRamp(string stylesheet)
+    {
+        // A public holiday and a school break are calendar annotations, not brand
+        // decoration. While .ferie read the accent ramp it followed the brand:
+        // plain grey under Team Trainer's, rose under Leyssa — so in one calendar
+        // the holiday sank into the chrome while the school-break pill beside it
+        // stayed amber. Both now take the warning ramp, which no theme re-points,
+        // and the icon (star vs sun) is what tells them apart.
+        var css = Regex.Replace(
+            RepositoryFiles.ReadWebAppFile("wwwroot", "css", stylesheet),
+            @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+
+        var offenders = css
+            .Split('\n')
+            .Select((line, index) => (line, number: index + 1))
+            .Where(entry => Regex.IsMatch(entry.line, @"\.(ferie|vac)\b"))
+            .Where(entry => entry.line.Contains("--azure-"))
+            .Select(entry => $"{stylesheet}:{entry.number} → {entry.line.Trim()}")
+            .ToList();
+
+        offenders.ShouldBeEmpty(
+            "A calendar annotation reads the accent ramp, so it changes colour with "
+            + "the brand. Use the warning ramp — it is shared and never themed.");
+    }
+
     private static string ReadThemesStylesheet() =>
         RepositoryFiles.ReadWebAppFile("wwwroot", "css", "themes.css");
 }
