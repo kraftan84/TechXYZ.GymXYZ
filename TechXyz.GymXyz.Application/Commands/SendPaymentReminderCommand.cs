@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Application.Models;
 
 namespace TechXyz.GymXyz.Application.Commands;
@@ -20,7 +21,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// so the screen can say why rather than appear to have done nothing.
 /// </para>
 /// </summary>
-public sealed class SendPaymentReminderCommand : IRequest<NotificationOutcomeDto>
+public sealed class SendPaymentReminderCommand : IRequest<NotificationOutcomeDto>, IManagerOnly
 {
     public SendPaymentReminderCommand(int subscriptionId)
     {

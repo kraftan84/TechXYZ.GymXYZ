@@ -17,4 +17,18 @@ public sealed record GymUserInfo(string DisplayName, string? Nickname, string? R
     /// the authentication state whose data it is drawing.
     /// </summary>
     public bool IsImpersonating { get; init; }
+
+    /// <summary>
+    /// Whether this person runs the gym rather than teaches in it. True for a
+    /// platform admin as well, matching <c>GymPolicies.GymManager</c>.
+    /// <para>
+    /// The role, not the <see cref="RoleLabel"/> beside it: that one is free text
+    /// the gym writes itself, and Leyssa's owner wrote "Coach" in it while
+    /// holding GymManager. Reading the label to decide what to show would hide
+    /// her own settings from her.
+    /// </para>
+    /// </summary>
+    public bool IsManager { get; init; }
+
+    public bool IsPlatformAdmin { get; init; }
 }

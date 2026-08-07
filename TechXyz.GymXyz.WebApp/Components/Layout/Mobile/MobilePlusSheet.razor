@@ -10,8 +10,7 @@
         </div>
     </div>
     <div class="gx-m-plusgrid">
-        @foreach (var item in GxNavigation.Visible(
-            GxNavigation.MobileMore, Brand.IsSolo, !ConsoleBrand.IsConsole(Brand)))
+        @foreach (var item in GxNavigation.Visible(GxNavigation.MobileMore, Viewer))
         {
             <button type="button" class="gx-m-plusitem" @onclick="() => GoAsync(item.Href)">
                 <span class="si">
@@ -36,6 +35,12 @@
     [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
     [Parameter, EditorRequired] public GymUserInfo User { get; set; } = default!;
     [Parameter] public EventCallback OnClose { get; set; }
+
+    private GxNavViewer Viewer => new(
+        IsSolo: Brand.IsSolo,
+        HasCustomer: !ConsoleBrand.IsConsole(Brand),
+        IsManager: User.IsManager,
+        IsPlatformAdmin: User.IsPlatformAdmin);
 
     private string RoleLine => string.IsNullOrWhiteSpace(User.RoleLabel)
         ? Brand.DisplayName

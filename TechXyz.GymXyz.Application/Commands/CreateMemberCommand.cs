@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateMemberCommand : IRequest<int>
+public sealed class CreateMemberCommand : IRequest<int>, IManagerOnly
 {
     public CreateMemberCommand(
         string firstName,

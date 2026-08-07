@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
@@ -14,7 +15,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// this screen to enter.
 /// </para>
 /// </summary>
-public sealed class RecordPaymentCommand : IRequest<int>
+public sealed class RecordPaymentCommand : IRequest<int>, IManagerOnly
 {
     public RecordPaymentCommand(
         int memberId,

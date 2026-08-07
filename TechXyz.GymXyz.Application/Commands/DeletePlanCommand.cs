@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -13,7 +14,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// back on it.
 /// </para>
 /// </summary>
-public sealed class DeletePlanCommand : IRequest<bool>
+public sealed class DeletePlanCommand : IRequest<bool>, IManagerOnly
 {
     public DeletePlanCommand(int id)
     {

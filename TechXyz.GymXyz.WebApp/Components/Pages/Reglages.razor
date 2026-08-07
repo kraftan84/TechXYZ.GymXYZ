@@ -1,4 +1,5 @@
 @page "/reglages"
+@attribute [Authorize(Policy = GymPolicies.GymManager)]
 @using MediatR
 @using TechXyz.GymXyz.Application.Commands
 @using TechXyz.GymXyz.Application.Common

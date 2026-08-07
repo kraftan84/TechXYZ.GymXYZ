@@ -1,0 +1,136 @@
+using System.Text.RegularExpressions;
+using Shouldly;
+
+namespace TechXYZ.GymXYZ.WebApp.Tests.Features;
+
+/// <summary>
+/// The perimeter table, made executable. Every routable page is read out of its
+/// own source and matched against the access it is supposed to carry.
+/// <para>
+/// A scan rather than a rendering test because there is no bUnit here and a page
+/// carries its rule as an attribute, which is a fact about the file. What this
+/// cannot prove is that the attribute is honoured — ASP.NET Core does that, and
+/// the browser pass confirms it once per lot. What it does prove is the part
+/// that rots: that a page added later states which side of the line it is on,
+/// instead of silently inheriting the bare <c>[Authorize]</c> from _Imports and
+/// opening the gym's revenue to whoever can sign in.
+/// </para>
+/// </summary>
+public class RoutePerimeterTests
+{
+    /// <summary>Pages every signed-in person may open, coaches included.</summary>
+    private static readonly string[] OpenToEverySignedInUser =
+    [
+        "Home.razor",
+        "Planning.razor",
+        "Presences.razor",
+        "Members.razor",
+        "MemberDetails.razor",
+        "Cours.razor",
+        "CourseDetails.razor"
+    ];
+
+    /// <summary>
+    /// Pages about running the gym rather than teaching in it. The policy admits
+    /// a platform admin as well, so impersonation keeps working.
+    /// </summary>
+    private static readonly string[] ManagerOnly =
+    [
+        "Abonnements.razor",
+        "Reglages.razor",
+        "Coachs.razor",
+        "CoachDetails.razor",
+        "Lieux.razor",
+        "LocationDetails.razor",
+        "Users.razor"
+    ];
+
+    /// <summary>The platform's own screens, reserved for TechXYZ.</summary>
+    private static readonly string[] PlatformAdminOnly =
+    [
+        "Administration.razor",
+        Path.Combine("Account", "Impersonation.razor"),
+        Path.Combine("Account", "ImpersonationExit.razor")
+    ];
+
+    /// <summary>Reachable without signing in, by explicit opt-out.</summary>
+    private static readonly string[] Anonymous =
+    [
+        Path.Combine("Account", "Login.razor"),
+        Path.Combine("Account", "AccessDenied.razor"),
+        "Error.razor",
+        "NotFound.razor"
+    ];
+
+    private static readonly Regex PageDirective = new(@"^@page\s", RegexOptions.Multiline);
+
+    [Theory]
+    [MemberData(nameof(ManagerOnlyPages))]
+    public void AManagerOnlyPage_ShouldCarryTheGymManagerPolicy(string relativePath)
+    {
+        Read(relativePath).ShouldContain(
+            "@attribute [Authorize(Policy = GymPolicies.GymManager)]",
+            customMessage: $"{relativePath} is about running the gym: a coach who types its URL must be refused.");
+    }
+
+    [Theory]
+    [MemberData(nameof(PlatformAdminPages))]
+    public void APlatformPage_ShouldCarryThePlatformAdminPolicy(string relativePath)
+    {
+        Read(relativePath).ShouldContain("@attribute [Authorize(Policy = GymPolicies.PlatformAdmin)]");
+    }
+
+    [Theory]
+    [MemberData(nameof(OpenPages))]
+    public void APageOpenToEverybody_ShouldCarryNoPolicy(string relativePath)
+    {
+        // The other direction, and the one a partitioning lot gets wrong: a coach
+        // has to keep the screens they work on.
+        Read(relativePath).ShouldNotContain(
+            "Policy =",
+            customMessage: $"{relativePath} is part of a coach's day and must stay open to them.");
+    }
+
+    [Fact]
+    public void EveryRoutablePage_ShouldBeAccountedForInThisTable()
+    {
+        // The canary. A new page inherits the bare [Authorize] from _Imports, so
+        // forgetting one is invisible on screen and total in effect — this is
+        // what makes it loud instead.
+        var declared = OpenToEverySignedInUser
+            .Concat(ManagerOnly)
+            .Concat(PlatformAdminOnly)
+            .Concat(Anonymous)
+            .Select(Normalise)
+            .ToHashSet();
+
+        var onDisk = RoutablePages().Select(Normalise).ToList();
+
+        onDisk.Except(declared).ShouldBeEmpty(
+            "A routable page states which side of the perimeter it is on, in RoutePerimeterTests.");
+        declared.Except(onDisk).ShouldBeEmpty(
+            "This table names a page that no longer exists.");
+    }
+
+    public static TheoryData<string> ManagerOnlyPages() => new(ManagerOnly);
+
+    public static TheoryData<string> PlatformAdminPages() => new(PlatformAdminOnly);
+
+    public static TheoryData<string> OpenPages() => new(OpenToEverySignedInUser);
+
+    private static string Read(string relativePath) =>
+        RepositoryFiles.ReadWebAppFile("Components", "Pages", relativePath);
+
+    private static IEnumerable<string> RoutablePages()
+    {
+        var pages = new DirectoryInfo(
+            Path.Combine(RepositoryFiles.WebApp().FullName, "Components", "Pages"));
+
+        return pages
+            .EnumerateFiles("*.razor", SearchOption.AllDirectories)
+            .Where(file => PageDirective.IsMatch(File.ReadAllText(file.FullName)))
+            .Select(file => Path.GetRelativePath(pages.FullName, file.FullName));
+    }
+
+    private static string Normalise(string path) => path.Replace('\\', '/');
+}

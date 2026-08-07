@@ -6,7 +6,7 @@
 
     @foreach (var group in GxNavigation.Groups)
     {
-        var items = GxNavigation.Visible(group.Items, Brand.IsSolo, HasCustomer).ToList();
+        var items = GxNavigation.Visible(group.Items, Viewer).ToList();
         if (items.Count == 0)
         {
             continue;
@@ -33,22 +33,34 @@
 
     <div class="gx-sb-spacer"></div>
 
+    @* Through the same filter as everything else. Rendered unconditionally until
+       this lot, it offered every coach a link that answers "accès refusé". *@
     <div class="gx-sb-foot">
-        <NavLink class="gx-nav" href="@GxNavigation.Administration.Href" ActiveClass="active">
-            <GxIcon Name="@GxNavigation.Administration.Icon" Size="19"/>
-            <span>@GxNavigation.Administration.Label</span>
-        </NavLink>
+        @foreach (var item in GxNavigation.Visible([GxNavigation.Administration], Viewer))
+        {
+            <NavLink class="gx-nav" href="@item.Href" ActiveClass="active">
+                <GxIcon Name="@item.Icon" Size="19"/>
+                <span>@item.Label</span>
+            </NavLink>
+        }
     </div>
 </aside>
 
 @code {
     [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
 
+    /// <summary>The signed-in person, for the sections that are not everybody's.</summary>
+    [CascadingParameter] public GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
+
     /// <summary>
-    /// False for a platform admin outside every customer: the business sections
-    /// disappear and only Administration is left in the footer.
+    /// HasCustomer is false for a platform admin outside every customer: the
+    /// business sections disappear and only Administration is left in the footer.
     /// </summary>
-    private bool HasCustomer => !ConsoleBrand.IsConsole(Brand);
+    private GxNavViewer Viewer => new(
+        IsSolo: Brand.IsSolo,
+        HasCustomer: !ConsoleBrand.IsConsole(Brand),
+        IsManager: User.IsManager,
+        IsPlatformAdmin: User.IsPlatformAdmin);
 
     /// <summary>Sheets waiting to be pointed, or null for no chip at all.</summary>
     [Parameter] public int? SheetsToPoint { get; set; }

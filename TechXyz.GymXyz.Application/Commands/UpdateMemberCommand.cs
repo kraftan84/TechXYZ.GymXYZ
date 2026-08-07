@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class UpdateMemberCommand : IRequest<bool>
+public sealed class UpdateMemberCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateMemberCommand(
         int id,

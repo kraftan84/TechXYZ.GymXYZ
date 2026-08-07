@@ -1,9 +1,10 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateCourseTemplateCommand : IRequest<int>
+public sealed class CreateCourseTemplateCommand : IRequest<int>, IManagerOnly
 {
     public CreateCourseTemplateCommand(
         string name,

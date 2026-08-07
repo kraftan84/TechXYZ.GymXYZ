@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class UpdateSiteCommand : IRequest<bool>
+public sealed class UpdateSiteCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateSiteCommand(
         int id,

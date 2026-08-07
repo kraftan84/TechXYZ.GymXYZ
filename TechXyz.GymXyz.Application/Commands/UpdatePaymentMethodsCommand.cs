@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
@@ -12,7 +13,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// costs and what a gym can be paid in are two decisions with two audiences.
 /// </para>
 /// </summary>
-public sealed class UpdatePaymentMethodsCommand : IRequest<bool>
+public sealed class UpdatePaymentMethodsCommand : IRequest<bool>, IManagerOnly
 {
     public UpdatePaymentMethodsCommand(
         string currency,

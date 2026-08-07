@@ -11,9 +11,15 @@
         <GxIcon Name="@GxIconPaths.Bell" Size="20"/>
         <span class="dot"></span>
     </div>
-    <NavLink class="gx-tb-ic" href="@GxNavigation.Reglages.Href" ActiveClass="on" title="Réglages">
-        <GxIcon Name="@GxNavigation.Reglages.Icon" Size="20"/>
-    </NavLink>
+    @* Réglages has no sidebar entry on desktop — this gear is the whole of it,
+       which is why it goes through the same filter rather than being hidden by
+       hand. *@
+    @foreach (var item in GxNavigation.Visible([GxNavigation.Reglages], Viewer))
+    {
+        <NavLink class="gx-tb-ic" href="@item.Href" ActiveClass="on" title="@item.Label">
+            <GxIcon Name="@item.Icon" Size="20"/>
+        </NavLink>
+    }
     <span class="gx-tb-div"></span>
     <div class="gx-me">
         <GxAvatar Name="@User.DisplayName" Size="sm"/>
@@ -27,6 +33,12 @@
 @code {
     [Parameter, EditorRequired] public TenantBrandDto Brand { get; set; } = default!;
     [Parameter, EditorRequired] public GymUserInfo User { get; set; } = default!;
+
+    private GxNavViewer Viewer => new(
+        IsSolo: Brand.IsSolo,
+        HasCustomer: !ConsoleBrand.IsConsole(Brand),
+        IsManager: User.IsManager,
+        IsPlatformAdmin: User.IsPlatformAdmin);
 
     private string RoleLine => string.IsNullOrWhiteSpace(User.RoleLabel)
         ? Brand.DisplayName

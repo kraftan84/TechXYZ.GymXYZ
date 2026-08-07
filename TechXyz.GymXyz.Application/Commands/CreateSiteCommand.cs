@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateSiteCommand : IRequest<int>
+public sealed class CreateSiteCommand : IRequest<int>, IManagerOnly
 {
     public CreateSiteCommand(
         string name,

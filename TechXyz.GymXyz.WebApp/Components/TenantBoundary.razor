@@ -5,6 +5,7 @@
    authentication cookie; the host is only used before authentication, to dress
    the login screen in the right colours. *@
 
+@using TechXyz.GymXyz.Application.Common
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ITenantResolver TenantResolver
 @inject TenantContext TenantContext
@@ -64,6 +65,8 @@
                           ?? principal.Identity.Name
                           ?? GymUserInfo.Anonymous.DisplayName;
 
+        var isPlatformAdmin = principal.IsInRole(GymRoleNames.PlatformAdmin);
+
         return new GymUserInfo(
             displayName,
             principal.FindFirstValue(GymClaimTypes.Nickname),
@@ -72,7 +75,13 @@
             // The tenant claims beside it are borrowed, not owned: a platform
             // admin's own account carries no tenant at all.
             IsImpersonating = principal.HasClaim(
-                claim => claim.Type == GymClaimTypes.Impersonation)
+                claim => claim.Type == GymClaimTypes.Impersonation),
+
+            // Read here rather than in each shell: the navigation, the topbar and
+            // the mobile sheet all ask the same question, and asking it three
+            // times is three chances to answer it differently.
+            IsManager = principal.IsInRole(GymRoleNames.GymManager) || isPlatformAdmin,
+            IsPlatformAdmin = isPlatformAdmin
         };
     }
 }

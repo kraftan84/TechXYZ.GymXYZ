@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateCoachCommand : IRequest<int>
+public sealed class CreateCoachCommand : IRequest<int>, IManagerOnly
 {
     public CreateCoachCommand(
         string firstName,

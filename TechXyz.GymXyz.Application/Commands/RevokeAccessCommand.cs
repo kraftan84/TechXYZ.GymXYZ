@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -10,7 +11,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// bought. Only the door closes.
 /// </para>
 /// </summary>
-public sealed class RevokeAccessCommand : IRequest<bool>
+public sealed class RevokeAccessCommand : IRequest<bool>, IManagerOnly
 {
     public RevokeAccessCommand(string userId)
     {

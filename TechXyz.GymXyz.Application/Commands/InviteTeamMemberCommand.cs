@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -13,7 +14,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// and the panel shows it as « en attente ».
 /// </para>
 /// </summary>
-public sealed class InviteTeamMemberCommand : IRequest<bool>
+public sealed class InviteTeamMemberCommand : IRequest<bool>, IManagerOnly
 {
     public InviteTeamMemberCommand(string email, string roleName, int? memberId = null)
     {
