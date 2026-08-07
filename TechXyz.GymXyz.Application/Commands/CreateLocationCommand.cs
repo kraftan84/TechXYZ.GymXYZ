@@ -1,9 +1,10 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class CreateLocationCommand : IRequest<int>
+public sealed class CreateLocationCommand : IRequest<int>, IManagerOnly
 {
     public CreateLocationCommand(
         string name,

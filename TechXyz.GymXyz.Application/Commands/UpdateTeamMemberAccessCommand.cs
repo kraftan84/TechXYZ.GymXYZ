@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -10,7 +11,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// second setting to keep in step with it.
 /// </para>
 /// </summary>
-public sealed class UpdateTeamMemberAccessCommand : IRequest<bool>
+public sealed class UpdateTeamMemberAccessCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateTeamMemberAccessCommand(string userId, string roleName)
     {

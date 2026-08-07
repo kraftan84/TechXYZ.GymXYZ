@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
@@ -8,7 +9,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// offer, and it stays an offer until <c>AssignSubscriptionCommand</c> gives a
 /// member their copy of it.
 /// </summary>
-public sealed class CreatePlanCommand : IRequest<int>
+public sealed class CreatePlanCommand : IRequest<int>, IManagerOnly
 {
     public CreatePlanCommand(
         string name,

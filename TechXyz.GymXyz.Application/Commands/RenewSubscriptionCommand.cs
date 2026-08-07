@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -7,7 +8,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// edited one: what the member had last month is history, and stretching its end
 /// date would erase it.
 /// </summary>
-public sealed class RenewSubscriptionCommand : IRequest<int?>
+public sealed class RenewSubscriptionCommand : IRequest<int?>, IManagerOnly
 {
     public RenewSubscriptionCommand(int subscriptionId)
     {

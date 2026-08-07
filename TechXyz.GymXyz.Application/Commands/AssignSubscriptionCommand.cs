@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -7,7 +8,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// it runs, how many entries it holds, what it costs — comes off the plan; the
 /// caller chooses the member, the plan and the day it starts.
 /// </summary>
-public sealed class AssignSubscriptionCommand : IRequest<int>
+public sealed class AssignSubscriptionCommand : IRequest<int>, IManagerOnly
 {
     public AssignSubscriptionCommand(int memberId, int planId, DateOnly? startedOn, bool autoRenew)
     {

@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -16,7 +17,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// subscription — including the monthly figure the MRR is a sum of.
 /// </para>
 /// </summary>
-public sealed class UpdatePlanCommand : IRequest<bool>
+public sealed class UpdatePlanCommand : IRequest<bool>, IManagerOnly
 {
     public UpdatePlanCommand(
         int id,

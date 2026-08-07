@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
@@ -12,7 +13,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// « off », and the first save is what turns that reading into a decision.
 /// </para>
 /// </summary>
-public sealed class UpdateNotificationSettingsCommand : IRequest<bool>
+public sealed class UpdateNotificationSettingsCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateNotificationSettingsCommand(IReadOnlyList<NotificationSettingInput> settings)
     {

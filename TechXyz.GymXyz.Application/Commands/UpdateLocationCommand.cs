@@ -1,9 +1,10 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 using TechXyz.GymXyz.Domain.Entities;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class UpdateLocationCommand : IRequest<bool>
+public sealed class UpdateLocationCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateLocationCommand(
         int id,

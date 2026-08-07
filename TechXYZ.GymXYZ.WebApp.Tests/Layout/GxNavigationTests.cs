@@ -5,10 +5,20 @@ namespace TechXYZ.GymXYZ.WebApp.Tests.Layout;
 
 public class GxNavigationTests
 {
+    /// <summary>Somebody who runs a gym: the viewer every section was drawn for.</summary>
+    private static readonly GxNavViewer Manager = new();
+
+    /// <summary>A salaried coach — the role this lot finally gives a perimeter.</summary>
+    private static readonly GxNavViewer Coach = new(IsManager: false);
+
+    /// <summary>A platform admin who has entered no customer.</summary>
+    private static readonly GxNavViewer Admin =
+        new(HasCustomer: false, IsPlatformAdmin: true);
+
     [Fact]
     public void Visible_ShouldKeepCoachs_ForARegularGym()
     {
-        var items = GxNavigation.Visible(GxNavigation.Groups[1].Items, isSolo: false).ToList();
+        var items = GxNavigation.Visible(GxNavigation.Groups[1].Items, Manager).ToList();
 
         items.ShouldContain(GxNavigation.Coachs);
     }
@@ -34,7 +44,7 @@ public class GxNavigationTests
     [Fact]
     public void Visible_ShouldDropCoachs_ForASoloCoach()
     {
-        var items = GxNavigation.Visible(GxNavigation.Groups[1].Items, isSolo: true).ToList();
+        var items = GxNavigation.Visible(GxNavigation.Groups[1].Items, Manager with { IsSolo = true }).ToList();
 
         items.ShouldNotContain(GxNavigation.Coachs);
         items.ShouldContain(GxNavigation.Membres);
@@ -67,7 +77,7 @@ public class GxNavigationTests
     [Fact]
     public void Visible_ShouldDropCoachs_FromTheMobilePlusSheet_ForASoloCoach()
     {
-        var items = GxNavigation.Visible(GxNavigation.MobileMore, isSolo: true).ToList();
+        var items = GxNavigation.Visible(GxNavigation.MobileMore, Manager with { IsSolo = true }).ToList();
 
         items.ShouldNotContain(GxNavigation.Coachs);
         items.ShouldContain(GxNavigation.Reglages);
@@ -84,7 +94,7 @@ public class GxNavigationTests
             .Concat(GxNavigation.MobileMore)
             .Distinct();
 
-        var items = GxNavigation.Visible(everything, isSolo: false, hasCustomer: false).ToList();
+        var items = GxNavigation.Visible(everything, Admin).ToList();
 
         items.ShouldBe([GxNavigation.Administration]);
     }
@@ -95,23 +105,84 @@ public class GxNavigationTests
         // Réglages is the customer's own settings — its identity, its team, its
         // e-mail. Named on its own because it sits in the footer rather than in
         // a group, and is the one business entry easy to forget.
-        GxNavigation.Visible([GxNavigation.Reglages], isSolo: false, hasCustomer: false)
+        GxNavigation.Visible([GxNavigation.Reglages], Admin)
             .ShouldBeEmpty();
     }
 
     [Fact]
-    public void Visible_ShouldChangeNothing_ForEveryOtherRole()
+    public void Visible_ShouldLeaveAManagerEverySection()
     {
-        // The half of this change that could quietly take access away from a
-        // manager or a coach: anybody inside a customer must see exactly what
-        // they saw before, which is what the default overload keeps promising.
-        foreach (var solo in new[] { true, false })
+        // The half of this change that could quietly take access away from the
+        // person who runs the gym. Asserted for the solo coach too, whose only
+        // missing section is the one that was already hidden from them.
+        foreach (var viewer in new[] { Manager, Manager with { IsSolo = true } })
         {
-            var items = GxNavigation.Groups.SelectMany(group => group.Items);
+            var items = GxNavigation.Groups.SelectMany(group => group.Items).ToList();
+            var visible = GxNavigation.Visible(items, viewer).ToList();
 
-            GxNavigation.Visible(items, solo, hasCustomer: true)
-                .ShouldBe(GxNavigation.Visible(items, solo));
+            visible.ShouldBe(items.Except(viewer.IsSolo ? [GxNavigation.Coachs] : []));
         }
+    }
+
+    [Fact]
+    public void Visible_ShouldLeaveACoachOnlyWhatTheirScopeNames()
+    {
+        // TeamAccessScopes.Coach reads « Planning, cours & présences ». The
+        // dashboard and the member list come with it — a coach lands somewhere
+        // and points a sheet against a list of people.
+        var everything = GxNavigation.Groups
+            .SelectMany(group => group.Items)
+            .Concat(GxNavigation.MobileMore)
+            .Distinct();
+
+        GxNavigation.Visible(everything, Coach).ShouldBe(
+        [
+            GxNavigation.Accueil,
+            GxNavigation.Planning,
+            GxNavigation.Presences,
+            GxNavigation.Membres,
+            GxNavigation.Cours
+        ]);
+    }
+
+    [Theory]
+    [InlineData("abos")]
+    [InlineData("reglages")]
+    [InlineData("coachs")]
+    [InlineData("salles")]
+    public void Visible_ShouldDropTheManagerSections_ForACoach(string id)
+    {
+        // Named one by one rather than only as a set: when somebody widens a
+        // coach's reach later, the test that fails should say which section.
+        var item = GxNavigation.Groups
+            .SelectMany(group => group.Items)
+            .Concat(GxNavigation.MobileMore)
+            .First(candidate => candidate.Id == id);
+
+        GxNavigation.Visible([item], Coach).ShouldBeEmpty();
+        GxNavigation.Visible([item], Manager).ShouldBe([item]);
+    }
+
+    [Fact]
+    public void Visible_ShouldOfferAdministration_ToNobodyButThePlatform()
+    {
+        // Rendered outside the filter until this lot, so every coach was shown a
+        // link that answers "accès refusé".
+        GxNavigation.Visible([GxNavigation.Administration], Coach).ShouldBeEmpty();
+        GxNavigation.Visible([GxNavigation.Administration], Manager).ShouldBeEmpty();
+        GxNavigation.Visible([GxNavigation.Administration], Admin)
+            .ShouldBe([GxNavigation.Administration]);
+    }
+
+    [Fact]
+    public void Visible_ShouldTreatAPlatformAdminInsideACustomerAsItsManager()
+    {
+        // GymPolicies.GymManager admits a PlatformAdmin, so hiding the sections
+        // they are about to be allowed to open would only look broken.
+        var inside = new GxNavViewer(IsPlatformAdmin: true);
+        var items = GxNavigation.Groups.SelectMany(group => group.Items).ToList();
+
+        GxNavigation.Visible(items, inside).ShouldBe(GxNavigation.Visible(items, Manager));
     }
 
     [Fact]

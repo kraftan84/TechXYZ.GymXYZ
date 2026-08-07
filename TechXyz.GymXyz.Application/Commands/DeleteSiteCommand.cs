@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteSiteCommand : IRequest<bool>
+public sealed class DeleteSiteCommand : IRequest<bool>, IManagerOnly
 {
     public DeleteSiteCommand(int id)
     {

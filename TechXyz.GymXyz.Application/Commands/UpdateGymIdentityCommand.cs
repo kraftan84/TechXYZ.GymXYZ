@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -17,7 +18,7 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// on showing the zone of an address the gym has left.
 /// </para>
 /// </summary>
-public sealed class UpdateGymIdentityCommand : IRequest<bool>
+public sealed class UpdateGymIdentityCommand : IRequest<bool>, IManagerOnly
 {
     public UpdateGymIdentityCommand(
         string name,

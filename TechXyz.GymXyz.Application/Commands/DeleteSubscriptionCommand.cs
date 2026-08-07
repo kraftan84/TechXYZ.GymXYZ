@@ -1,8 +1,9 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
-public sealed class DeleteSubscriptionCommand : IRequest<bool>
+public sealed class DeleteSubscriptionCommand : IRequest<bool>, IManagerOnly
 {
     public DeleteSubscriptionCommand(int id)
     {
