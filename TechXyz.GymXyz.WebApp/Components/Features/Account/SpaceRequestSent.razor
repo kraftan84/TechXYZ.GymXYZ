@@ -1,0 +1,103 @@
+@* Demande envoyée.
+
+   The wording had to be checked against what the product can actually do. At the
+   end of this lot a request can be filed and nothing can process it — the
+   console is the next lot — so this screen announces a working day as an
+   average and never promises a date. The e-mail says the same. *@
+
+@using TechXyz.GymXyz.Application.Models
+
+<div class="gx-ob">
+    <SpaceRequestTopBar>
+        Une question ? <a class="gx-link" href="mailto:bonjour@gymxyz.fr">bonjour@gymxyz.fr</a>
+    </SpaceRequestTopBar>
+
+    <div class="gx-ob-main">
+        <div class="gx-ob-card">
+            <div class="gx-ob-h gx-a-center" style="padding-bottom:4px">
+                <div class="gx-a-big ok" style="margin-bottom:14px"><GxIcon Name="check" Size="34"/></div>
+                <h2 style="margin-top:0">Demande envoyée</h2>
+                <p style="margin:10px auto 0">
+                    Merci @Receipt.ContactFirstName — votre demande pour
+                    <b style="color:var(--text-strong)">@Receipt.Name</b> est enregistrée et attend
+                    la validation de l'équipe GymXYZ.
+                </p>
+                <div style="margin-top:16px">
+                    <span class="gx-ref">
+                        <GxIcon Name="file" Size="15"/>Référence <b>@Receipt.Reference</b>
+                    </span>
+                </div>
+            </div>
+
+            <div class="gx-ob-body">
+                <div class="stack">
+                    <div class="gx-recap">
+                        <div class="gx-recap-h">
+                            <GxIcon Name="mail" Size="15"/>Accusé de réception envoyé à @Receipt.ContactEmail
+                        </div>
+                        <div class="gx-recap-b">
+                            <dl class="gx-kv2">
+                                <dt>Formule souhaitée</dt>
+                                <dd>@Receipt.RequestedPlan</dd>
+                                <dt>Adresse de l'espace</dt>
+                                <dd>@(Receipt.RequestedSubdomain + ".gymxyz.fr")</dd>
+                                <dt>Reçue le</dt>
+                                <dd>@Receipt.ReceivedOn.ToLocalTime().ToString("d MMMM yyyy · HH:mm", French)</dd>
+                                <dt>Statut</dt>
+                                <dd>En attente de validation</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="gx-lab">Ce qui se passe ensuite</span>
+                        <div class="gx-tl2">
+                            <div class="it done">
+                                <span class="dot"><GxIcon Name="check" Size="13"/></span>
+                                <span>
+                                    <span class="t">Demande reçue</span>
+                                    <span class="d">Nous avons votre dossier. Un accusé de réception part par e-mail.</span>
+                                </span>
+                            </div>
+                            <div class="it now">
+                                <span class="dot">2</span>
+                                <span>
+                                    <span class="t">Vérification</span>
+                                    <span class="d">Nous contrôlons les informations de la structure. Un jour ouvré en moyenne.</span>
+                                </span>
+                            </div>
+                            <div class="it">
+                                <span class="dot">3</span>
+                                <span>
+                                    <span class="t">Échange de 20 minutes</span>
+                                    <span class="d">Un appel pour cadrer vos besoins et votre planning de démarrage.</span>
+                                </span>
+                            </div>
+                            <div class="it">
+                                <span class="dot">4</span>
+                                <span>
+                                    <span class="t">Devis puis ouverture de l'espace</span>
+                                    <span class="d">À la signature, votre espace est ouvert et vos comptes créés.</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gx-ob-foot">
+                <span class="gx-ob-count">Vous pouvez fermer cette page : tout est dans l'e-mail.</span>
+                <FluentAnchor Href="/account/connexion" Appearance="Appearance.Accent">
+                    Aller à la connexion
+                </FluentAnchor>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly System.Globalization.CultureInfo French =
+        System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+
+    [Parameter, EditorRequired] public SpaceRequestReceiptDto Receipt { get; set; } = default!;
+}

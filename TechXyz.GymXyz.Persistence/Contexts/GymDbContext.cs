@@ -53,6 +53,14 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<TenantImpersonation> TenantImpersonations => Set<TenantImpersonation>();
 
+    // Above it for a different reason: these are filled in before any customer
+    // exists. A space request is a stranger asking for one, so there is no tenant to
+    // scope it to — not an escape from the partitioning, a place before it. The
+    // requests that touch them carry IPlatformScoped and say so.
+    public DbSet<SpaceRequest> SpaceRequests => Set<SpaceRequest>();
+    public DbSet<SpaceRequestActivity> SpaceRequestActivities => Set<SpaceRequestActivity>();
+    public DbSet<SpaceRequestNote> SpaceRequestNotes => Set<SpaceRequestNote>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
         builder.Properties<Enum>()
@@ -329,6 +337,36 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // customer reads the other index.
             x.HasIndex(visit => new { visit.AdminUserId, visit.EndedAt });
             x.HasIndex(visit => new { visit.TenantId, visit.StartedAt });
+        });
+
+        modelBuilder.Entity<SpaceRequest>(x =>
+        {
+            // The reference is what the applicant quotes and what the console
+            // searches on, so it is unique in the store and not merely in the
+            // code that allocates it.
+            x.HasIndex(request => request.Reference).IsUnique();
+
+            // The console's default view is "à traiter, newest first".
+            x.HasIndex(request => new { request.Status, request.ReceivedOn });
+
+            // What the purge sweeps on: refusals old enough to delete.
+            x.HasIndex(request => request.RefusedOn);
+
+            // Cascade, and deliberately so: the purge deletes a refused request
+            // three months on because the consent text promised it would, and a
+            // promise kept only for the parent row is not kept.
+            x.HasMany(request => request.Activities)
+                .WithOne(activity => activity.Request!)
+                .HasForeignKey(activity => activity.SpaceRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            x.HasMany(request => request.Notes)
+                .WithOne(note => note.Request!)
+                .HasForeignKey(note => note.SpaceRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Computed from the other two on the way out; nothing to store.
+            x.Ignore(request => request.Where);
         });
 
         modelBuilder.Entity<ApplicationUser>()

@@ -29,5 +29,11 @@ public interface IGymDbContext
     DbSet<Invoice> Invoices { get; }
     DbSet<TenantImpersonation> TenantImpersonations { get; }
 
+    // Outside every tenant, because they precede all of them. Only requests
+    // marked IPlatformScoped may read these.
+    DbSet<SpaceRequest> SpaceRequests { get; }
+    DbSet<SpaceRequestActivity> SpaceRequestActivities { get; }
+    DbSet<SpaceRequestNote> SpaceRequestNotes { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

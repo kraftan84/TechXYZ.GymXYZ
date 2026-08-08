@@ -86,7 +86,10 @@ builder.Services.AddScoped<MobileHeaderService>();
 builder.Services.AddScoped<NavBadgeService>();
 
 // Singleton: the window it holds has to outlive the request that opened it.
-builder.Services.AddSingleton<PasswordResetThrottle>();
+builder.Services.AddSingleton<PublicFormThrottle>();
+
+// The deletion promised in the space request's own consent text.
+builder.Services.AddHostedService<SpaceRequestPurgeService>();
 
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);

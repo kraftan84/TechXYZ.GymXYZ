@@ -77,11 +77,19 @@
             Se connecter
         </FluentButton>
 
-        @if (!IsGymXyz)
+        <div class="gx-a-hr">ou</div>
+
+        @if (IsGymXyz)
+        {
+            <p class="gx-a-tail">
+                Vous découvrez GymXYZ ?<br/>
+                <a class="gx-link" href="/demande-ouverture">Demander l'ouverture d'un espace</a>
+            </p>
+        }
+        else
         {
             @* No sign-up link on a customer's screen: a member does not open a
                space, and the people who run this one already have accounts. *@
-            <div class="gx-a-hr">ou</div>
             <p class="gx-a-tail">
                 Vous êtes membre de @(Brand?.DisplayName ?? "cette salle") ?
                 Connectez-vous depuis l'application mobile, avec le lien reçu par e-mail.

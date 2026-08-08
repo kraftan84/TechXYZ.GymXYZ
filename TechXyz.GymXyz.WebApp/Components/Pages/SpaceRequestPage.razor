@@ -1,0 +1,293 @@
+@* Demande d'ouverture d'espace. Public, anonymous, and GymXYZ-branded whatever
+   host it was reached on.
+
+   Interactive rather than statically rendered, unlike the /account screens: this
+   one writes no cookie, and six steps with conditional fields and a subdomain
+   checked as you type is exactly what a circuit is for. *@
+
+@page "/demande-ouverture"
+@attribute [AllowAnonymous]
+@layout EmptyLayout
+@implements IDisposable
+
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Application.Queries
+@using TechXyz.GymXyz.Domain.Entities
+@using TechXyz.GymXyz.WebApp.Components.Features.Account
+@using FluentValidation
+
+@inject ISender Sender
+@inject NavigationManager Navigation
+@inject PublicFormThrottle Throttle
+@inject ILogger<SpaceRequestPage> Logger
+
+<PageTitle>Demander l'ouverture d'un espace</PageTitle>
+
+@* The honeypot lives outside the wizard so a step change cannot drop it. *@
+<div class="gx-hp" aria-hidden="true">
+    <label for="website">Site web</label>
+    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off"
+           @bind="_model.Website" @bind:event="oninput"/>
+</div>
+
+@if (_receipt is not null)
+{
+    <SpaceRequestSent Receipt="_receipt"/>
+}
+else
+{
+    <SpaceRequestWizard Model="_model"
+                        Step="_step"
+                        Errors="_errors"
+                        Availability="_availability"
+                        IsSubmitting="_isSubmitting"
+                        SubmitError="_submitError"
+                        OnBack="BackAsync"
+                        OnNext="NextAsync"
+                        OnSubmit="SubmitAsync"
+                        OnJumpTo="JumpTo"
+                        OnTypeChanged="ChooseType"
+                        OnPlanChosen="ChoosePlan"
+                        OnAccentChosen="ChooseAccent"
+                        OnSubdomainChanged="SubdomainChangedAsync"/>
+}
+
+@code {
+    private readonly SpaceRequestModel _model = new();
+
+    private int _step;
+    private IReadOnlyDictionary<string, string> _errors = new Dictionary<string, string>();
+    private SubdomainAvailabilityDto? _availability;
+    private SpaceRequestReceiptDto? _receipt;
+    private bool _isSubmitting;
+    private string? _submitError;
+
+    /// <summary>
+    /// Cancels the previous availability check when a newer keystroke arrives.
+    /// Without it the answer to "atlas-trainin" can land after the answer to
+    /// "atlas-training" and tell somebody their own name is free when it is not.
+    /// </summary>
+    private CancellationTokenSource? _lookup;
+
+    private void ChooseType(SpaceRequestType type)
+    {
+        _model.Type = type;
+
+        // The answer reshapes step 2, so what was typed under the other shape is
+        // dropped rather than carried invisibly into the request: a coach has no
+        // address, a gym has no intervention area.
+        if (type == SpaceRequestType.Coach)
+        {
+            _model.Street = _model.ZipCode = _model.City = string.Empty;
+        }
+        else
+        {
+            _model.AreaLabel = string.Empty;
+        }
+
+        // The size brackets differ too, and a value from the other list would sit
+        // there looking chosen while matching nothing on offer.
+        _model.SizeLabel = string.Empty;
+        _errors = new Dictionary<string, string>();
+    }
+
+    private void ChoosePlan(string plan) => _model.RequestedPlan = plan;
+
+    private void ChooseAccent((string Label, string Hex) accent)
+    {
+        _model.AccentLabel = accent.Label;
+        _model.AccentHex = accent.Hex;
+    }
+
+    private async Task SubdomainChangedAsync(string raw)
+    {
+        // Normalised as you type, exactly as the server will store it: what the
+        // field shows is what the address will be.
+        _model.RequestedSubdomain = Subdomains.Normalise(raw);
+        _errors = new Dictionary<string, string>();
+
+        // Cancelled but not disposed here: the query it belongs to is still in
+        // flight and still holding the token, and disposing underneath it throws
+        // ObjectDisposedException out of an async event handler — which in Blazor
+        // means the circuit, not the field. Each lookup disposes its own.
+        _lookup?.Cancel();
+        _lookup = null;
+
+        if (!Subdomains.IsWellFormed(_model.RequestedSubdomain))
+        {
+            _availability = null;
+
+            return;
+        }
+
+        var lookup = new CancellationTokenSource();
+        _lookup = lookup;
+
+        try
+        {
+            var answer = await Sender.Send(
+                new CheckSubdomainAvailabilityQuery(_model.RequestedSubdomain), lookup.Token);
+
+            // A newer keystroke won while this was in flight.
+            if (!lookup.IsCancellationRequested && answer.Normalised == _model.RequestedSubdomain)
+            {
+                _availability = answer;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded; the newer check owns the answer.
+        }
+        finally
+        {
+            if (ReferenceEquals(_lookup, lookup))
+            {
+                _lookup = null;
+            }
+
+            lookup.Dispose();
+        }
+    }
+
+    private void JumpTo(int step)
+    {
+        _step = step;
+        _errors = new Dictionary<string, string>();
+    }
+
+    private async Task BackAsync()
+    {
+        if (_step == 0)
+        {
+            Navigation.NavigateTo("/account/connexion");
+
+            return;
+        }
+
+        _step--;
+        _errors = new Dictionary<string, string>();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task NextAsync()
+    {
+        _errors = _model.Validate(_step);
+
+        if (_errors.Count > 0)
+        {
+            return;
+        }
+
+        // Step 5 owns the address, and the field may have been left before its
+        // check came back — or the name taken since. Asked once more here, where
+        // it still costs the applicant nothing to fix.
+        if (_step == 4)
+        {
+            await SubdomainChangedAsync(_model.RequestedSubdomain);
+
+            if (_availability is { IsAvailable: false } taken)
+            {
+                _errors = new Dictionary<string, string>
+                {
+                    [nameof(SpaceRequestModel.RequestedSubdomain)] = taken.Message
+                };
+
+                return;
+            }
+        }
+
+        _step = Math.Min(_step + 1, SpaceRequestModel.StepCount - 1);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_isSubmitting || !_model.CanSubmit)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _submitError = null;
+
+        try
+        {
+            // Per address and per minute. The form is public, so without it one
+            // script fills the console's queue faster than anybody can empty it.
+            if (!Throttle.TryBegin(PublicFormThrottle.SpaceRequest, _model.ContactEmail))
+            {
+                _submitError = SpaceRequestRules.SendFailed;
+
+                return;
+            }
+
+            _receipt = await Sender.Send(new SubmitSpaceRequestCommand
+            {
+                Type = _model.Type,
+                Name = _model.Name,
+                Siret = _model.Siret,
+                SizeLabel = _model.SizeLabel,
+                Disciplines = _model.Disciplines,
+                Street = _model.Street,
+                ZipCode = _model.ZipCode,
+                City = _model.City,
+                AreaLabel = _model.AreaLabel,
+                ContactFirstName = _model.ContactFirstName,
+                ContactLastName = _model.ContactLastName,
+                ContactRole = _model.ContactRole,
+                ContactEmail = _model.ContactEmail,
+                ContactPhone = _model.ContactPhone,
+                RequestedPlan = _model.RequestedPlan,
+                AccentHex = _model.AccentHex,
+                AccentLabel = _model.AccentLabel,
+                RequestedSubdomain = _model.RequestedSubdomain,
+                AcceptedTerms = _model.AcceptedTerms,
+                AcceptedDataProcessing = _model.AcceptedDataProcessing,
+                OptedIntoNewsletter = _model.OptedIntoNewsletter,
+                Website = _model.Website
+            });
+        }
+        catch (ValidationException failure)
+        {
+            // The server refused something the steps let through — most likely the
+            // address, taken between step 5 and now. Shown where it belongs, with
+            // every answer still in place.
+            var refusal = failure.Errors.FirstOrDefault();
+
+            if (refusal?.PropertyName == nameof(SubmitSpaceRequestCommand.RequestedSubdomain))
+            {
+                _errors = new Dictionary<string, string>
+                {
+                    [nameof(SpaceRequestModel.RequestedSubdomain)] = refusal.ErrorMessage
+                };
+                _step = 4;
+            }
+            else
+            {
+                _submitError = refusal?.ErrorMessage ?? SpaceRequestRules.SendFailed;
+            }
+        }
+        catch (Exception error)
+        {
+            // Nothing typed is lost: the model is untouched, the applicant stays on
+            // step 6, and the button comes back. Six steps retyped is how somebody
+            // decides not to bother.
+            Logger.LogError(error, "A space request could not be filed.");
+            _submitError = SpaceRequestRules.SendFailed;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    /// <summary>
+    /// Cancel only. The lookup still holding this token disposes it in its own
+    /// finally; doing it here as well would be the same premature disposal, at
+    /// teardown instead of mid-keystroke.
+    /// </summary>
+    public void Dispose() => _lookup?.Cancel();
+}

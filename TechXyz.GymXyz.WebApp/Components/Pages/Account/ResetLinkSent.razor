@@ -12,7 +12,7 @@
 
 @inject ISender Sender
 @inject NavigationManager Navigation
-@inject PasswordResetThrottle Throttle
+@inject PublicFormThrottle Throttle
 
 <PageTitle>Lien envoyé</PageTitle>
 
@@ -58,7 +58,7 @@
     {
         // Throttled to one a minute, and silent about it: "vous avez déjà demandé"
         // would tell a stranger the address is worth asking about.
-        if (!string.IsNullOrWhiteSpace(Email) && Throttle.TryBegin(Email))
+        if (!string.IsNullOrWhiteSpace(Email) && Throttle.TryBegin(PublicFormThrottle.PasswordReset, Email))
         {
             var resetPageUrl = Navigation.ToAbsoluteUri("/account/reinitialisation").ToString();
 
