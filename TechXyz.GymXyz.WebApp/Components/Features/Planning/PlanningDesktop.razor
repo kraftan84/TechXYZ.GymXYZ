@@ -5,11 +5,12 @@
    Planning.razor.
 
    The prototype makes « Diffuser » the primary button of this screen and opens
-   a modal offering push, e-mail and a public link. None of the three exists
-   before the notifications lot, and the hand-off defers the feature itself to
-   lot 10, so the button is rendered disabled with a tooltip that says when it
-   arrives. « Nouveau cours » takes the accent, which is what the toolbar spec
-   asks for anyway. *@
+   a modal offering push, e-mail and a public link. None of the three is in the
+   product: the decision of 2026-08-07 is an image the manager publishes
+   themselves, and the three broadcast buttons switch on together — here and on
+   both Accueil shells — so this one is disabled with the same reason they give.
+   « Nouveau cours » takes the accent, which is what the toolbar spec asks for
+   anyway. *@
 
 <Crumb Parts="@_crumb"/>
 
@@ -24,7 +25,7 @@
         <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
     </FluentButton>
     <FluentButton Appearance="Appearance.Outline" Disabled="true"
-                  title="Disponible avec les notifications.">
+                  title="@BroadcastLabels.Unavailable">
         <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
         Diffuser
     </FluentButton>

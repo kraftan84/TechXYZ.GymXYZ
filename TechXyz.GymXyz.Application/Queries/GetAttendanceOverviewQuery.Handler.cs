@@ -64,8 +64,20 @@ public sealed class GetAttendanceOverviewQueryHandler
         // to the same question.
         var overdue = toPoint.Count(session => session.StartsAt.Date < today);
 
-        // Today's classes, for the two figures the prototype labels "aujourd'hui".
+        // How many people turned up today — which can only count what has
+        // already happened, so the facts are the right source.
         var todaysFacts = recent.Where(fact => fact.StartsAt.Date == today).ToList();
+
+        // The denominator beside it — "12 présents sur 3 séances" — covers the
+        // whole day instead, the same span AttendanceRules.OpenSheetWindow uses
+        // for the list underneath. Counted off the facts it inherited their cut
+        // at "now", so at eight in the morning the tile read "0 sur 0 séances"
+        // above a list holding a nine o'clock class. Same defect as the one
+        // `overdue` above already answers, one tile along.
+        var sessionsToday = await SessionsQuery(scope)
+            .CountAsync(
+                session => session.StartsAt >= today && session.StartsAt < today.AddDays(1),
+                cancellationToken);
 
         var kpis = new AttendanceKpisDto(
             SessionStatistics.AttendanceRate(recent),
@@ -73,7 +85,7 @@ public sealed class GetAttendanceOverviewQueryHandler
             toPoint.Count,
             overdue,
             todaysFacts.Sum(fact => fact.Attended),
-            todaysFacts.Count,
+            sessionsToday,
             recent.Where(fact => fact.StartsAt >= weekFrom && fact.StartsAt < weekTo)
                 .Sum(fact => fact.Absent));
 
