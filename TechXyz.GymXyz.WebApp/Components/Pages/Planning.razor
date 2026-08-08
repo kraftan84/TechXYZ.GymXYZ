@@ -55,6 +55,9 @@ else
                              Coaches="_coaches"
                              Locations="_locations"
                              IsSolo="@(Brand?.IsSolo ?? false)"
+                             CanBroadcast="User.IsManager"
+                             IsBroadcasting="@(_poster?.IsBusy ?? false)"
+                             OnBroadcast="BroadcastAsync"
                              OnPreviousWeek="() => ShiftWeekAsync(-7)"
                              OnNextWeek="() => ShiftWeekAsync(7)"
                              OnToday="GoToTodayAsync"
@@ -67,6 +70,8 @@ else
         }
     </div>
 }
+
+<PlanningPosterStage @ref="_poster" OnBusyChanged="() => InvokeAsync(StateHasChanged)"/>
 
 @if (_isDrawerOpen)
 {
@@ -94,6 +99,8 @@ else
     /// </summary>
     [SupplyParameterFromQuery(Name = "jour")] public string? Day { get; set; }
 
+    private PlanningPosterStage? _poster;
+
     private WeekPlanningDto _page = WeekPlanningDto.Empty;
     private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
     private readonly PlanningFilterState _filters = new();
@@ -111,6 +118,12 @@ else
     /// gym is a solo coach, and the postcode the school zone comes from.
     /// </summary>
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    /// <summary>
+    /// Cascaded beside it. Read here only to decide whether the « Diffuser »
+    /// button belongs on this screen at all.
+    /// </summary>
+    [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
 
     private bool _isDrawerOpen;
     private bool _isSaving;
@@ -181,6 +194,14 @@ else
 
         _calendar = Brand?.MarksSchoolVacations == false ? calendar.WithoutVacations() : calendar;
     }
+
+    /// <summary>
+    /// The week the arrows have left this screen on — what you see is what you
+    /// publish. The filter chips above deliberately do not travel with it: the
+    /// image always carries the whole week, and the button says so.
+    /// </summary>
+    private Task BroadcastAsync() =>
+        _poster is null ? Task.CompletedTask : _poster.GenerateAsync(_weekStart);
 
     private async Task ShiftWeekAsync(int days)
     {

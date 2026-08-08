@@ -22,6 +22,7 @@ public static class QueryableProjectionExtensions
             tenant.IsSolo)
         {
             City = tenant.City,
+            AreaLabel = tenant.AreaLabel,
             ZipCode = tenant.ZipCode,
             ShowSchoolVacations = tenant.ShowSchoolVacations
         });

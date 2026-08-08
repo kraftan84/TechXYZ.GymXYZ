@@ -1,15 +1,15 @@
-@* Desktop topbar, 64px. Search is present but inert — global search is scoped
-   for lot 3.
+@* Desktop topbar, 64px.
 
-   There is no bell. Nothing stores a notification, so it had nothing to
-   announce, and its red dot was hard-coded on: a permanent alert teaches people
-   to stop reading alerts. It comes back when there is something behind it. *@
+   There is no search field. One was drawn here from lot 0 — inert, aria-hidden,
+   no input behind it — as a placeholder for a global search that was never
+   built. A control that looks like a control and answers nothing is worse than
+   its absence: it gets clicked. It comes back with something behind it.
+
+   There is no bell either, and for the same reason. Nothing stores a
+   notification, so it had nothing to announce, and its red dot was hard-coded
+   on: a permanent alert teaches people to stop reading alerts. *@
 
 <header class="gx-tb">
-    <div class="gx-search" aria-hidden="true">
-        <GxIcon Name="@GxIconPaths.Search" Size="17"/>
-        <span>Rechercher un membre, un cours…</span>
-    </div>
     <div class="gx-tb-sp"></div>
     @* Réglages has no sidebar entry on desktop — this gear is the whole of it,
        which is why it goes through the same filter rather than being hidden by

@@ -1,0 +1,183 @@
+@namespace TechXyz.GymXyz.WebApp.Components.Features.Planning
+
+@* The image itself, at its true 1080 × 1350. Rendered into the page off-screen
+   and rasterised from there by gx-poster.js — the browser doing the layout is
+   the same browser that will paint it, which is what keeps the result faithful
+   to design/Planning diffusé - 3 styles.html.
+
+   Presentation only, and pure: every string comes from PosterLayout, every
+   colour from poster.css. A new customer is a block of CSS and a theme key.
+
+   The three heads and the three feet are genuinely different objects — a
+   wordmark over an eyebrow, a black slab with an 84px headline, a circled mark
+   over a script — so they are written out rather than parameterised into one
+   shape that would fit none of them. The seven days below are shared. *@
+
+<div class="post @ThemeClass" data-theme="@ThemeKey" style="--poster-cols:@Columns" id="@ElementId">
+
+    @if (ThemeKey == "teamtrainers")
+    {
+        <div class="head">
+            <div class="wm">@Wordmark</div>
+            <h1>Planning<br/>de la semaine</h1>
+            <div class="rule">
+                <div class="dates">@PosterLayout.Range(Week.WeekStart, ThemeKey)</div>
+                <div class="line"></div>
+                <div class="n">@PosterLayout.CourseCount(Week.CourseCount, withSuffix: false)</div>
+            </div>
+        </div>
+    }
+    else if (ThemeKey == "leyssa")
+    {
+        <div class="head">
+            @* No default mark: a customer who supplied none shows their name
+               alone rather than borrowing GymXYZ's. *@
+            @if (Brand?.CircleLogo == true && !string.IsNullOrWhiteSpace(Brand.LogoPath))
+            {
+                <img class="mark" src="@Brand.LogoPath" alt="@Brand.DisplayName"/>
+            }
+            <div class="wm">@Wordmark</div>
+            <div class="eyebrow">Programme de la semaine</div>
+            <h1>@PosterLayout.Range(Week.WeekStart, ThemeKey)@(Place.Length > 0 ? $" · {Place}" : string.Empty)</h1>
+        </div>
+    }
+    else
+    {
+        <div class="head">
+            <div class="wm">
+                @if (SplitWordmark)
+                {
+                    <b>@Brand!.WordmarkPrefix</b><span>@Brand.WordmarkAccent</span>
+                }
+                else
+                {
+                    @Wordmark
+                }
+            </div>
+            <div class="eyebrow">Planning de la semaine</div>
+            <h1>@PosterLayout.Range(Week.WeekStart, ThemeKey)</h1>
+            <div class="sub">@PosterLayout.CourseCount(Week.CourseCount, withSuffix: true)</div>
+        </div>
+    }
+
+    <div class="days">
+        @for (var index = 0; index < 7; index++)
+        {
+            var day = Week.WeekStart.AddDays(index);
+            var cells = PosterLayout.Cells(Week.On(day), index, Columns, ThemeKey);
+
+            <div class="day">
+                <div class="dcol">
+                    <div class="dname">@PosterLayout.DayName(day, ThemeKey)</div>
+                    <div class="dnum">@PosterLayout.DayNumber(day)</div>
+                </div>
+                <div class="slots">
+                    @foreach (var cell in cells)
+                    {
+                        switch (cell.Kind)
+                        {
+                            case PosterCellKind.Rest:
+                                <div class="rest">@cell.Name</div>
+                                break;
+
+                            case PosterCellKind.Overflow:
+                                <div class="more">@cell.Name</div>
+                                break;
+
+                            case PosterCellKind.Filler:
+                                @* Holds its place and shows nothing, so the
+                                   columns stay aligned from one day to the next. *@
+                                <div class="slot hidden"></div>
+                                break;
+
+                            default:
+                                <div class="slot @RhythmClass(cell)">
+                                    <div class="h">@cell.Time</div>
+                                    <div class="n">@cell.Name</div>
+                                    <div class="m">@cell.Meta</div>
+                                </div>
+                                break;
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (ThemeKey == "leyssa")
+    {
+        <div class="foot">
+            <div class="cta">@PosterLayout.Call(ThemeKey)</div>
+            <div class="tag">@Place<span>·</span>Réservations ouvertes</div>
+        </div>
+    }
+    else if (ThemeKey == "teamtrainers")
+    {
+        <div class="foot">
+            <div class="cta">@PosterLayout.Call(ThemeKey)</div>
+            <div class="tag">@Place</div>
+        </div>
+    }
+    else
+    {
+        <div class="foot">
+            <div class="cta">Réservations <em>ouvertes</em></div>
+            <div class="tag">@Place</div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The week to publish, already stripped of what may not be shown.</summary>
+    [Parameter, EditorRequired] public PosterWeekDto Week { get; set; } = PosterWeekDto.Empty;
+
+    /// <summary>The customer whose colours, name and mark the poster wears.</summary>
+    [Parameter] public TenantBrandDto? Brand { get; set; }
+
+    /// <summary>What gx-poster.js reaches for when it rasterises.</summary>
+    [Parameter] public string ElementId { get; set; } = "gx-poster";
+
+    private string? ThemeKey => Brand?.ThemeKey ?? "techxyz";
+
+    private string ThemeClass => ThemeKey switch
+    {
+        "teamtrainers" => "p-tt",
+        "leyssa" => "p-ly",
+        _ => "p-gx"
+    };
+
+    private int Columns => PosterLayout.Columns(ThemeKey, Week.BusiestDay);
+
+    private string Place => PosterLayout.Place(Brand);
+
+    /// <summary>
+    /// The two-tone wordmark — « GYM » then « XYZ » in the accent. Only for a
+    /// customer who actually has one; the others write their name in one piece.
+    /// </summary>
+    private bool SplitWordmark =>
+        !string.IsNullOrWhiteSpace(Brand?.WordmarkPrefix) &&
+        !string.IsNullOrWhiteSpace(Brand?.WordmarkAccent);
+
+    private string Wordmark =>
+        Brand?.WordmarkText is { Length: > 0 } text ? text : Brand?.DisplayName ?? string.Empty;
+
+    /// <summary>
+    /// The block variant that gives the rows their rhythm. Named per brand
+    /// because the alternation is part of each identity: Team Trainer's plays
+    /// three shades of ink, Leyssa alternates rose and sage, the default skin
+    /// keeps one block and varies nothing.
+    /// </summary>
+    private string RhythmClass(PosterCell cell)
+    {
+        var full = cell.IsFull ? "full" : string.Empty;
+
+        var rhythm = ThemeKey switch
+        {
+            "teamtrainers" => cell.Rhythm switch { 1 => "k2", 2 => "k3", _ => string.Empty },
+            "leyssa" => cell.Rhythm == 1 ? "sage" : string.Empty,
+            _ => string.Empty
+        };
+
+        return $"{full} {rhythm}".Trim();
+    }
+}

@@ -4,6 +4,7 @@
 @using TechXyz.GymXyz.Application.Models
 @using TechXyz.GymXyz.Application.Queries
 @using TechXyz.GymXyz.WebApp.Components.Features.Dashboard
+@using TechXyz.GymXyz.WebApp.Components.Features.Planning
 @implements IDisposable
 
 @inject ISender Sender
@@ -34,6 +35,9 @@
                    Calendar="_calendar"
                    IsLoaded="_isLoaded"
                    GreetingName="@User.GreetingName"
+                   CanBroadcast="User.IsManager"
+                   IsBroadcasting="@(_poster?.IsBusy ?? false)"
+                   OnBroadcast="BroadcastAsync"
                    OnOpenDay="OpenDay"
                    OnOpenPlanning="OpenPlanning"
                    OnOpenSection="OpenSection"/>
@@ -46,15 +50,22 @@ else
                         IsLoaded="_isLoaded"
                         GreetingName="@User.GreetingName"
                         IsSolo="@(Brand?.IsSolo ?? false)"
+                        CanBroadcast="User.IsManager"
+                        IsBroadcasting="@(_poster?.IsBusy ?? false)"
+                        OnBroadcast="BroadcastAsync"
                         OnOpenDay="OpenDay"
                         OnOpenPlanning="OpenPlanning"
                         OnOpenSection="OpenSection"/>
     </div>
 }
 
+<PlanningPosterStage @ref="_poster" OnBusyChanged="() => InvokeAsync(StateHasChanged)"/>
+
 @code {
     [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    private PlanningPosterStage? _poster;
 
     private DashboardDto _dashboard = DashboardDto.Empty;
     private SchoolCalendarDto _calendar = SchoolCalendarDto.Unavailable("—");
@@ -115,6 +126,15 @@ else
         NavManager.NavigateTo($"/planning?jour={day:yyyy-MM-dd}");
 
     private void OpenPlanning() => NavManager.NavigateTo("/planning");
+
+    /// <summary>
+    /// The week this screen is showing — the one under the strip the manager is
+    /// looking at. The hand-off's « next week by default » belongs to the
+    /// parameters screen that has still to be designed; until there is one, what
+    /// you see is what you publish.
+    /// </summary>
+    private Task BroadcastAsync() =>
+        _poster is null ? Task.CompletedTask : _poster.GenerateAsync(_dashboard.WeekStart);
 
     private void OpenSection(string href) => NavManager.NavigateTo(href);
 

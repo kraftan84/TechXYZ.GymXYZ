@@ -24,11 +24,15 @@
                   aria-label="Semaine suivante">
         <GxIcon Name="@GxIconPaths.ChevronRight" Size="16"/>
     </FluentButton>
-    <FluentButton Appearance="Appearance.Outline" Disabled="true"
-                  title="@BroadcastLabels.Unavailable">
-        <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
-        Diffuser
-    </FluentButton>
+    @if (CanBroadcast)
+    {
+        <FluentButton Appearance="Appearance.Outline" Disabled="@IsBroadcasting"
+                      title="@BroadcastLabels.PlanningButtonHint"
+                      @onclick="() => OnBroadcast.InvokeAsync()">
+            <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
+            @(IsBroadcasting ? BroadcastLabels.Working : "Diffuser")
+        </FluentButton>
+    }
     <FluentButton Appearance="Appearance.Accent" @onclick="OnCreate">
         <GxIcon Slot="start" Name="@GxIconPaths.Plus" Size="18"/>
         Nouveau cours
@@ -134,6 +138,18 @@
     [Parameter] public IReadOnlyList<LocationListItemDto> Locations { get; set; } = [];
     [Parameter] public DateOnly Today { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     [Parameter] public bool IsSolo { get; set; }
+
+    /// <summary>
+    /// Whether this person may publish the club's week. False hides the button:
+    /// the query behind it is manager-only, and a coach pressing it would only
+    /// meet a refusal.
+    /// </summary>
+    [Parameter] public bool CanBroadcast { get; set; }
+
+    /// <summary>An image is being produced right now.</summary>
+    [Parameter] public bool IsBroadcasting { get; set; }
+
+    [Parameter] public EventCallback OnBroadcast { get; set; }
 
     [Parameter] public EventCallback OnPreviousWeek { get; set; }
     [Parameter] public EventCallback OnNextWeek { get; set; }
