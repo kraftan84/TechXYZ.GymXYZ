@@ -60,8 +60,22 @@
             ? null
             : RenderMode.InteractiveServer;
 
+    /// <summary>
+    /// The space request stays GymXYZ's own, whatever host it was reached on.
+    /// Somebody asking to become a customer is not one yet, and dressing the form
+    /// in the brand of whichever subdomain they happened to land on would claim a
+    /// relationship that does not exist. The hand-off calls this AUTH_GYM_ONLY.
+    /// </summary>
+    private bool IsPlatformOwnedPage =>
+        HttpContext?.Request.Path.StartsWithSegments("/demande-ouverture") == true;
+
     protected override async Task OnInitializedAsync()
     {
+        if (IsPlatformOwnedPage)
+        {
+            return;
+        }
+
         var brand = await TenantResolver.ResolveAsync(HttpContext?.User);
 
         if (brand is not null)

@@ -1,0 +1,29 @@
+@* The bar above the space request. GymXYZ's own mark, never the customer's:
+   this form is filled in by somebody who is not a customer yet, and dressing it
+   in the brand of whichever subdomain they happened to land on would be claiming
+   a relationship that does not exist. *@
+
+<div class="gx-ob-top">
+    <div class="gx-ob-topin">
+        <div class="gx-brand">
+            <span class="gx-wordmark">GYM<span class="accent">XYZ</span></span>
+        </div>
+
+        <span class="gx-ob-topright">
+            @if (ChildContent is not null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                <text>Déjà un espace ? </text>
+                <a class="gx-link" href="/account/connexion">Se connecter</a>
+            }
+        </span>
+    </div>
+</div>
+
+@code {
+    /// <summary>Replaces the sign-in prompt — the sent screen offers help instead.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,544 @@
+@* The six steps. Presentation only: it holds no state of its own and decides
+   nothing — the page owns the model, the step, and every call that leaves. *@
+
+@using TechXyz.GymXyz.Application.Common
+@using TechXyz.GymXyz.Application.Models
+@using TechXyz.GymXyz.Domain.Entities
+
+<div class="gx-ob">
+    <SpaceRequestTopBar/>
+
+    @* 0 % on step 1, 83 % on step 6: the bar only fills on send, because the
+       last step is not done until the demande has actually left. *@
+    <div class="gx-ob-prog"><i style="width:@(Math.Round(Step / (double)SpaceRequestModel.StepCount * 100))%"></i></div>
+
+    <div class="gx-ob-main">
+        <div class="gx-ob-steps">
+            @for (var index = 0; index < StepLabels.Length; index++)
+            {
+                var position = index;
+
+                if (position > 0)
+                {
+                    <span class="gx-ob-sep"></span>
+                }
+
+                <span class="gx-ob-step @(position == Step ? "on" : position < Step ? "done" : null)">
+                    <span class="n">
+                        @if (position < Step)
+                        {
+                            <GxIcon Name="check" Size="12"/>
+                        }
+                        else
+                        {
+                            @(position + 1)
+                        }
+                    </span>
+                    <span>@StepLabels[position]</span>
+                </span>
+            }
+        </div>
+
+        @* Re-keyed on the step so the entry animation replays, as the hand-off asks. *@
+        <div class="gx-ob-card" @key="Step">
+            <div class="gx-ob-h">
+                <span class="eyebrow">@Heading.Eyebrow</span>
+                <h2>@Heading.Title</h2>
+                <p>@Heading.Lead</p>
+            </div>
+
+            @switch (Step)
+            {
+                case 0:
+                    <div class="gx-ob-body">
+                        <div class="gx-choice">
+                            <button type="button" class="gx-choice-card @(Model.IsSolo ? null : "on")"
+                                    @onclick="() => OnTypeChanged.InvokeAsync(SpaceRequestType.Gym)">
+                                @if (!Model.IsSolo)
+                                {
+                                    <span class="tick"><GxIcon Name="check" Size="13"/></span>
+                                }
+                                <span class="ic"><GxIcon Name="building" Size="22"/></span>
+                                <span class="t">Salle de sport ou club</span>
+                                <span class="d">Une équipe, des cours collectifs, plusieurs créneaux par jour.</span>
+                                <ul>
+                                    <li><GxIcon Name="check" Size="13"/>Plusieurs coachs et lieux</li>
+                                    <li><GxIcon Name="check" Size="13"/>Cours collectifs et présences</li>
+                                    <li><GxIcon Name="check" Size="13"/>Abonnements et relances</li>
+                                </ul>
+                            </button>
+
+                            <button type="button" class="gx-choice-card @(Model.IsSolo ? "on" : null)"
+                                    @onclick="() => OnTypeChanged.InvokeAsync(SpaceRequestType.Coach)">
+                                @if (Model.IsSolo)
+                                {
+                                    <span class="tick"><GxIcon Name="check" Size="13"/></span>
+                                }
+                                <span class="ic"><GxIcon Name="user" Size="22"/></span>
+                                <span class="t">Coach indépendant·e</span>
+                                <span class="d">Vous travaillez seul·e, en studio, à domicile ou en extérieur.</span>
+                                <ul>
+                                    <li><GxIcon Name="check" Size="13"/>Séances individuelles et petits groupes</li>
+                                    <li><GxIcon Name="check" Size="13"/>Suivi de vos client·es</li>
+                                    <li><GxIcon Name="check" Size="13"/>Cartes de séances et paiements</li>
+                                </ul>
+                            </button>
+                        </div>
+                        <p class="gx-fieldnote full">
+                            Vous gérez un réseau de plusieurs salles ? Choisissez « Salle de sport » :
+                            nous ajouterons les autres lieux avec vous.
+                        </p>
+                    </div>
+                    break;
+
+                case 1:
+                    <div class="gx-ob-body">
+                        <div class="full">
+                            <FluentTextField Label="@(Model.IsSolo ? "Nom de votre activité" : "Nom de la structure")"
+                                             @bind-Value="Model.Name" Required="true"
+                                             Placeholder="@(Model.IsSolo ? "Naj Coaching" : "Atlas Training Club")"
+                                             Style="width:100%"/>
+                            <FieldError Message="@Error(nameof(SpaceRequestModel.Name))"/>
+                        </div>
+
+                        <div>
+                            <FluentTextField Label="SIRET" @bind-Value="Model.Siret"
+                                             Placeholder="918 402 551 00019" Style="width:100%"/>
+                            @if (Model.IsSolo)
+                            {
+                                <p class="gx-fieldnote">Laissez vide si votre immatriculation est en cours.</p>
+                            }
+                        </div>
+
+                        <FluentSelect Label="@(Model.IsSolo ? "Client·es suivi·es" : "Nombre de membres")"
+                                      TOption="string"
+                                      Items="@(Model.IsSolo ? SpaceRequestModel.SoloSizes : SpaceRequestModel.Sizes)"
+                                      OptionValue="@(size => size)" OptionText="@(size => size)"
+                                      @bind-SelectedOption="Model.SizeLabel"
+                                      Placeholder="Choisissez une fourchette"
+                                      Style="width:100%"/>
+
+                        @if (Model.IsSolo)
+                        {
+                            <div class="full">
+                                <FluentTextField Label="Zone d'intervention" @bind-Value="Model.AreaLabel"
+                                                 Placeholder="Thonon-les-Bains et 30 km alentour"
+                                                 Style="width:100%"/>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="full">
+                                <FluentTextField Label="Adresse" @bind-Value="Model.Street"
+                                                 Placeholder="12 avenue des Sports" Style="width:100%"/>
+                            </div>
+                            <div>
+                                <FluentTextField Label="Code postal" @bind-Value="Model.ZipCode"
+                                                 Placeholder="74200" Style="width:100%"/>
+                                <FieldError Message="@Error(nameof(SpaceRequestModel.ZipCode))"/>
+                            </div>
+                            <FluentTextField Label="Ville" @bind-Value="Model.City"
+                                             Placeholder="Thonon-les-Bains" Style="width:100%"/>
+                        }
+
+                        <div class="full">
+                            <FluentTextField Label="@(Model.IsSolo ? "Spécialités" : "Disciplines proposées")"
+                                             @bind-Value="Model.Disciplines"
+                                             Placeholder="@(Model.IsSolo ? "Renforcement, pré/post-natal" : "Musculation, cross-training, cours collectifs")"
+                                             Style="width:100%"/>
+                            <p class="gx-fieldnote">
+                                Séparez par des virgules. Cela nous sert à préparer vos modèles de cours.
+                            </p>
+                        </div>
+                    </div>
+                    break;
+
+                case 2:
+                    <div class="gx-ob-body">
+                        <div>
+                            <FluentTextField Label="Prénom" @bind-Value="Model.ContactFirstName"
+                                             Required="true" Style="width:100%"/>
+                            <FieldError Message="@Error(nameof(SpaceRequestModel.ContactFirstName))"/>
+                        </div>
+                        <div>
+                            <FluentTextField Label="Nom" @bind-Value="Model.ContactLastName"
+                                             Required="true" Style="width:100%"/>
+                            <FieldError Message="@Error(nameof(SpaceRequestModel.ContactLastName))"/>
+                        </div>
+
+                        <FluentSelect Label="Votre rôle" TOption="string"
+                                      Items="SpaceRequestModel.Roles"
+                                      OptionValue="@(role => role)" OptionText="@(role => role)"
+                                      @bind-SelectedOption="Model.ContactRole"
+                                      Placeholder="Choisissez" Style="width:100%"/>
+
+                        <FluentTextField Label="Téléphone" @bind-Value="Model.ContactPhone"
+                                         Placeholder="06 12 34 56 78" Style="width:100%"/>
+
+                        <div class="full">
+                            <FluentTextField Label="E-mail professionnel" @bind-Value="Model.ContactEmail"
+                                             TextFieldType="TextFieldType.Email" Required="true"
+                                             Placeholder="prenom@votre-salle.fr" Style="width:100%"/>
+                            <FieldError Message="@Error(nameof(SpaceRequestModel.ContactEmail))"/>
+                            <p class="gx-fieldnote">
+                                Nous y envoyons l'accusé de réception, puis vos identifiants.
+                            </p>
+                        </div>
+                    </div>
+                    break;
+
+                case 3:
+                    <div class="gx-ob-body">
+                        <div class="gx-plans">
+                            @foreach (var plan in PlatformPlans.All)
+                            {
+                                var chosen = plan.Name == Model.RequestedPlan;
+
+                                <button type="button" class="gx-plan @(chosen ? "on" : null)"
+                                        @onclick="() => OnPlanChosen.InvokeAsync(plan.Name)">
+                                    @if (plan.Ribbon is not null)
+                                    {
+                                        <span class="gx-ribbon">@plan.Ribbon</span>
+                                    }
+                                    <span class="nm">@plan.Name</span>
+                                    <span class="pr">@plan.Price @if (plan.Unit is not null) { <small>@plan.Unit</small> }</span>
+                                    <span class="for">@plan.For</span>
+                                    <ul>
+                                        @foreach (var feature in plan.Features)
+                                        {
+                                            <li><GxIcon Name="check" Size="13"/>@feature</li>
+                                        }
+                                    </ul>
+                                </button>
+                            }
+                        </div>
+
+                        <div class="gx-a-note full">
+                            <GxIcon Name="wallet" Size="18" Class="ic"/>
+                            <span>
+                                Aucun paiement à cette étape, et pas de carte à saisir. Après validation
+                                de votre demande, nous convenons d'un échange de 20 minutes puis vous
+                                recevez un devis.
+                            </span>
+                        </div>
+                    </div>
+                    break;
+
+                case 4:
+                    <div class="gx-ob-body">
+                        <div class="stack">
+                            <div>
+                                <span class="gx-lab">Votre logo</span>
+                                @* Collected at opening rather than here. A public, anonymous upload
+                                   with no scanning, on hosting measured in hundreds of megabytes, is
+                                   not something to ship because a mock drew a drop zone. *@
+                                <div class="gx-drop">
+                                    <span class="ic"><GxIcon Name="palette" Size="22"/></span>
+                                    <span style="flex:1">
+                                        <span class="t">Vous le déposerez à l'ouverture de votre espace</span>
+                                        <span class="d">
+                                            PNG ou SVG, fond transparent de préférence. Nous vous
+                                            l'installons pendant l'échange de mise en route.
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="gx-lab">Couleur d'accent</span>
+                                <div class="gx-sws">
+                                    @foreach (var (label, hex) in SpaceRequestModel.Accents)
+                                    {
+                                        var chosen = hex == Model.AccentHex;
+
+                                        <button type="button" class="gx-sw @(chosen ? "on" : null)"
+                                                style="background:@hex" title="@label" aria-label="@label"
+                                                @onclick="() => OnAccentChosen.InvokeAsync((label, hex))">
+                                            @if (chosen)
+                                            {
+                                                <GxIcon Name="check" Size="16"/>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                                <p class="gx-fieldnote" style="margin-top:8px">
+                                    Sélection : <b>@Model.AccentLabel</b>. Nous ajustons ensuite les
+                                    contrastes pour rester lisible et accessible.
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="gx-lab">Adresse de votre espace</span>
+                                <div class="gx-dom">
+                                    <div class="gx-dom-field">
+                                        @* Immediate with a 400 ms delay: the spec's debounce, so the
+                                           server is asked once when typing stops rather than per keystroke. *@
+                                        <FluentTextField Value="@Model.RequestedSubdomain"
+                                                         ValueChanged="OnSubdomainTyped"
+                                                         Immediate="true" ImmediateDelay="400"
+                                                         Placeholder="votre-salle" Style="width:100%"/>
+                                    </div>
+                                    <span class="sfx">.gymxyz.fr</span>
+                                </div>
+
+                                @if (Error(nameof(SpaceRequestModel.RequestedSubdomain)) is { } subdomainError)
+                                {
+                                    <p class="gx-fieldnote ko" style="margin-top:8px">@subdomainError</p>
+                                }
+                                else if (Availability is { } availability && Model.RequestedSubdomain.Length > 0)
+                                {
+                                    <p class="gx-fieldnote @(availability.IsAvailable ? "ok" : "ko")" style="margin-top:8px">
+                                        @availability.Message
+                                        @if (!availability.IsAvailable && availability.Suggestion.Length > 0)
+                                        {
+                                            <text> </text>
+                                            <button type="button" class="gx-link"
+                                                    @onclick="() => OnSubdomainTyped(availability.Suggestion)">
+                                                Essayer @availability.Suggestion
+                                            </button>
+                                        }
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="gx-fieldnote" style="margin-top:8px">
+                                        Lettres, chiffres et tirets. Un nom de domaine à vous est possible plus tard.
+                                    </p>
+                                }
+                            </div>
+
+                            <div>
+                                <span class="gx-lab">Aperçu</span>
+                                @* Symbolic, and said to be: the real theme is produced outside the
+                                   application. Over-promising here is how a customer arrives expecting
+                                   the screen they were shown. *@
+                                <div class="gx-prev">
+                                    <div class="sb">
+                                        <b>@Preview</b>
+                                        <i class="on" style="background:@Model.AccentHex;opacity:1"></i>
+                                        <i></i><i></i><i></i><i></i>
+                                    </div>
+                                    <div class="bd">
+                                        <span class="t">@(Blank(Model.Name) ?? "Votre structure") · Accueil</span>
+                                        <span class="card"></span>
+                                        <span class="card"></span>
+                                        <span class="btn" style="background:@Model.AccentHex">Diffuser le planning</span>
+                                    </div>
+                                </div>
+                                <p class="gx-fieldnote" style="margin-top:8px">
+                                    Un aperçu indicatif : votre habillage définitif est préparé avec vous.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    break;
+
+                case 5:
+                    <div class="gx-ob-body">
+                        <div class="stack">
+                            <div class="gx-recap">
+                                <div class="gx-recap-h">
+                                    @(Model.IsSolo ? "Activité" : "Structure")
+                                    <span class="r">
+                                        <button type="button" class="gx-link" @onclick="() => OnJumpTo.InvokeAsync(1)">Modifier</button>
+                                    </span>
+                                </div>
+                                <div class="gx-recap-b">
+                                    <dl class="gx-kv2">
+                                        <dt>@(Model.IsSolo ? "Nom de l'activité" : "Nom")</dt>
+                                        <dd>@Value(Model.Name)</dd>
+                                        <dt>Profil</dt>
+                                        <dd>@(Model.IsSolo ? "Coach indépendant·e" : "Salle de sport ou club")</dd>
+                                        <dt>@(Model.IsSolo ? "Zone" : "Adresse")</dt>
+                                        <dd>@Value(Model.IsSolo ? Model.AreaLabel : Address)</dd>
+                                        <dt>SIRET</dt>
+                                        <dd>@Value(Model.Siret)</dd>
+                                        <dt>@(Model.IsSolo ? "Client·es" : "Membres")</dt>
+                                        <dd>@Value(Model.SizeLabel)</dd>
+                                        <dt>Disciplines</dt>
+                                        <dd>@Value(Model.Disciplines)</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <div class="gx-recap">
+                                <div class="gx-recap-h">
+                                    Contact
+                                    <span class="r">
+                                        <button type="button" class="gx-link" @onclick="() => OnJumpTo.InvokeAsync(2)">Modifier</button>
+                                    </span>
+                                </div>
+                                <div class="gx-recap-b">
+                                    <dl class="gx-kv2">
+                                        <dt>Personne</dt>
+                                        <dd>@Value($"{Model.ContactFirstName} {Model.ContactLastName}".Trim())</dd>
+                                        <dt>Rôle</dt>
+                                        <dd>@Value(Model.ContactRole)</dd>
+                                        <dt>E-mail</dt>
+                                        <dd>@Value(Model.ContactEmail)</dd>
+                                        <dt>Téléphone</dt>
+                                        <dd>@Value(Model.ContactPhone)</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <div class="gx-recap">
+                                <div class="gx-recap-h">
+                                    Formule & marque
+                                    <span class="r">
+                                        <button type="button" class="gx-link" @onclick="() => OnJumpTo.InvokeAsync(3)">Modifier</button>
+                                    </span>
+                                </div>
+                                <div class="gx-recap-b">
+                                    <dl class="gx-kv2">
+                                        <dt>Formule souhaitée</dt>
+                                        <dd>@ChosenPlan</dd>
+                                        <dt>Couleur d'accent</dt>
+                                        <dd>@Model.AccentLabel</dd>
+                                        <dt>Logo</dt>
+                                        <dd>À fournir à l'ouverture</dd>
+                                        <dt>Adresse de l'espace</dt>
+                                        <dd>@(Value(Model.RequestedSubdomain) is "—" ? "—" : $"{Model.RequestedSubdomain}.gymxyz.fr")</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            @if (SubmitError is not null)
+                            {
+                                <div class="gx-a-err" role="alert">
+                                    <GxIcon Name="alert" Size="18" Class="ic"/>
+                                    <span>@SubmitError</span>
+                                </div>
+                            }
+
+                            <div class="gx-consent">
+                                <FluentCheckbox @bind-Value="Model.AcceptedTerms" Class="cbx">
+                                    J'accepte les conditions générales de GymXYZ et je confirme être
+                                    habilité·e à engager la structure.
+                                </FluentCheckbox>
+
+                                <FluentCheckbox @bind-Value="Model.AcceptedDataProcessing" Class="cbx">
+                                    J'autorise GymXYZ à traiter ces informations pour étudier ma demande.
+                                    Données hébergées en France, supprimées sous 3 mois en cas de refus.
+                                </FluentCheckbox>
+
+                                <FluentCheckbox @bind-Value="Model.OptedIntoNewsletter" Class="cbx">
+                                    Je veux recevoir les nouveautés produit, environ une fois par trimestre.
+                                    (facultatif)
+                                </FluentCheckbox>
+                            </div>
+                        </div>
+                    </div>
+                    break;
+            }
+
+            <div class="gx-ob-foot">
+                <span class="gx-ob-count">Étape @(Step + 1) sur @SpaceRequestModel.StepCount</span>
+
+                <div class="gx-ob-actions">
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="OnBack" Disabled="IsSubmitting">
+                        @(Step == 0 ? "Connexion" : "Retour")
+                    </FluentButton>
+
+                    @if (Step < SpaceRequestModel.StepCount - 1)
+                    {
+                        <FluentButton Appearance="Appearance.Accent" OnClick="OnNext">Continuer</FluentButton>
+                    }
+                    else
+                    {
+                        @* Disabled while sending as well as before the consents: a second
+                           click on a slow connection would file the request twice. *@
+                        <FluentButton Appearance="Appearance.Accent" OnClick="OnSubmit"
+                                      Disabled="@(!Model.CanSubmit || IsSubmitting)">
+                            @(IsSubmitting ? "Envoi en cours…" : "Envoyer ma demande")
+                        </FluentButton>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="gx-ob-reassure">
+            <span><GxIcon Name="check" Size="15"/>Sans engagement</span>
+            <span><GxIcon Name="check" Size="15"/>Aucun paiement à cette étape</span>
+            <span><GxIcon Name="check" Size="15"/>Réponse sous 1 jour ouvré</span>
+            <span><GxIcon Name="check" Size="15"/>Données hébergées en France</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly string[] StepLabels =
+        ["Profil", "Structure", "Contact", "Formule", "Marque", "Récapitulatif"];
+
+    [Parameter, EditorRequired] public SpaceRequestModel Model { get; set; } = default!;
+
+    [Parameter, EditorRequired] public int Step { get; set; }
+
+    [Parameter] public IReadOnlyDictionary<string, string> Errors { get; set; } =
+        new Dictionary<string, string>();
+
+    [Parameter] public SubdomainAvailabilityDto? Availability { get; set; }
+
+    [Parameter] public bool IsSubmitting { get; set; }
+
+    [Parameter] public string? SubmitError { get; set; }
+
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    [Parameter] public EventCallback<int> OnJumpTo { get; set; }
+
+    [Parameter] public EventCallback<SpaceRequestType> OnTypeChanged { get; set; }
+
+    [Parameter] public EventCallback<string> OnPlanChosen { get; set; }
+
+    [Parameter] public EventCallback<(string Label, string Hex)> OnAccentChosen { get; set; }
+
+    [Parameter] public EventCallback<string> OnSubdomainChanged { get; set; }
+
+    private (string Eyebrow, string Title, string Lead) Heading => Step switch
+    {
+        0 => ("Bienvenue", "Vous gérez quoi, exactement ?",
+            "La suite du formulaire s'adapte à votre réponse. Deux minutes, pas plus."),
+        1 => ("Étape 2", Model.IsSolo ? "Votre activité" : "Votre structure",
+            "Ces informations servent à vérifier la demande et à préparer votre espace."),
+        2 => ("Étape 3", "Vous contacter",
+            "Nous répondons à cette adresse, et c'est elle qui recevra vos identifiants."),
+        3 => ("Étape 4", "La formule qui vous ressemble",
+            "Rien n'est facturé aujourd'hui. Vous pourrez changer d'avis après notre échange."),
+        4 => ("Étape 5", "Votre marque dans l'application",
+            "GymXYZ disparaît derrière votre identité : logo, couleur, adresse web."),
+        _ => ("Dernière étape", "On relit ensemble",
+            "Vérifiez, cochez les consentements, et la demande partira côté GymXYZ.")
+    };
+
+    private string ChosenPlan
+    {
+        get
+        {
+            var plan = PlatformPlans.Find(Model.RequestedPlan);
+
+            return plan.Unit is null ? $"{plan.Name} · {plan.Price}" : $"{plan.Name} · {plan.Price} {plan.Unit}";
+        }
+    }
+
+    private string Address => string.Join(
+        ", ",
+        new[] { Model.Street, Model.ZipCode, Model.City }.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    /// <summary>Eleven characters, like the mock's fake sidebar.</summary>
+    private string Preview => Blank(Model.Name) is { } name
+        ? name[..Math.Min(11, name.Length)]
+        : "Votre marque";
+
+    private string? Error(string field) => Errors.TryGetValue(field, out var message) ? message : null;
+
+    private static string Value(string? raw) => string.IsNullOrWhiteSpace(raw) ? "—" : raw.Trim();
+
+    private static string? Blank(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
+
+    private Task OnSubdomainTyped(string? raw) => OnSubdomainChanged.InvokeAsync(raw ?? string.Empty);
+}

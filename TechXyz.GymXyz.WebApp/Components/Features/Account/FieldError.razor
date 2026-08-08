@@ -1,0 +1,11 @@
+@* A refusal under the field it belongs to. Renders nothing when there is none,
+   so a step's markup does not have to guard every call site. *@
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <p class="gx-fieldnote ko" role="alert">@Message</p>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+}

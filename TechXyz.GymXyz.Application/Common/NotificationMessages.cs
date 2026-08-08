@@ -59,6 +59,55 @@ public static class NotificationMessages
             body);
     }
 
+    /// <summary>
+    /// The receipt for a space request. Signed by GymXYZ, not by a customer:
+    /// there is no customer yet, and this is the one message the platform sends
+    /// in its own name.
+    /// <para>
+    /// It carries the reference, what was asked for, and the delay the screen
+    /// announced — and it stops there. "Vous pouvez fermer cette page : tout est
+    /// dans l'e-mail" is a promise made on screen, so everything the applicant
+    /// might want later has to actually be in here.
+    /// </para>
+    /// </summary>
+    public static EmailMessage SpaceRequestAcknowledgement(
+        string reference,
+        string firstName,
+        string structureName,
+        string toAddress,
+        string plan,
+        string subdomain)
+    {
+        var body =
+            $"""
+             Bonjour {firstName},
+
+             Nous avons bien reçu votre demande d'ouverture d'espace pour {structureName}.
+
+             Référence : {reference}
+             Formule souhaitée : {plan}
+             Adresse souhaitée : {subdomain}.gymxyz.fr
+
+             Ce qui se passe ensuite : nous contrôlons les informations de la structure, en un jour ouvré en moyenne. Nous vous proposons ensuite un échange de 20 minutes pour cadrer vos besoins, puis un devis. À la signature, votre espace est ouvert et vos comptes créés.
+
+             Rien n'est facturé à ce stade et aucune carte ne vous sera demandée.
+
+             Une question d'ici là ? Répondez à ce message ou écrivez à bonjour@gymxyz.fr en rappelant la référence ci-dessus.
+
+             À très vite,
+             L'équipe GymXYZ
+             """;
+
+        return new EmailMessage(
+            toAddress,
+            firstName,
+            $"GymXYZ — votre demande {reference} est bien arrivée",
+            body)
+        {
+            FromName = "GymXYZ"
+        };
+    }
+
     /// <summary>Chasing a cover that is late or about to run out.</summary>
     public static EmailMessage RenewalReminder(
         string gymName,

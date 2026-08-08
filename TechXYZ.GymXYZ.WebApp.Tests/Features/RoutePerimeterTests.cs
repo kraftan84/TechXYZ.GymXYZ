@@ -66,6 +66,11 @@ public class RoutePerimeterTests
         Path.Combine("Account", "ResetLinkSent.razor"),
         Path.Combine("Account", "ResetPassword.razor"),
         Path.Combine("Account", "ResetPasswordDone.razor"),
+
+        // The space request. Anonymous by nature — its whole purpose is to be
+        // filled in by somebody who has no account and is asking for one.
+        "SpaceRequestPage.razor",
+
         "Error.razor",
         "NotFound.razor"
     ];

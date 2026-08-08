@@ -107,7 +107,17 @@ public class ManagerOnlyPerimeterTests
     private static readonly string[] Anonymous =
     [
         nameof(RequestPasswordResetCommand),
-        nameof(ResetPasswordCommand)
+        nameof(ResetPasswordCommand),
+
+        // The onboarding form. Public in the fullest sense — it is the only write
+        // in the product reachable by somebody with no account at all, which is
+        // why it carries a honeypot and a rate limit instead of a role.
+        nameof(SubmitSpaceRequestCommand),
+
+        // Not public: nobody runs it at all. It is swept from a background service
+        // with no principal, so demanding a manager would mean it never ran and
+        // the deletion promised on the form never happened.
+        nameof(PurgeRefusedSpaceRequestsCommand)
     ];
 
     [Fact]
