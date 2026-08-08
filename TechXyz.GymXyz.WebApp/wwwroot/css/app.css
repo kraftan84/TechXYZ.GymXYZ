@@ -134,18 +134,6 @@ body {
   padding: 0 24px;
   z-index: 4;
 }
-.gx-search {
-  display: flex; align-items: center; gap: 9px;
-  width: 340px; max-width: 38vw;
-  height: 40px; padding: 0 14px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-subtle);
-  font-size: var(--text-sm);
-  cursor: text;
-}
-.gx-search svg { width: 17px; height: 17px; flex: none; }
 .gx-tb-sp { flex: 1; }
 .gx-tb-ic {
   position: relative; width: 40px; height: 40px;
