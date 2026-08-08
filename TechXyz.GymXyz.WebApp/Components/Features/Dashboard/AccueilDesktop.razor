@@ -5,20 +5,21 @@
    mockups agree with each other about the screen being planning-first.
 
    « Diffuser le planning » and « Aperçu » render disabled with a reason on
-   them. Broadcasting really would need a seventh NotificationKey, a seventh
-   toggle in the lot 8 panel and a recipient list nobody has defined; showing a
-   button that silently does nothing would be worse than showing why. Same
-   treatment as the payment-card button at lot 9. *@
+   them. The button produces an image the manager publishes themselves — decided
+   2026-08-07 — and that image is not built yet; showing a button that silently
+   does nothing would be worse than showing why. Same treatment as the
+   payment-card button at lot 9. The wording lives in BroadcastLabels: the head
+   of the Planning carries the same button and the two switch on together. *@
 
 <PageHead Title="@($"Bonjour {GreetingName}")"
-          Subtitle="Préparez la semaine et diffusez-la à vos membres.">
+          Subtitle="@BroadcastLabels.AccueilSubtitle">
     <FluentButton Appearance="Appearance.Outline" Disabled="true"
-                  Title="@DashboardFilters.PreviewDisabledReason">
+                  Title="@BroadcastLabels.PreviewUnavailable">
         <GxIcon Slot="start" Name="@GxIconPaths.Eye" Size="18"/>
         Aperçu
     </FluentButton>
     <FluentButton Appearance="Appearance.Accent" Disabled="true"
-                  Title="@DashboardFilters.BroadcastDisabledReason">
+                  Title="@BroadcastLabels.Unavailable">
         <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
         Diffuser le planning
     </FluentButton>
@@ -58,7 +59,7 @@
 
         <div class="gx-diffuse-foot">
             <GxIcon Name="@GxIconPaths.Send" Size="15"/>
-            <span>@DashboardFilters.BroadcastFootnote</span>
+            <span>@BroadcastLabels.Footnote</span>
             <span style="margin-left:auto">
                 <FluentButton Appearance="Appearance.Stealth" Size="ButtonSize.Small"
                               @onclick="() => OnOpenPlanning.InvokeAsync()">

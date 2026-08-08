@@ -214,6 +214,32 @@ public class AttendanceQueryTests
     }
 
     /// <summary>
+    /// "Présents du jour · sur N séances" counts the whole day, not the part of
+    /// it that has already happened.
+    /// <para>
+    /// Counted off the facts, N inherited their cut at "now": the tile said
+    /// "0 sur 0 séances" every morning above a list that already held the day's
+    /// classes, and the suite itself only failed before nine. Both sessions here
+    /// are today whatever the hour the tests run at, which is the point — a
+    /// figure that changes with the clock cannot be pinned by seeding one.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task GetAttendanceOverview_ShouldCountTodaysSessionsWholeDay()
+    {
+        await using var dbContext = TestInfrastructure.CreateDbContext(nameof(GetAttendanceOverview_ShouldCountTodaysSessionsWholeDay));
+
+        SeedSession(dbContext, Today(0).AddMinutes(30), pending: 6);
+        SeedSession(dbContext, Today(23), pending: 6);
+        SeedSession(dbContext, Yesterday(18), present: 4);
+        await dbContext.SaveChangesAsync();
+
+        var result = await Overview(dbContext);
+
+        result.Kpis.SessionsToday.ShouldBe(2);
+    }
+
+    /// <summary>
     /// A sheet left open on an earlier day stays in front of whoever opens the
     /// screen, and the tile says so rather than claiming it is today's work.
     /// </summary>

@@ -109,22 +109,7 @@ public static class DashboardFilters
     public static string? DayMarkClass(SchoolCalendarDto calendar, DateOnly day) =>
         calendar.MarkFor(day) is { } mark ? CalendarFormats.MarkClass(mark.Kind) : null;
 
-    /// <summary>
-    /// Why « Diffuser le planning » and « Aperçu » are there but cannot be
-    /// pressed. Said out loud on the button rather than left to be discovered.
-    /// </summary>
-    public const string BroadcastDisabledReason =
-        "L'envoi du planning aux membres n'est pas encore disponible : ce message n'a pas de réglage de notification.";
-
-    public const string PreviewDisabledReason =
-        "L'aperçu du planning arrive dans un lot ultérieur.";
-
-    /// <summary>
-    /// What the foot of the week card says. The prototype writes « Dernière
-    /// diffusion : dimanche dernier », but nothing has ever been broadcast and
-    /// nothing records one — so it states where the feature stands instead of
-    /// inventing a date.
-    /// </summary>
-    public const string BroadcastFootnote =
-        "La diffusion aux membres n'est pas encore active. Le planning reste consultable ici.";
+    // The broadcast wording moved to Components/Shared/BroadcastLabels.cs: the
+    // head of the Planning says the same thing and cannot reach into the
+    // Dashboard's own labels for it.
 }

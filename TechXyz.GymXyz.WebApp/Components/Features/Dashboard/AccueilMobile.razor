@@ -9,18 +9,19 @@
    screen of its own. That is the reading this lot follows on both shells.
 
    « Diffuser le planning » is the prototype's primary CTA. It renders disabled
-   with the reason on it rather than doing nothing quietly: a real broadcast
-   needs a seventh NotificationKey, a seventh toggle in the lot 8 panel and a
-   recipient list nobody has defined. *@
+   with the reason on it rather than doing nothing quietly: what it will produce
+   is an image the manager publishes themselves, and that image is not built
+   yet. Wording shared with the desktop shell and the Planning head through
+   BroadcastLabels — the three buttons switch on in the same PR. *@
 
 <div class="gx-m-screen">
     <div class="gx-m-greet">
         <div class="hi">Bonjour @GreetingName</div>
-        <div class="sub">Préparez la semaine et diffusez-la à vos membres.</div>
+        <div class="sub">@BroadcastLabels.AccueilSubtitle</div>
     </div>
 
     <button type="button" class="gx-m-cta ghost" style="margin-top:16px" disabled
-            title="@DashboardFilters.BroadcastDisabledReason">
+            title="@BroadcastLabels.Unavailable">
         <GxIcon Name="@GxIconPaths.Share" Size="20"/>
         Diffuser le planning
     </button>
@@ -53,7 +54,7 @@
         </div>
         <div class="gx-m-diffuse">
             <GxIcon Name="@GxIconPaths.Send" Size="16"/>
-            <span>@DashboardFilters.BroadcastFootnote</span>
+            <span>@BroadcastLabels.Footnote</span>
         </div>
     </div>
 
