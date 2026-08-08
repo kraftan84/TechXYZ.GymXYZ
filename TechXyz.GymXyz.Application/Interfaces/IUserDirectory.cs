@@ -59,4 +59,28 @@ public interface IUserDirectory
     /// here — an account is not an <c>EntityBase</c>.
     /// </summary>
     Task<bool> RevokeAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a password reset, or returns null when the address has no account
+    /// this screen may reset. The caller must behave identically either way.
+    /// <para>
+    /// The reset screens run before anybody has authenticated, so the tenant
+    /// comes from the host — which is the reason <c>Tenant:RootDomain</c> has to
+    /// be right in development too. Rooted wrongly, every host resolves to the
+    /// default customer and a Team Trainer's address is simply never found.
+    /// </para>
+    /// </summary>
+    Task<PasswordResetTicket?> BeginPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Spends the token and sets the new password, signing the account's other
+    /// devices out — which the confirmation screen promises in so many words.
+    /// </summary>
+    Task<PasswordResetOutcome> CompletePasswordResetAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default);
 }

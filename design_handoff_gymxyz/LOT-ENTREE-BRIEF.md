@@ -134,7 +134,7 @@ Ceux-là sont acquis, ne les repayez pas :
   déclencher un `change`. Un `.click()` en JS sur un bouton Blazor fonctionne.
 - **Les comptes de démo** : `dwayne.johnson@gymxyz.fr`,
   `aurelie.siquier@teamtrainers.fr`, `najate.amzil@leyssa-coaching.fr`, et le
-  coach `marine.debord@teamtrainers.fr`. Mot de passe `GymXyz!2026`.
+  coach `marine.debord@teamtrainers.fr`. Mot de passe `GymXyz!2026!`.
 - **Le tenant vient des claims dès qu'on est authentifié** : changer de client =
   se reconnecter. Pour se déconnecter depuis le volet, poster un formulaire vers
   `/account/deconnexion`.

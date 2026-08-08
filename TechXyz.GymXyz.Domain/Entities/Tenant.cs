@@ -116,6 +116,19 @@ public class Tenant : EntityBase<int>
     /// <summary>Sentence describing what the plan includes, under its name.</summary>
     public string? PlanDescription { get; set; }
 
+    /// <summary>
+    /// Customer whose space is closed for non-payment. Nobody signs in, and the
+    /// login screen says why instead of refusing the password they typed
+    /// correctly.
+    /// <para>
+    /// Only ever read here for now: the console owns the screen that raises and
+    /// clears it, and that lot has not been built. A suspension is therefore set
+    /// by hand until then — which is still better than a state the entry screen
+    /// is specified to show and has no way to know about.
+    /// </para>
+    /// </summary>
+    public bool IsSuspended { get; set; }
+
     // ---- Payment method -----------------------------------------------------
     //
     // Descriptive only. These three fields are what a payment provider hands

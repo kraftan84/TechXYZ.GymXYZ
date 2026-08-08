@@ -16,6 +16,10 @@
     <link rel="stylesheet" href="@Assets["css/app.css"]"/>
     <link rel="stylesheet" href="@Assets["css/mobile.css"]"/>
     <link rel="stylesheet" href="@Assets["css/gx-extras.css"]"/>
+    @* The entry screens. Their own stylesheet because the split panel carries a
+       brand token set nothing else uses — and because Leyssa's panel is light,
+       which no app surface is. *@
+    <link rel="stylesheet" href="@Assets["css/auth.css"]"/>
     @* The published image. Its own stylesheet because gx-poster.js carries
        exactly these rules into the SVG it rasterises — and nothing else. Found
        by the marker rather than by its file name: MapStaticAssets fingerprints
@@ -34,6 +38,10 @@
 <ReconnectModal/>
 <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
 <script src="@Assets["_framework/blazor.web.js"]"></script>
+@* The eye and the strength gauge on the entry screens. A classic script, not a
+   module: those pages render statically — signing in writes a cookie, which a
+   circuit cannot — so there is no interop to call it from. *@
+<script src="@Assets["js/gx-auth.js"]"></script>
 </body>
 
 </html>

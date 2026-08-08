@@ -24,7 +24,8 @@ public static class QueryableProjectionExtensions
             City = tenant.City,
             AreaLabel = tenant.AreaLabel,
             ZipCode = tenant.ZipCode,
-            ShowSchoolVacations = tenant.ShowSchoolVacations
+            ShowSchoolVacations = tenant.ShowSchoolVacations,
+            IsSuspended = tenant.IsSuspended
         });
     }
 

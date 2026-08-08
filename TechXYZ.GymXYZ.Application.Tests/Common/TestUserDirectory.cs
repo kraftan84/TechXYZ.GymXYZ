@@ -89,6 +89,48 @@ internal sealed class TestUserDirectory : IUserDirectory
         return Task.FromResult(true);
     }
 
+    /// <summary>Reset links handed out, so a test can assert one was — or was not.</summary>
+    public List<string> ResetsBegun { get; } = [];
+
+    public Task<PasswordResetTicket?> BeginPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var user = _users.FirstOrDefault(candidate =>
+            string.Equals(candidate.Email, email, StringComparison.OrdinalIgnoreCase));
+
+        // Same refusal as the real one: a revoked access does not get a way back in.
+        if (user is null || user.IsRevoked)
+        {
+            return Task.FromResult<PasswordResetTicket?>(null);
+        }
+
+        ResetsBegun.Add(user.Email);
+
+        return Task.FromResult<PasswordResetTicket?>(
+            new PasswordResetTicket(user.Email, $"token-for-{user.UserId}", user.DisplayName));
+    }
+
+    public Task<PasswordResetOutcome> CompletePasswordResetAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var user = _users.FirstOrDefault(candidate =>
+            string.Equals(candidate.Email, email, StringComparison.OrdinalIgnoreCase));
+
+        if (user is null || user.IsRevoked || token != $"token-for-{user.UserId}")
+        {
+            return Task.FromResult(PasswordResetOutcome.DeadLink());
+        }
+
+        return Task.FromResult(
+            newPassword.Length >= 12
+                ? PasswordResetOutcome.Ok()
+                : PasswordResetOutcome.Refused(["Le mot de passe doit contenir au moins 12 caractères."]));
+    }
+
     public static TestUserDirectory WithManager(string email = "test-user") =>
         new TestUserDirectory().Add("manager", email, GymRoleNames.GymManager);
 }

@@ -136,6 +136,87 @@ public sealed class UserDirectory : IUserDirectory
         return locked.Succeeded;
     }
 
+    public async Task<PasswordResetTicket?> BeginPasswordResetAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        if (await FindResettableUserAsync(email, cancellationToken) is not { } user)
+        {
+            return null;
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        return new PasswordResetTicket(user.Email ?? email, token, user.DisplayName);
+    }
+
+    public async Task<PasswordResetOutcome> CompletePasswordResetAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        if (await FindResettableUserAsync(email, cancellationToken) is not { } user)
+        {
+            return PasswordResetOutcome.DeadLink();
+        }
+
+        // Resets the password and rolls the security stamp with it, which is what
+        // signs the account's other cookies out.
+        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+        if (result.Succeeded)
+        {
+            return PasswordResetOutcome.Ok();
+        }
+
+        // Identity reports a bad token as a plain validation error like any
+        // other. Told apart by its code, because "your link has expired" and
+        // "your password is too short" are not the same screen.
+        var deadLink = result.Errors.Any(error => error.Code == "InvalidToken");
+
+        return deadLink
+            ? PasswordResetOutcome.DeadLink()
+            : PasswordResetOutcome.Refused(result.Errors.Select(error => error.Description).ToList());
+    }
+
+    /// <summary>
+    /// The account behind an address, when it is one this host may reset.
+    /// <para>
+    /// Accounts with no tenant are included on purpose: the platform's own people
+    /// sign in through this same screen, and a null tenant belongs to no customer,
+    /// so nothing of a customer's is reachable through it.
+    /// </para>
+    /// <para>
+    /// A revoked account is excluded. Identity's reset path does not look at
+    /// lockout, so without this a coach whose access was withdrawn could set a
+    /// new password and walk back in.
+    /// </para>
+    /// </summary>
+    private async Task<ApplicationUser?> FindResettableUserAsync(
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var normalized = _userManager.NormalizeEmail(email);
+        var tenantId = _tenantContext.Current;
+
+        var user = await _dbContext.Users
+            .Where(candidate => candidate.TenantId == tenantId || candidate.TenantId == null)
+            .FirstOrDefaultAsync(
+                candidate => candidate.NormalizedEmail == normalized,
+                cancellationToken);
+
+        return user is null || IsRevoked(user) ? null : user;
+    }
+
+    /// <summary>
+    /// Revocation and a lockout after five bad tries are the same column. What
+    /// separates them is the date: <c>RevokeAsync</c> writes the far end of time,
+    /// a failed sign-in writes fifteen minutes from now.
+    /// </summary>
+    public static bool IsRevoked(ApplicationUser user) =>
+        user.LockoutEnd is { } end && end.Year >= DateTimeOffset.MaxValue.Year;
+
     private IQueryable<ApplicationUser> TenantUsers()
     {
         var tenantId = _tenantContext.Current;

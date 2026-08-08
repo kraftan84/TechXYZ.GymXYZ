@@ -18,6 +18,47 @@ public static class NotificationMessages
 {
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
 
+    /// <summary>
+    /// The link that lets somebody choose a new password. Signed by the customer's
+    /// own space rather than by GymXYZ: the person asking is a Team Trainer's
+    /// manager, and a message from a brand they have never heard of is a message
+    /// they report as phishing.
+    /// <para>
+    /// It says how long the link lasts and that it works once, because the screen
+    /// that sent it said so too, and it names no account state at all — the same
+    /// message goes out whether or not the address was found.
+    /// </para>
+    /// </summary>
+    public static EmailMessage PasswordReset(
+        string spaceName,
+        string toAddress,
+        string? toName,
+        string link)
+    {
+        var greeting = string.IsNullOrWhiteSpace(toName) ? "Bonjour," : $"Bonjour {toName},";
+
+        var body =
+            $"""
+             {greeting}
+
+             Vous avez demandé à changer le mot de passe de votre espace {spaceName}. Suivez ce lien pour en choisir un nouveau :
+
+             {link}
+
+             Le lien est valable 30 minutes et ne peut servir qu'une fois.
+
+             Si vous n'avez rien demandé, ignorez ce message : votre mot de passe actuel reste valable.
+
+             {spaceName}
+             """;
+
+        return new EmailMessage(
+            toAddress,
+            toName,
+            $"{spaceName} — choisissez un nouveau mot de passe",
+            body);
+    }
+
     /// <summary>Chasing a cover that is late or about to run out.</summary>
     public static EmailMessage RenewalReminder(
         string gymName,

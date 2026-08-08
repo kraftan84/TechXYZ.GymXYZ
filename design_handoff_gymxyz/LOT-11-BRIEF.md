@@ -31,7 +31,7 @@ de dérouler la liste comme si tout restait à faire.
 
 Les deux marques clientes ont été ouvertes dans le navigateur avec leurs comptes
 de démo (`aurelie.siquier@teamtrainers.fr`, `najate.amzil@leyssa-coaching.fr`,
-mot de passe `GymXyz!2026`) :
+mot de passe `GymXyz!2026!`) :
 
 - **Team Trainer's** : sidebar sombre, mark blanche (`teamtrainers-white.png`
   via `BrandLockup.OnDark`), Anton sur les titres, rampe graphite. Conforme.

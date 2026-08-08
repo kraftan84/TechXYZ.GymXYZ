@@ -85,6 +85,9 @@ builder.Services.AddScoped<ResponsiveModeService>();
 builder.Services.AddScoped<MobileHeaderService>();
 builder.Services.AddScoped<NavBadgeService>();
 
+// Singleton: the window it holds has to outlive the request that opened it.
+builder.Services.AddSingleton<PasswordResetThrottle>();
+
 builder.Services.AddApplicationLayer();
 builder.Services.AddPersistenceLayer(builder.Configuration, builder.Environment);
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -102,6 +105,24 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
         options.User.RequireUniqueEmail = true;
+
+        // The rule the reset screen states out loud: "12 caractères minimum, avec
+        // majuscules, minuscules et un chiffre." The hand-off's strength gauge
+        // counted from 8 while its own note promised 12 — 12 won, and it is set
+        // here so the server enforces exactly what the screen promises. Anything
+        // else is a screen lying about the rule.
+        options.Password.RequiredLength = 12;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireDigit = true;
+        options.Password.RequireNonAlphanumeric = false;
+
+        // Five tries, then a quarter of an hour. Enabled by default so it covers
+        // accounts created before this lot: PasswordSignInAsync already asked for
+        // lockout on failure, but with nothing configured it never locked.
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     })
     .AddRoles<ApplicationRole>()
     .AddEntityFrameworkStores<GymDbContext>()
@@ -115,6 +136,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/account/deconnexion";
     options.AccessDeniedPath = "/account/acces-refuse";
 });
+
+// "Le lien est valable 30 minutes" — said on the screen that sends it and in the
+// message itself, so the token has to actually expire then. Identity's default
+// is a full day.
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromMinutes(30));
+
+// "Les autres appareils ont été déconnectés" is what the confirmation screen
+// says, so it has to be true within the minute rather than within Identity's
+// default half hour. Resetting a password rolls the security stamp; this is how
+// often a cookie is made to notice.
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+    options.ValidationInterval = TimeSpan.FromMinutes(1));
 
 builder.Services.AddAuthorization(options =>
 {

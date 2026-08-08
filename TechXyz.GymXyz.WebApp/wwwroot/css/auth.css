@@ -1,0 +1,384 @@
+/* ============================================================
+   GymXYZ — the entry: login, forgotten password, reset
+   ------------------------------------------------------------
+   Ported from the hand-off (design/app/auth.css, §1). Same rule
+   as the app: no brand colour written in a screen. The split
+   panel carries its own small token set so each white-label
+   theme keeps its register — ink navy, graphite, blush — and a
+   customer never sees somebody else's blue.
+
+   The panel is NOT "the dark side". Leyssa's is light, which is
+   why every value below comes through --gx-a-* rather than
+   through a neutral ramp.
+   ============================================================ */
+
+:root {
+  --gx-a-panel: linear-gradient(160deg, #0C2236 0%, #12304A 62%, #0C2236 100%);
+  --gx-a-fg: #fff;
+  --gx-a-dim: rgba(255, 255, 255, .68);
+  --gx-a-faint: rgba(255, 255, 255, .42);
+  --gx-a-accent: var(--azure-400);
+  --gx-a-dots: rgba(0, 171, 252, .26);
+  --gx-a-hair: rgba(255, 255, 255, .14);
+}
+
+[data-theme="teamtrainers"] {
+  --gx-a-panel: linear-gradient(160deg, #1F1F23 0%, #101013 58%, #000 100%);
+  --gx-a-fg: #fff;
+  --gx-a-dim: rgba(255, 255, 255, .66);
+  --gx-a-faint: rgba(255, 255, 255, .38);
+  --gx-a-accent: #fff;
+  --gx-a-dots: rgba(255, 255, 255, .16);
+  --gx-a-hair: rgba(255, 255, 255, .13);
+}
+
+[data-theme="leyssa"] {
+  --gx-a-panel: linear-gradient(165deg, #FDF3F5 0%, #F6DEE5 52%, #E9EFE0 100%);
+  --gx-a-fg: #4A2A38;
+  --gx-a-dim: rgba(74, 42, 56, .72);
+  --gx-a-faint: rgba(74, 42, 56, .5);
+  --gx-a-accent: var(--azure-600);
+  --gx-a-dots: rgba(203, 91, 116, .22);
+  --gx-a-hair: rgba(122, 68, 86, .14);
+}
+
+/* ---------- The two columns ---------- */
+
+.gx-auth {
+  display: grid;
+  grid-template-columns: 1.02fr .98fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.gx-auth-panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--gx-a-panel);
+  color: var(--gx-a-fg);
+  padding: 44px 52px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The node-graph motif, kept discreet. */
+.gx-auth-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--gx-a-dots) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: .55;
+  pointer-events: none;
+}
+
+.gx-auth-panel::after {
+  content: "";
+  position: absolute;
+  width: 46vmax;
+  height: 46vmax;
+  right: -16vmax;
+  top: -14vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gx-a-dots) 0%, transparent 66%);
+  opacity: .85;
+  pointer-events: none;
+}
+
+.gx-auth-panel > * { position: relative; z-index: 1; }
+.gx-auth-panel .gx-brand { padding: 0; }
+.gx-auth-panel .gx-wordmark { color: var(--gx-a-fg); }
+.gx-auth-panel .gx-wordmark .accent { color: var(--gx-a-accent); }
+.gx-auth-panel .gx-brand .mark { color: var(--gx-a-fg); }
+
+.gx-a-mid {
+  margin: auto 0;
+  max-width: 520px;
+}
+
+.gx-a-mid h1 {
+  font-family: var(--font-display, var(--font-sans));
+  font-weight: var(--display-weight, 700);
+  letter-spacing: var(--display-ls, 0);
+  font-size: calc(clamp(30px, 3.2vw, 44px) * var(--display-title-scale, 1));
+  line-height: 1.08;
+  margin: 0 0 16px;
+  color: var(--gx-a-fg);
+  text-wrap: pretty;
+}
+
+.gx-a-mid p {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--gx-a-dim);
+  max-width: 26em;
+  text-wrap: pretty;
+}
+
+.gx-a-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.gx-a-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--gx-a-hair);
+  color: var(--gx-a-dim);
+  font-size: var(--text-sm);
+}
+
+.gx-a-pfoot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-xs);
+  color: var(--gx-a-faint);
+}
+
+.gx-a-pfoot .sep { width: 1px; height: 12px; background: var(--gx-a-hair); }
+
+.gx-auth-side {
+  background: var(--surface-page);
+  display: grid;
+  place-items: center;
+  padding: 40px 32px;
+  overflow-y: auto;
+}
+
+.gx-a-form {
+  width: 100%;
+  max-width: 392px;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+/* ---------- Type and links ---------- */
+
+.gx-a-h {
+  font-family: var(--font-display, var(--font-sans));
+  font-weight: var(--display-weight, 700);
+  letter-spacing: var(--display-ls, 0);
+  font-size: calc(var(--text-3xl) * var(--display-title-scale, 1));
+  line-height: 1.15;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.gx-a-sub {
+  margin: 6px 0 0;
+  font-size: var(--text-md);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.gx-a-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.gx-link {
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.gx-link:hover { color: var(--azure-700); text-decoration: underline; }
+.gx-link.muted { color: var(--text-muted); font-weight: var(--weight-medium); }
+.gx-link.muted:hover { color: var(--text-strong); }
+
+.gx-a-hr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  margin: 2px 0;
+}
+
+.gx-a-hr::before,
+.gx-a-hr::after { content: ""; height: 1px; flex: 1; background: var(--border-subtle); }
+
+.gx-a-tail {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.gx-a-help {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  text-align: center;
+  margin: 0;
+}
+
+.gx-a-help a { color: inherit; }
+
+/* ---------- Fields ---------- */
+
+.gx-a-field { display: flex; flex-direction: column; gap: 6px; }
+
+.gx-a-field > label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+}
+
+/* The eye sits over the control, so the wrapper is the positioning context and
+   the field below it must keep its own height — hence bottom:0 rather than a
+   vertical centring that would drift once a validation message appears. */
+.gx-a-pw { position: relative; display: flex; align-items: flex-end; }
+.gx-a-pw > .gx-a-field { flex: 1; min-width: 0; }
+
+.gx-a-eye {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  height: var(--control-md);
+  width: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+
+.gx-a-eye:hover { color: var(--text-body); }
+
+/* A password field with a hint or an error underneath: the eye would otherwise
+   sit on the message instead of the control. */
+.gx-a-pw.has-note .gx-a-eye { bottom: auto; top: 22px; }
+
+.gx-a-strength { display: flex; gap: 5px; margin-top: 2px; }
+.gx-a-strength i { height: 4px; flex: 1; border-radius: 2px; background: var(--surface-sunken); }
+.gx-a-strength i.mid { background: var(--warning-500, #E9A23B); }
+.gx-a-strength i.on { background: var(--color-success); }
+
+.gx-a-fieldnote {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ---------- Notices ---------- */
+
+.gx-a-note {
+  display: flex;
+  gap: 11px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--azure-50);
+  border: 1px solid var(--border-brand, var(--azure-100));
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.gx-a-note .ic { flex: none; color: var(--color-primary); margin-top: 1px; }
+
+.gx-a-err {
+  display: flex;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--danger-700);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.gx-a-err .ic { flex: none; margin-top: 1px; }
+
+.gx-a-big {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--azure-50);
+  color: var(--color-primary);
+  margin: 0 auto 6px;
+}
+
+.gx-a-big.ok { background: var(--success-50); color: var(--color-success); }
+
+.gx-a-center { text-align: center; }
+.gx-a-center .gx-a-form { align-items: stretch; }
+
+/* ============================================================
+   Mobile — the same DOM, rearranged
+   ------------------------------------------------------------
+   The hand-off draws mobile as a separate component because the
+   prototype toggles a device frame. Here it is one markup and a
+   media query instead: these pages are statically rendered, so
+   there is no circuit to tell the server how wide the screen is,
+   and the cookie ResponsiveModeService reads is missing on a
+   first visit — which is exactly the visit the login screen is.
+   A phone would get the desktop split panel.
+
+   The panel becomes the hero: brand and title on the gradient,
+   form underneath, pills and panel footer dropped.
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .gx-auth {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .gx-auth-panel { padding: 64px 22px 26px; }
+  .gx-auth-panel::before { background-size: 22px 22px; opacity: .5; }
+  .gx-auth-panel::after { display: none; }
+
+  .gx-a-mid { margin: 22px 0 0; }
+
+  .gx-a-mid h1 {
+    font-size: calc(23px * var(--display-title-scale, 1));
+    line-height: 1.15;
+    margin: 0 0 6px;
+  }
+
+  .gx-a-mid p { font-size: var(--text-sm); line-height: 1.45; }
+
+  /* Three pills and a legal footer are the panel earning its width. On a phone
+     the panel is a header, and they push the form below the fold. */
+  .gx-a-pills,
+  .gx-a-pfoot { display: none; }
+
+  .gx-auth-side { padding: 22px 20px 26px; place-items: start stretch; overflow: visible; }
+  .gx-a-form { max-width: none; }
+
+  /* The desktop size is --text-3xl times the brand's display scale, which on
+     Leyssa's script face lands at 46px — a line and a half of a phone. The
+     hand-off's phone titles are 23px before the same scale. */
+  .gx-a-h { font-size: calc(23px * var(--display-title-scale, 1)); }
+
+  /* The secondary screens lead with their own title, so the hero repeating the
+     brand promise is noise: it keeps the wordmark and nothing else. */
+  .gx-auth.compact .gx-auth-panel { padding: 54px 22px 18px; }
+  .gx-auth.compact .gx-a-mid { display: none; }
+}

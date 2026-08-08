@@ -1,0 +1,72 @@
+@* Lien envoyé. Says exactly the same thing whether or not the address has an
+   account — it is the other half of the no-enumeration rule, and the reason this
+   screen never reports a failure to send either. *@
+
+@page "/account/lien-envoye"
+@attribute [AllowAnonymous]
+@layout EmptyLayout
+
+@using MediatR
+@using TechXyz.GymXyz.Application.Commands
+@using TechXyz.GymXyz.WebApp.Components.Features.Account
+
+@inject ISender Sender
+@inject NavigationManager Navigation
+@inject PasswordResetThrottle Throttle
+
+<PageTitle>Lien envoyé</PageTitle>
+
+<AuthShell Compact="true">
+    <EditForm Model="_resend" method="post" OnValidSubmit="ResendAsync" FormName="renvoyer-le-lien"
+              class="gx-a-form gx-a-center">
+
+        <div class="gx-a-big"><GxIcon Name="mail" Size="32"/></div>
+
+        <div>
+            <h1 class="gx-a-h">Vérifiez votre boîte</h1>
+            <p class="gx-a-sub">
+                Si un compte existe pour <b>@DisplayEmail</b>, un lien vient d'y partir.
+            </p>
+        </div>
+
+        <div class="gx-a-note">
+            <GxIcon Name="clock" Size="18" Class="ic"/>
+            <span>
+                Rien reçu au bout de deux minutes ? Regardez dans les indésirables,
+                puis renvoyez le lien.
+            </span>
+        </div>
+
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Outline" Style="width:100%">
+            Renvoyer le lien
+        </FluentButton>
+
+        <a class="gx-link muted" href="/account/connexion">← Revenir à la connexion</a>
+    </EditForm>
+</AuthShell>
+
+@code {
+    [SupplyParameterFromQuery] private string? Email { get; set; }
+
+    // EditForm needs a model; there is nothing to bind, the address travels in
+    // the query where the person put it by asking.
+    private readonly object _resend = new();
+
+    private string DisplayEmail => string.IsNullOrWhiteSpace(Email) ? "votre adresse" : Email;
+
+    private async Task ResendAsync()
+    {
+        // Throttled to one a minute, and silent about it: "vous avez déjà demandé"
+        // would tell a stranger the address is worth asking about.
+        if (!string.IsNullOrWhiteSpace(Email) && Throttle.TryBegin(Email))
+        {
+            var resetPageUrl = Navigation.ToAbsoluteUri("/account/reinitialisation").ToString();
+
+            await Sender.Send(new RequestPasswordResetCommand(Email, resetPageUrl));
+        }
+
+        Navigation.NavigateTo(
+            $"/account/lien-envoye?email={Uri.EscapeDataString(Email ?? string.Empty)}",
+            forceLoad: true);
+    }
+}

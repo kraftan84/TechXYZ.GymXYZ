@@ -11,8 +11,16 @@ namespace TechXyz.GymXyz.Persistence.Data;
 
 public static class DbInitializer
 {
-    /// <summary>Demo account password. Development seed only.</summary>
-    private const string DemoPassword = "GymXyz!2026";
+    /// <summary>
+    /// Demo account password. Development seed only.
+    /// <para>
+    /// Twelve characters because the entry lot set <c>RequiredLength</c> to 12 and
+    /// these accounts are created through <c>UserManager.CreateAsync</c>, which
+    /// runs the validators: the previous eleven-character value would fail every
+    /// one of them and seed a database with no accounts at all.
+    /// </para>
+    /// </summary>
+    private const string DemoPassword = "GymXyz!2026!";
 
     public static async Task InitializeAsync(IServiceProvider serviceProvider, GymDbContext dbContext)
     {

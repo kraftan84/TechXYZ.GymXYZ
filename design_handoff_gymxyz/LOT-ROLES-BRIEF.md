@@ -56,7 +56,7 @@ Deux choses sont **déjà justes** dans le code, et ne sont pas à refaire :
 ## Ce que l'application fait aujourd'hui face à ce modèle
 
 **Mesuré, écran par écran, connecté en `nora.lemoine@gymxyz.fr` (rôle `Coach`,
-mot de passe `GymXyz!2026`).**
+mot de passe `GymXyz!2026!`).**
 
 | Écran | Coach aujourd'hui | Attendu |
 |---|---|---|
