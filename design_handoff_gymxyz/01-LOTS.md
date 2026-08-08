@@ -1,4 +1,23 @@
-# Plan d'implémentation — 13 lots
+# Plan d'implémentation — 12 lots livrés, 3 lots venus du second handoff
+
+> **Deux handoffs, deux numérotations — c'est le piège de ce document.** Le
+> handoff d'origine (août, docs `01` à `05`) numérotait les lots dans un ordre
+> que la construction a changé : ce document porte **l'ordre de construction**,
+> le seul que le dépôt suive, et chaque lot rappelle son numéro d'origine sous
+> « Réf. handoff initial ».
+>
+> Le **second handoff** (docs `06`, `07`, `08`, livré le 2026-08-07) reprend
+> l'intégralité du premier et renumérote encore : il compte 15 lots et son lot 1
+> est l'Accueil. **Ses numéros 13, 14 et 15 n'ont donc rien à voir avec les
+> nôtres** — notre lot 13 est le registre de dette technique. Ses trois lots
+> nouveaux sont repris ici **par leur sujet**, sans numéro inventé, comme le lot
+> « Rôles & cloisonnement » avant eux. Ce que le second handoff apporte
+> réellement : les trois documents `06`/`07`/`08`, leurs prototypes, et
+> l'annulation de notre lot 9 (voir sa section).
+>
+> Les documents `02` à `05` sont ceux du second handoff, à un détail près :
+> `05-DATA-MODEL.md` garde notre renvoi au lot 5 (Planning), qui est le numéro
+> de construction.
 
 **Principe de découpage : par feature verticale.** Chaque lot livre le desktop
 **et** le mobile de la même section, de l'entité EF jusqu'à l'écran. Raison : les
@@ -53,13 +72,19 @@ cloisonnement des données d'un coach à ses propres séances.
 Séquence arrêtée le 2026-08-07. **Au bout de cette liste, la V1 est complète** —
 tout ce qui n'y est pas est explicitement repoussé (section suivante).
 
-| # | Chantier | Matière disponible |
-|---|---|---|
-| 1 | **Entrée 3 du registre + warnings de compilation** | `LOT-13-BRIEF.md` ; `CS8604` sur `Planning.razor:153`, `BL0008` sur `Login.razor:72` |
-| 2 | ~~Cloche de notifications + météo des cours extérieurs~~ | **vidé le 2026-08-07** — voir juste en dessous |
-| 3 | **Diffusion du planning en image** | décision du lot 10, tranchée ci-dessous |
-| 4 | **Login & onboarding** | **handoff à fournir** |
-| 5 | **Portail super-admin** | **handoff à fournir** |
+| # | Chantier | État | Matière |
+|---|---|---|---|
+| 1 | Entrée 3 du registre + warnings de compilation | ✅ **livré** (#33) | `LOT-LOG-BRIEF.md` — entrée 3 fermée sur une cause nommée |
+| 2 | ~~Cloche de notifications + météo~~ | ✅ **vidé** (#34) | voir juste en dessous |
+| 3 | **Diffusion du planning en image** | à faire | **`08-PLANNING-DIFFUSE.md`** + `LOT-DIFFUSION-BRIEF.md` |
+| 4 | **Entrée : connexion & demande d'ouverture** | à faire | **`06-ENTREE-AUTH-ONBOARDING.md`** |
+| 5 | **Console plateforme (super-admin)** | à faire | **`07-CONSOLE-PLATEFORME.md`** |
+| 6 | **Comptes à casquettes multiples sur plusieurs clients** | à faire | entrée 4 du registre, qui décrit déjà le remède et son risque |
+
+**Les deux handoffs attendus sont arrivés** (2026-08-07) et remplissent les
+points 3, 4 et 5. Chacun a sa section de lot en fin de document, et chacun porte
+des décisions à trancher **avant** de coder — dont une qui contredit du code déjà
+livré, signalée au lot 9.
 
 > **Le point 2 n'existe plus, et la V1 tient en cinq points.** Ses deux chantiers
 > sont tombés le même jour, pour deux raisons différentes :
@@ -76,7 +101,6 @@ tout ce qui n'y est pas est explicitement repoussé (section suivante).
 > URL d'API sorties dans `appsettings`, et un réglage « afficher les vacances
 > scolaires » par client. La numérotation ci-dessus est conservée telle quelle
 > pour que les briefs déjà écrits continuent de désigner les mêmes chantiers.
-| 6 | **Comptes à casquettes multiples sur plusieurs clients** | entrée 4 du registre, qui décrit déjà le remède et son risque |
 
 **L'ordre porte deux dépendances, pas seulement une préférence.** Le point 6
 arrive **après** les points 4 et 5 parce qu'il touche la fabrique de claims, la
@@ -506,7 +530,32 @@ d'envoi réel : stocker les préférences, brancher l'envoi dans un lot ultérie
 
 ---
 
-## Lot 9 — Administration (super-admin TechXYZ) ✅ livré
+## Lot 9 — Administration (super-admin TechXYZ) ✅ livré, ⚠️ remplacé
+
+> **Le second handoff déclare ce lot caduc** (son lot 7) et le remplace par la
+> **console plateforme**, `07-CONSOLE-PLATEFORME.md` — une application à part,
+> desktop seul, huit écrans, là où ce lot avait livré deux panneaux. La section
+> ci-dessous décrit donc **ce qui tourne aujourd'hui**, pas la cible. L'écran
+> `ScreenAdministration` du prototype `screen-reglages.jsx` ne doit plus servir
+> de référence.
+>
+> **Un point de la cible contredit du code livré, et c'est une décision produit,
+> pas un détail de reprise.** Le doc `07` retient que **le super-admin n'entre
+> jamais dans un espace client** : ses queries ne projettent que des agrégats, et
+> l'impersonation est un Tweak du prototype, **faux par défaut** (§1), avec
+> « impersonation : oui / non, défaut recommandé **non** » en tête des décisions
+> à prendre (§11).
+>
+> Or l'impersonation n'est pas une option non construite : elle a été câblée ici
+> (`ITenantContext.UseTenant`, entité `TenantImpersonation`), puis **durcie au
+> lot 11 PR 3**, qui a fermé l'entrée 2 du registre en posant qu'un admin hors
+> impersonation ne lit **aucune** donnée métier — tout le modèle « l'admin entre,
+> et ça laisse une trace » repose dessus. Choisir « non » ne coûte donc pas rien :
+> c'est **retirer un chemin livré, testé et tracé**, et il faut alors décider ce
+> que devient ce que l'impersonation servait à faire (le support client, d'abord).
+> À trancher avant d'écrire la console — et à lire avec l'**entrée 4** du
+> registre, qui dit que l'impersonation et l'appartenance multi-clients sont la
+> même question sous deux noms.
 
 *Réf. handoff initial : lot 7.* Ne dépend que du lot 0, mais placé ici parce qu'il
 pilote des clients dont le paramétrage n'a de sens qu'une fois les lots métier
@@ -630,6 +679,115 @@ paiements. À maquetter d'abord (retour en phase design), puis lot d'implémenta
 
 ---
 
+## Lot « Planning diffusé » — l'image à publier · point 3 de la V1
+
+*Réf. second handoff : lot 15. Spécification : `08-PLANNING-DIFFUSE.md`. Brief de
+démarrage : `LOT-DIFFUSION-BRIEF.md`.* Dépend du lot 5 (Planning).
+
+C'est le contenu du bouton « Diffuser le planning », tranché le 2026-08-07 et
+maintenant maquetté : une image **1080 × 1350** (4:5) du planning de la semaine,
+aux couleurs du client, que le gérant télécharge pour la publier. **Trois
+habillages** sont maquettés au pixel, un par marque (`08`, §3 à §5).
+
+**Implémentation recommandée par le handoff** : un composant Razor
+`PlanningPoster.razor` nourri par `GetWeekPlanningQuery` — la query existe depuis
+le lot 5 — rendu côté serveur puis capturé en PNG (Playwright .NET ou
+PuppeteerSharp), viewport 1080×1350.
+
+**Le piège nommé par le handoff** : polices **auto-hébergées** et
+`document.fonts.ready` **attendu avant la capture**, sinon les polices de marque
+tombent en Montserrat et l'affiche perd l'identité qui est sa seule raison d'être.
+Le lot 11 a déjà auto-hébergé Anton et Dancing Script — c'est un acquis, pas un
+travail à refaire.
+
+> **Règle de contenu, non négociable** : l'affiche est **publique**. Aucun nom
+> d'adhérent, aucun effectif inscrit, aucun prix.
+
+> **Décision attendue avant de coder** : le **parcours** de génération — choix de
+> la semaine, du format, des options, aperçu, partage — **n'est pas maquetté**
+> (`08`, §6). Le handoff demande de repasser en design avant de le coder. Ce qui
+> est maquetté, c'est l'image ; ce qui ne l'est pas, c'est comment on l'obtient.
+
+---
+
+## Lot « Entrée » — connexion & demande d'ouverture · point 4 de la V1
+
+*Réf. second handoff : lot 13. Spécification : `06-ENTREE-AUTH-ONBOARDING.md`.*
+Prototype : `design/GymXYZ Auth & Onboarding.html`.
+
+Deux parcours dans un seul document, desktop **et** mobile, sur les trois marques.
+
+- **Connexion, mot de passe oublié, réinitialisation** (`06`, §1 et §2). Les
+  écrans existent déjà en code depuis le lot 0 ; ce lot les remplace par la
+  maquette. **Règle structurante du handoff** : la connexion est **thémée
+  client** — l'écran porte la marque du tenant, pas celle de GymXYZ.
+- **Demande d'ouverture d'espace** (`06`, §3 et §4) : formulaire public en
+  **6 étapes** (Profil · Structure · Contact · Formule · Marque · Récapitulatif)
+  puis confirmation. Marque GymXYZ uniquement.
+
+**Le point d'architecture** : ce formulaire est **hors tenant** — ni `TenantId`,
+ni filtre global. C'est le **seul** endroit du produit dans ce cas, et tout le
+socle du lot 0 est bâti sur l'hypothèse inverse. À traiter explicitement, pas en
+laissant le filtre global « ne rien trouver ».
+
+**Application** : `SubmitDemandeOuvertureCommand` (validator complet, anti-bot),
+`CheckSubdomainAvailabilityQuery`. Entité `DemandeOuverture` détaillée dans `06`
+§6, **à réconcilier avec `05-DATA-MODEL.md`** plutôt qu'à ajouter à côté.
+
+> **Décisions attendues avant de coder**
+> 1. **Le mot de passe** : saisi au formulaire (donc un hash dormant à purger si
+>    la demande est refusée) ou remplacé par un **lien d'activation** à
+>    l'ouverture de l'espace — recommandé par le handoff.
+> 2. **La purge des demandes refusées après 3 mois** est *annoncée dans le
+>    consentement*, donc obligatoire : c'est une promesse faite à l'utilisateur,
+>    pas une option de rétention.
+> 3. `06` §7 liste des **états absents de la maquette** (erreurs, expiration,
+>    doublons) — à couvrir, la DoD du repo demande états vides, chargement et
+>    erreur.
+
+---
+
+## Lot « Console plateforme » — super-admin TechXYZ · point 5 de la V1
+
+*Réf. second handoff : lot 14. Spécification : `07-CONSOLE-PLATEFORME.md`.*
+Prototype : `design/GymXYZ Console.html`. **Remplace notre lot 9**, dont la
+section porte le détail de ce qui devient caduc. Dépend du lot « Entrée ».
+
+Une application à part, **desktop uniquement**, sous policy `PlatformAdmin` :
+bandeau plateforme, sidebar en 4 groupes, et huit écrans — Vue d'ensemble ·
+Demandes · Fiche demande (valider / refuser / demander un complément / notes) ·
+Clients · Fiche client · Facturation · Support · Formules · Santé & journal ·
+Référentiels.
+
+**Le point d'architecture du lot** : la console ne projette que des **agrégats**,
+jamais une entité métier d'un client. Le contournement du filtre `TenantId` est
+encapsulé dans un `IPlatformQuery` **nommé**, jamais au fil de l'eau — c'est la
+même discipline que le marqueur `IManagerOnly` du lot rôles : une règle qu'on
+peut relire, plutôt qu'une vérification qu'on peut oublier. Toute action est
+écrite au **journal d'audit**.
+
+**Elle contient la seule action qui provisionne un client** — « Valider et ouvrir
+l'espace » : création du `Tenant`, du premier compte `GymManager`, du seed
+minimal, envoi de l'invitation. **En transaction, et l'invitation rejouable.**
+C'est aussi le moment où la base cesse d'être jetable : voir l'**entrée 5** du
+registre (migrations EF), dont l'échéance est exactement là.
+
+> **Décisions attendues avant de coder** (`07`, §11) — six, dont la première
+> engage du code livré :
+> 1. **Impersonation : oui / non.** Défaut recommandé par le handoff : **non**.
+>    Lire d'abord l'encadré du lot 9 : ce chemin existe, il est tracé et testé.
+> 2. **Suspension automatique après N impayés** : seuil, préavis, message côté
+>    client.
+> 3. **Facturation** : la console émet-elle les factures (numérotation, PDF, TVA)
+>    ou reflète-t-elle un outil comptable existant ? Le bouton « PDF » suppose la
+>    première réponse.
+> 4. **Bouton « Aide »** dans l'app cliente : emplacement, champs, pièce jointe.
+> 5. **Éditeur de modèles d'e-mail** : à maquetter avant implémentation.
+> 6. **Plafonds de formule** : 80 ou 150 membres pour Essentiel — l'onboarding et
+>    la console doivent lire **une seule source**.
+
+---
+
 ## Récapitulatif des dépendances
 
 | # | Lot | Dépend de | Produit ce qui manque à |
@@ -643,10 +801,14 @@ paiements. À maquetter d'abord (retour en phase design), puis lot d'implémenta
 | 6 | Présences | 1, 5 | 7, 10 · complète les colonnes du lot 1 |
 | 7 | Abonnements & encaissements | 1, 6 | 10 · complète les colonnes du lot 1 |
 | 8 | Réglages | 1, 2 | — |
-| 9 | Administration | 0 | — |
+| 9 | Administration ⚠️ remplacé par la console | 0 | — |
 | 10 | Accueil / tableau de bord | 5, 6, 7 | — |
 | 11 | Marques clientes | 0 → 10 | — |
-| 12 | Portail membre | design d'abord | — |
+| 12 | Portail membre ❌ hors V1 | design d'abord | — |
+| — | Rôles & cloisonnement | 0 → 11 | — |
+| — | Planning diffusé | 5 | — |
+| — | Entrée : connexion & demande d'ouverture | 0 | la console |
+| — | Console plateforme | 0, Entrée | remplace 9 |
 
 **Vues dérivées temporairement vides.** Trois écrans affichent des colonnes ou des
 panneaux dont la source arrive plus tard. C'est voulu, et c'est le seul coût de ce

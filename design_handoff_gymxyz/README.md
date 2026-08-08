@@ -10,12 +10,16 @@
 |---|---|
 | `README.md` | Ce fichier : cadrage, règles du jeu, mapping maquette → archi, tokens, assets. |
 | `PROMPT.md` | Le message à coller dans Claude Code pour démarrer. |
-| `01-LOTS.md` | **Le plan de travail** : 12 lots, périmètre, DoD, ordre. Un lot = une PR. |
+| `01-LOTS.md` | **Le plan de travail**, dans l'ordre de construction : 12 lots livrés + les 3 lots de ce second handoff. Un lot = une PR. **Sa numérotation n'est pas celle de ce README** — voir son encadré d'ouverture. |
+| `LOT-*-BRIEF.md` | Les **briefs de démarrage** écrits lot par lot pendant la construction, plus `LOT-13-BRIEF.md`, le **registre de dette technique** (à lire avant de planifier). |
 | `02-THEMING.md` | Marque blanche : les 3 marques, tous les tokens, polices, règles par marque. |
 | `03-SCREENS-DESKTOP.md` | Spécification écran par écran (desktop). |
 | `04-SCREENS-MOBILE.md` | Spécification écran par écran (mobile responsive). |
 | `05-DATA-MODEL.md` | Entités proposées, enums, invariants, seed de démo. |
-| `screenshots/` | **Captures cibles** : 10 écrans desktop + 5 mobile, × 3 marques. |
+| `06-ENTREE-AUTH-ONBOARDING.md` | **Connexion, mot de passe, demande d'ouverture d'espace** (desktop + mobile, 3 marques). |
+| `07-CONSOLE-PLATEFORME.md` | **Console super-admin TechXYZ** : demandes, clients, facturation, support, santé, référentiels. Remplace le lot 7. |
+| `08-PLANNING-DIFFUSE.md` | **L'image « Diffuser le planning »** : 3 habillages, format, génération. |
+| `screenshots/` | **Captures cibles** : l'app (10 desktop + 5 mobile × 3 marques), `entree/` (17), `console/` (15), `planning-diffuse/` (3 affiches 1080×1350). |
 | `design/` | **Le prototype** (HTML/CSS/JSX) : la référence visuelle normative. |
 
 ---
@@ -33,6 +37,11 @@ GymXYZ est **un seul produit de gestion de salle de sport, re-brandé par client
 Le point différenciant du produit — et ce que le code doit préserver — est que
 **changer de marque ne change aucun écran** : tout passe par des tokens CSS.
 
+Trois ensembles s'ajoutent à l'app elle-même, chacun avec son document :
+**l'entrée** (connexion et demande d'ouverture d'espace, `06`), **la console
+plateforme** du super-admin TechXYZ (`07`), et **l'image de planning à publier**
+(`08`).
+
 ## À propos des fichiers de design
 
 Les fichiers de `design/` sont des **maquettes de référence réalisées en HTML/CSS +
@@ -46,10 +55,20 @@ Le CSS, lui, **est réutilisable presque tel quel** : `design/app/app.css`,
 `design/app/mobile.css` et `design/app/themes.css` sont écrits uniquement en
 `var(--*)` sur les tokens TechXYZ. C'est le chemin le plus court vers la fidélité.
 
-**Pour faire tourner le prototype** : ouvrir `design/GymXYZ Desktop.html` ou
-`design/GymXYZ Mobile.html` dans un navigateur (connexion requise : React et Babel
-viennent d'un CDN). Le panneau « Tweaks » (coin de l'écran) permet de basculer de
-marque en direct — c'est le meilleur moyen de comprendre l'étendue du thèmage.
+**Pour faire tourner le prototype**, ouvrir dans un navigateur (connexion requise :
+React et Babel viennent d'un CDN) :
+
+| Fichier | Contenu | Doc |
+|---|---|---|
+| `design/GymXYZ Desktop.html` | L'app, 10 sections, desktop | `03` |
+| `design/GymXYZ Mobile.html` | L'app, mobile | `04` |
+| `design/GymXYZ Auth & Onboarding.html` | Connexion, mot de passe, demande d'ouverture (desktop **et** mobile, 3 marques) | `06` |
+| `design/GymXYZ Console.html` | Console plateforme super-admin | `07` |
+| `design/Planning diffusé - 3 styles.html` | Les 3 affiches de planning (canevas, 3 frames côte à côte) | `08` |
+
+Le panneau « Tweaks » (coin de l'écran) permet de basculer de marque, de surface
+(desktop/mobile) et d'écran en direct — c'est le meilleur moyen de comprendre
+l'étendue du thèmage.
 
 Si vous ne pouvez pas l'ouvrir, `screenshots/` contient les mêmes écrans figés
 pour les trois marques (voir `screenshots/README.md`).
@@ -124,6 +143,9 @@ relecture de toutes les requêtes.
 | `app/shell.jsx` (Sidebar, Topbar, Brand, Kpi, Bar, Ring, PageHead, Crumb, CardHead, Chip) | `WebApp/Components/Layout/` + `WebApp/Components/Shared/` (composants Razor réutilisables). |
 | `app/mobile-shell.jsx` (MHead, MTabBar, MSheet, MPlusSheet, MKpi…) | `WebApp/Components/Layout/Mobile/`. |
 | `app/screen-*.jsx` | une page Razor par section dans `WebApp/Components/Pages/`. |
+| `app/auth.css`, `app/auth-*.jsx` | zone `WebApp/Components/Account/` (parcours d'entrée) — voir `06`. |
+| `app/console.css`, `app/console-*.jsx`, `app/auth-admin.jsx` | zone `WebApp/Components/Platform/`, policy `PlatformAdmin` — voir `07`. |
+| `Planning diffusé - 3 styles.html` | un composant de rendu `PlanningPoster.razor` + capture headless — voir `08`. |
 | `app/data.js` → `GX_DATA` | **seed de démo** en base (`Persistence/DataInitialization`), pas des constantes C#. |
 | `app/data.js` → `GX_THEMES` | table `Tenants` + `ThemeKey`. |
 | `app/calendar.jsx` (fériés + vacances scolaires) | service `ISchoolCalendarService` dans Application, appel `api.gouv.fr` côté serveur + cache mémoire. |
@@ -228,8 +250,8 @@ Dans `design/assets/themes/` :
 - `teamtrainers-white.png` — version blanche (sidebar sombre du thème).
 - `teamtrainers-full.png` — lockup complet.
 - `leyssa-mark.png` — marque Leyssa (affichée en cercle, `circle: true`).
-- GymXYZ n'a pas de fichier : sa marque est **une kettlebell dessinée en SVG**
-  (`KettlebellMark` dans `design/app/icons.jsx`) — à porter en composant Razor.
+- GymXYZ n'a **pas de marque** : le thème par défaut s'affiche en wordmark seul
+  (`markType: 'none'` dans `design/app/data.js`).
 
 Polices auto-hébergées dans `design/_ds/.../assets/fonts/` (Orbitron latin,
 Montserrat latin + italic, woff2). **Anton** et **Dancing Script** sont chargées
@@ -246,6 +268,9 @@ Formats FR : espace comme séparateur de milliers (`1 200`), virgule décimale,
 
 ## Écarts connus / à décider
 
+0. Les écarts propres aux nouveaux écrans sont listés en fin de `06`, `07` et
+   `08` (validation du formulaire, impersonation, suspension pour impayé,
+   bouton « Aide », parcours de diffusion du planning).
 1. **Recherche globale** (topbar desktop, header mobile) : présente visuellement,
    sans comportement défini dans la maquette. Proposition : lot 1 (Membres),
    recherche membres + cours, palette clavier `Ctrl+K`. À confirmer.

@@ -8,8 +8,8 @@ const { Button, Badge, Avatar, Card, IconButton } = window.TechXYZDesignSystem_f
 /* ---------- Brand lockup (mark + themed wordmark) ---------- */
 function Brand({ theme, size = 'md', onDark = false }) {
   const useDark = onDark && theme.markSrcDark;
-  const mark = theme.markType === 'kettlebell'
-    ? React.createElement(KettlebellMark, { size: size === 'lg' ? 44 : 38 })
+  /* markType 'none' (GymXYZ) → wordmark seul, pas de marque */
+  const mark = theme.markType === 'none' ? null
     : React.createElement('img', { src: useDark ? theme.markSrcDark : theme.markSrc, alt: theme.name });
   const wm = theme.wordmark.full
     ? React.createElement('span', { className: 'gx-wordmark' }, theme.wordmark.full)
@@ -17,7 +17,7 @@ function Brand({ theme, size = 'md', onDark = false }) {
         theme.wordmark.a,
         React.createElement('span', { className: 'accent' }, theme.wordmark.b));
   return React.createElement('div', { className: 'gx-brand' },
-    React.createElement('span', { className: 'mark' + (theme.circle ? ' circle' : '') }, mark),
+    mark ? React.createElement('span', { className: 'mark' + (theme.circle ? ' circle' : '') }, mark) : null,
     wm);
 }
 

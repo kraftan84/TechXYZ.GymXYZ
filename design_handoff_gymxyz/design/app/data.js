@@ -8,7 +8,7 @@ window.GX_THEMES = [
   {
     id: 'techxyz', label: 'GymXYZ', sub: 'Défaut · base TechXYZ',
     name: 'GymXYZ', wordmark: { a: 'GYM', b: 'XYZ' },
-    markType: 'kettlebell', swatch: ['#00ABFC', '#0C2236'],
+    markType: 'none', swatch: ['#00ABFC', '#0C2236'],
     manager: { name: 'Dwayne Johnson', nick: 'The Rock', first: 'Dwayne', role: 'Gérant' },
   },
   {
@@ -568,3 +568,13 @@ window.GX_DATA = {
     },
   },
 };
+
+/* ---------- Checklist de démarrage (premier login d'un nouveau client) ----------
+   Alimentée à l'ouverture de l'espace par la console super-admin. */
+window.GX_DATA.demarrage = [
+  { t: 'Compléter la fiche de la salle', d: 'Adresse, horaires, capacité', done: true, to: 'reglages' },
+  { t: 'Créer vos premiers cours', d: '4 modèles suffisent pour démarrer', done: true, to: 'cours' },
+  { t: 'Importer vos membres', d: 'Depuis un tableur ou un autre logiciel', done: false, to: 'membres' },
+  { t: 'Inviter votre équipe', d: 'Coachs et personnel d’accueil', done: false, to: 'reglages' },
+  { t: 'Diffuser le planning', d: 'Vos membres reçoivent l’e-mail et la notification', done: false, to: 'planning' },
+];

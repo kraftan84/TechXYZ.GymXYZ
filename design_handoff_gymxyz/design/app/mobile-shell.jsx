@@ -8,15 +8,15 @@ const { Badge: MBadge, Avatar: MAvatar, Switch: MSwitch } = window.TechXYZDesign
 
 /* ---------- Brand lockup (mark + themed wordmark) ---------- */
 function MBrand({ theme }) {
-  const mark = theme.markType === 'kettlebell'
-    ? React.createElement(KettlebellMark, { size: 34 })
+  /* markType 'none' (GymXYZ) → wordmark seul, pas de marque */
+  const mark = theme.markType === 'none' ? null
     : React.createElement('img', { src: theme.markSrc, alt: theme.name });
   const wm = theme.wordmark.full
     ? React.createElement('span', { className: 'gx-m-wordmark' }, theme.wordmark.full)
     : React.createElement('span', { className: 'gx-m-wordmark' },
         theme.wordmark.a, React.createElement('span', { className: 'accent' }, theme.wordmark.b));
   return React.createElement('div', { className: 'gx-m-brand' },
-    React.createElement('span', { className: 'mark' + (theme.circle ? ' circle' : '') }, mark), wm);
+    mark ? React.createElement('span', { className: 'mark' + (theme.circle ? ' circle' : '') }, mark) : null, wm);
 }
 
 /* ---------- Chip (wraps DS Badge) ---------- */

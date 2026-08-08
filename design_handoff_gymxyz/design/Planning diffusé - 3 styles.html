@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<title>Planning diffusé — image réseaux sociaux · 3 styles</title>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/techxyz-ff9a8f49-d86c-4b16-a55f-b2d344231c2f/styles.css">
+<link rel="stylesheet" href="app/themes.css">
+<style>
+body{margin:0;font-family:var(--font-sans)}
+a{color:var(--color-primary)}a:hover{color:var(--azure-700)}
+.lbl{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5A6B7B;margin-bottom:14px;display:flex;align-items:baseline;gap:10px}
+.lbl small{font-size:12px;letter-spacing:.06em;font-weight:600;color:#8A99A8;text-transform:none}
+.frame{position:absolute}
+
+/* ---------- shared poster skeleton (1080 × 1350 — format 4:5 Instagram) ---------- */
+.post{width:1080px;height:1350px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.post .days{flex:1;display:flex;flex-direction:column}
+.post .day{flex:1;display:flex;align-items:center;gap:26px;min-height:0}
+.post .dcol{flex:none;width:150px}
+.post .dname{line-height:1}
+.post .dnum{line-height:1}
+.post .slots{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:max-content;gap:12px;align-content:center;align-items:stretch;min-width:0;height:100%}
+.post .slot{min-width:0;display:flex;flex-direction:column;justify-content:flex-start;gap:4px}
+.post .m{margin-top:auto}
+.post .h{font-variant-numeric:tabular-nums;white-space:nowrap}
+.post .n{text-wrap:balance}
+.post .rest{font-style:normal;grid-column:1/-1;align-self:center}
+
+/* ============================================================
+   1 · GymXYZ — TechXYZ ink + azure spark, Orbitron
+   ============================================================ */
+.p-gx{background:#0C2236;color:#fff}
+.p-gx::before{content:"";position:absolute;inset:auto -180px -300px auto;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(0,171,252,.30),rgba(0,171,252,0) 62%);pointer-events:none}
+.p-gx::after{content:"";position:absolute;top:-260px;left:-220px;width:760px;height:760px;border-radius:50%;background:radial-gradient(circle,rgba(0,171,252,.16),rgba(0,171,252,0) 65%);pointer-events:none}
+.p-gx .head{position:relative;padding:38px 60px 14px}
+.p-gx .wm{font-family:"Orbitron",var(--font-sans);font-size:34px;letter-spacing:.02em;line-height:1}
+.p-gx .wm b{font-weight:700}
+.p-gx .wm span{font-weight:500;color:#00ABFC}
+.p-gx .eyebrow{margin-top:20px;font-size:20px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:#00ABFC}
+.p-gx h1{color:#fff;margin:14px 0 0;font-family:"Orbitron",var(--font-sans);font-weight:700;font-size:50px;line-height:1;letter-spacing:.005em}
+.p-gx .sub{margin-top:12px;font-size:20px;font-weight:500;color:rgba(255,255,255,.62)}
+.p-gx .days{position:relative;padding:0 60px 4px}
+.p-gx .day{border-top:1px solid rgba(255,255,255,.12)}
+.p-gx .day:first-child{border-top:0}
+.p-gx .dname{font-size:26px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.p-gx .dnum{margin-top:8px;font-size:16px;font-weight:600;color:rgba(255,255,255,.42);letter-spacing:.06em}
+.p-gx .slot{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 16px}
+.p-gx .slot.full{background:rgba(0,171,252,.14);border-color:rgba(0,171,252,.45)}
+.p-gx .h{font-size:22px;font-weight:700;color:#00ABFC;line-height:1.2}
+.p-gx .n{font-size:23px;font-weight:700;line-height:1.1}
+.p-gx .m{font-size:16px;font-weight:500;color:rgba(255,255,255,.5);line-height:1.2}
+.p-gx .slot.full .m{color:#7ED0FF;font-weight:700}
+.p-gx .rest{font-size:20px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.26);align-self:center}
+.p-gx .foot{position:relative;display:flex;align-items:center;gap:18px;padding:20px 60px 28px;border-top:1px solid rgba(255,255,255,.12);margin:0 0 0}
+.p-gx .cta{font-size:26px;font-weight:700}
+.p-gx .cta em{font-style:normal;color:#00ABFC}
+.p-gx .tag{margin-left:auto;font-size:19px;font-weight:500;color:rgba(255,255,255,.5)}
+
+/* ============================================================
+   2 · Team Trainer's — monochrome, Anton, energie « rock »
+   ============================================================ */
+.p-tt{background:#fff;color:#1A1A1D}
+.p-tt .head{background:#1A1A1D;color:#fff;padding:34px 60px 26px}
+.p-tt .wm{font-family:"Anton",sans-serif;font-size:34px;letter-spacing:.03em;text-transform:uppercase;line-height:1}
+.p-tt h1{color:#fff;margin:20px 0 0;font-family:"Anton",sans-serif;font-size:84px;line-height:.9;letter-spacing:.005em;text-transform:uppercase}
+.p-tt .rule{display:flex;align-items:baseline;gap:20px;margin-top:16px}
+.p-tt .rule .dates{font-size:25px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.p-tt .rule .line{flex:1;height:4px;background:rgba(255,255,255,.28)}
+.p-tt .rule .n{font-size:19px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.p-tt .days{padding:0 60px}
+.p-tt .day{border-bottom:2px solid #E2E2E5}
+.p-tt .day:last-child{border-bottom:0}
+.p-tt .dname{font-family:"Anton",sans-serif;font-size:42px;letter-spacing:.02em;text-transform:uppercase}
+.p-tt .dnum{margin-top:6px;font-size:16px;font-weight:700;letter-spacing:.12em;color:#8C8C95}
+.p-tt .slot{border:2px solid #1A1A1D;border-radius:4px;padding:9px 15px;background:#fff}
+.p-tt .slot.k2{background:#1A1A1D;color:#fff}
+.p-tt .slot.k3{background:#EAEAEC;border-color:#EAEAEC}
+.p-tt .h{font-size:21px;font-weight:800;letter-spacing:.02em;line-height:1.2}
+.p-tt .n{font-family:"Anton",sans-serif;font-size:26px;line-height:1.05;letter-spacing:.01em;text-transform:uppercase}
+.p-tt .m{font-size:15px;font-weight:600;color:#6E6E76;line-height:1.2}
+.p-tt .slot.k2 .m{color:rgba(255,255,255,.62)}
+.p-tt .rest{font-family:"Anton",sans-serif;font-size:30px;letter-spacing:.14em;text-transform:uppercase;color:#D2D2D7;align-self:center}
+.p-tt .foot{display:flex;align-items:center;gap:20px;background:#1A1A1D;color:#fff;padding:22px 60px 30px}
+.p-tt .cta{font-family:"Anton",sans-serif;font-size:30px;letter-spacing:.02em;text-transform:uppercase}
+.p-tt .tag{margin-left:auto;font-size:20px;font-weight:700;letter-spacing:.06em;color:rgba(255,255,255,.62)}
+
+/* ============================================================
+   3 · Leyssa Coaching — rose poudré / sauge, Dancing Script
+   ============================================================ */
+.p-ly{background:#FBF5F4;color:#4A2A38}
+.p-ly::before{content:"";position:absolute;top:-320px;right:-260px;width:820px;height:820px;border-radius:50%;background:radial-gradient(circle,rgba(234,240,226,.9),rgba(251,245,244,0) 68%);pointer-events:none}
+.p-ly .head{position:relative;padding:44px 70px 24px;text-align:center}
+.p-ly .mark{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid #F1C2D0;margin-bottom:12px}
+.p-ly .wm{font-family:"Dancing Script",cursive;font-weight:700;font-size:58px;line-height:1;color:#B54C66}
+.p-ly .eyebrow{margin-top:18px;font-size:18px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#B98C99}
+.p-ly h1{color:#4A2A38;margin:12px 0 0;font-size:40px;font-weight:700;letter-spacing:.01em;line-height:1.1}
+.p-ly .days{position:relative;padding:8px 70px 0}
+.p-ly .slots{grid-template-columns:repeat(2,1fr)}
+.p-ly .day{border-top:1px solid #EEDFE1}
+.p-ly .day:first-child{border-top:0}
+.p-ly .dname{font-family:"Dancing Script",cursive;font-weight:700;font-size:40px;line-height:1;color:#B54C66}
+.p-ly .dnum{margin-top:6px;font-size:15px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#B98C99}
+.p-ly .slot{background:#FCF1F4;border:1px solid #F1C2D0;border-radius:18px;padding:11px 18px}
+.p-ly .slot.sage{background:#EFF3E8;border-color:#D8E2C7}
+.p-ly .h{display:inline-block;font-size:19px;font-weight:700;color:#9A3F56;line-height:1.2}
+.p-ly .slot.sage .h{color:#67784F}
+.p-ly .n{font-size:23px;font-weight:700;line-height:1.1;color:#4A2A38}
+.p-ly .m{font-size:15px;font-weight:500;color:#8B6472;line-height:1.2}
+.p-ly .rest{font-size:19px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#D6BEC4;align-self:center}
+.p-ly .foot{position:relative;text-align:center;padding:22px 70px 34px}
+.p-ly .cta{font-family:"Dancing Script",cursive;font-weight:700;font-size:42px;color:#B54C66;line-height:1}
+.p-ly .tag{margin-top:12px;font-size:19px;font-weight:600;letter-spacing:.12em;color:#8B6472}
+.p-ly .tag span{color:#C9AEB5;margin:0 10px}
+</style></head>
+<body>
+
+<!-- ============ 1 · GymXYZ (thème par défaut) ============ -->
+<div class="frame" style="left:80px;top:80px">
+<div class="lbl">GymXYZ — thème par défaut <small>1080 × 1350 · format 4:5</small></div>
+<div class="post p-gx" data-theme="techxyz">
+  <div class="head">
+    <div class="wm"><b>GYM</b><span>XYZ</span></div>
+    <div class="eyebrow">Planning de la semaine</div>
+    <h1>8 → 14 juin</h1>
+    <div class="sub">12 cours cette semaine</div>
+  </div>
+  <div class="days">
+    <div class="day"><div class="dcol"><div class="dname">Lun</div><div class="dnum">08/06</div></div><div class="slots">
+      <div class="slot"><div class="h">08h00</div><div class="n">Strength Foundations</div><div class="m">Studio A · 6 places</div></div>
+      <div class="slot"><div class="h">12h00</div><div class="n">Core Express</div><div class="m">Studio B · 2 places</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mar</div><div class="dnum">09/06</div></div><div class="slots">
+      <div class="slot"><div class="h">18h00</div><div class="n">Pilates Core</div><div class="m">Studio A · 4 places</div></div>
+      <div class="slot"><div class="h">20h00</div><div class="n">Mobility Reset</div><div class="m">Studio B · 6 places</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mer</div><div class="dnum">10/06</div></div><div class="slots">
+      <div class="slot"><div class="h">19h00</div><div class="n">Boxing Fundamentals</div><div class="m">Studio C · 6 places</div></div>
+      <div class="slot" style="visibility:hidden"></div><div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Jeu</div><div class="dnum">11/06</div></div><div class="slots">
+      <div class="slot"><div class="h">17h00</div><div class="n">Yoga Restore</div><div class="m">Studio A · 6 places</div></div>
+      <div class="slot"><div class="h">19h00</div><div class="n">Strength Lab</div><div class="m">Studio C · 4 places</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Ven</div><div class="dnum">12/06</div></div><div class="slots">
+      <div class="slot"><div class="h">09h00</div><div class="n">HIIT Blast</div><div class="m">Studio B · 4 places</div></div>
+      <div class="slot full"><div class="h">18h00</div><div class="n">Power Cycle</div><div class="m">Complet · liste d'attente</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Sam</div><div class="dnum">13/06</div></div><div class="slots">
+      <div class="slot"><div class="h">10h00</div><div class="n">Open Gym</div><div class="m">Plateau · libre accès</div></div>
+      <div class="slot"><div class="h">11h00</div><div class="n">Coaching perso</div><div class="m">Sur rendez-vous</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Dim</div><div class="dnum">14/06</div></div><div class="slots">
+      <div class="slot"><div class="h">09h00</div><div class="n">HIIT Blast</div><div class="m">Studio B · 11 places</div></div>
+      <div class="slot" style="visibility:hidden"></div><div class="slot" style="visibility:hidden"></div></div></div>
+  </div>
+  <div class="foot"><div class="cta">Réservations <em>ouvertes</em></div><div class="tag">gymxyz.fr</div></div>
+</div>
+</div>
+
+<!-- ============ 2 · Team Trainer's ============ -->
+<div class="frame" style="left:1260px;top:80px">
+<div class="lbl">Team Trainer's <small>1080 × 1350 · format 4:5</small></div>
+<div class="post p-tt" data-theme="teamtrainers">
+  <div class="head">
+    <div class="wm">Team Trainer's</div>
+    <h1>Planning<br>de la semaine</h1>
+    <div class="rule"><div class="dates">03 → 09 août</div><div class="line"></div><div class="n">11 cours</div></div>
+  </div>
+  <div class="days">
+    <div class="day"><div class="dcol"><div class="dname">Lun</div><div class="dnum">03/08</div></div><div class="slots">
+      <div class="slot k3"><div class="h">10h15</div><div class="n">Flexibilité</div><div class="m">60 min · Lily</div></div>
+      <div class="slot k2"><div class="h">17h00</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div>
+      <div class="slot k2"><div class="h">18h15</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mar</div><div class="dnum">04/08</div></div><div class="slots">
+      <div class="slot"><div class="h">18h30</div><div class="n">Run Training</div><div class="m">60 min · piste</div></div>
+      <div class="slot k2"><div class="h">19h15</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div>
+      <div class="slot k3"><div class="h">19h30</div><div class="n">RPM</div><div class="m">60 min · complet</div></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mer</div><div class="dnum">05/08</div></div><div class="slots">
+      <div class="slot k2"><div class="h">17h30</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div>
+      <div class="slot"><div class="h">18h30</div><div class="n">Run Training</div><div class="m">60 min · piste</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Jeu</div><div class="dnum">06/08</div></div><div class="slots">
+      <div class="slot k2"><div class="h">19h15</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div>
+      <div class="slot k3"><div class="h">19h15</div><div class="n">RPM</div><div class="m">60 min · salle 2</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Ven</div><div class="dnum">07/08</div></div><div class="slots">
+      <div class="rest">Repos</div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Sam</div><div class="dnum">08/08</div></div><div class="slots">
+      <div class="rest">Repos</div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Dim</div><div class="dnum">09/08</div></div><div class="slots">
+      <div class="slot k2"><div class="h">10h00</div><div class="n">Functional</div><div class="m">60 min · Lily</div></div>
+      <div class="slot" style="visibility:hidden"></div><div class="slot" style="visibility:hidden"></div></div></div>
+  </div>
+  <div class="foot"><div class="cta">Réservations ouvertes</div><div class="tag">Team Trainer's</div></div>
+</div>
+</div>
+
+<!-- ============ 3 · Leyssa Coaching ============ -->
+<div class="frame" style="left:2440px;top:80px">
+<div class="lbl">Leyssa Coaching <small>1080 × 1350 · format 4:5</small></div>
+<div class="post p-ly" data-theme="leyssa">
+  <div class="head">
+    <img class="mark" src="assets/themes/leyssa-mark.png" alt="Leyssa Coaching">
+    <div class="wm">Leyssa Coaching</div>
+    <div class="eyebrow">Programme de la semaine</div>
+    <h1>Du 8 au 14 juin · Thonon</h1>
+  </div>
+  <div class="days">
+    <div class="day"><div class="dcol"><div class="dname">Lundi</div><div class="dnum">08/06</div></div><div class="slots">
+      <div class="slot"><div class="h">09h30</div><div class="n">Pilates</div><div class="m">6 places · 2 restantes</div></div>
+      <div class="slot sage"><div class="h">18h30</div><div class="n">Renforcement</div><div class="m">8 places · 3 restantes</div></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mardi</div><div class="dnum">09/06</div></div><div class="slots">
+      <div class="slot sage"><div class="h">12h15</div><div class="n">Stretching</div><div class="m">Pause déjeuner · 45 min</div></div>
+      <div class="slot"><div class="h">19h00</div><div class="n">Cardio doux</div><div class="m">8 places · 4 restantes</div></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Mercredi</div><div class="dnum">10/06</div></div><div class="slots">
+      <div class="slot"><div class="h">09h30</div><div class="n">Circuit training</div><div class="m">6 places · complet</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Jeudi</div><div class="dnum">11/06</div></div><div class="slots">
+      <div class="slot"><div class="h">18h30</div><div class="n">Pilates</div><div class="m">6 places · 1 restante</div></div>
+      <div class="slot sage"><div class="h">19h45</div><div class="n">Renforcement</div><div class="m">8 places · 5 restantes</div></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Vendredi</div><div class="dnum">12/06</div></div><div class="slots">
+      <div class="slot sage"><div class="h">12h15</div><div class="n">Stretching</div><div class="m">Pause déjeuner · 45 min</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Samedi</div><div class="dnum">13/06</div></div><div class="slots">
+      <div class="slot"><div class="h">10h00</div><div class="n">Séance plein air</div><div class="m">Bord du lac · 10 places</div></div>
+      <div class="slot" style="visibility:hidden"></div></div></div>
+    <div class="day"><div class="dcol"><div class="dname">Dimanche</div><div class="dnum">14/06</div></div><div class="slots">
+      <div class="rest">Repos</div></div></div>
+  </div>
+  <div class="foot"><div class="cta">Révélez-vous</div><div class="tag">Thonon <span>·</span> Réservations ouvertes</div></div>
+</div>
+</div>
+
+</body></html>

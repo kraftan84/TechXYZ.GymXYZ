@@ -248,3 +248,18 @@
               color var(--duration-fast) var(--ease-standard),
               box-shadow var(--duration-base) var(--ease-standard);
 }
+
+/* ============================================================
+   PARTAGÉ — checklist « Bien démarrer » (accueil desktop + mobile)
+   ============================================================ */
+.gx-onb-rows{display:flex;flex-direction:column}
+.gx-onb-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border-subtle);text-align:left}
+.gx-onb-row:last-child{border-bottom:0}
+.gx-onb-row .tick{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--border-default);color:var(--text-subtle)}
+.gx-onb-row.done .tick{background:var(--color-success);border-color:var(--color-success);color:#fff}
+.gx-onb-row .main{flex:1;min-width:0}
+.gx-onb-row .t{font-size:var(--text-sm);font-weight:var(--weight-bold);color:var(--text-strong)}
+.gx-onb-row.done .t{color:var(--text-muted);text-decoration:line-through}
+.gx-onb-row .d{font-size:var(--text-xs);color:var(--text-muted);margin-top:2px}
+.gx-onb-pad{padding:6px 18px 14px}
+.gx-onb-m .gx-onb-row{padding:11px 16px}

@@ -53,8 +53,7 @@ Base TechXYZ telle quelle : azure `#00ABFC` (spark), actions `#0089CE`, encre na
 - Affichage : **Orbitron** 700, `ls .01em`, `title-scale .9`, `head-scale .8`
   (Orbitron court large → on réduit).
 - Wordmark : `GYM` + `XYZ` en accent, 20px, majuscules, `ls .02em`.
-- Marque : **kettlebell en SVG** (pas de fichier image) — `KettlebellMark` dans
-  `design/app/icons.jsx`.
+- Marque : **aucune** — GymXYZ s'affiche en **wordmark seul** (`markType: 'none'`).
 - Sidebar : registre clair (surface carte, filet subtil, actif en `--azure-50`).
 - Gérant de démo : Dwayne Johnson, « Gérant ».
 

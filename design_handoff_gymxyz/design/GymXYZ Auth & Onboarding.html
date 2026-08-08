@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="techxyz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GymXYZ — Connexion & demande d'ouverture d'espace</title>
+
+<!-- React + Babel (pinned) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- TechXYZ design system tokens + base -->
+<link rel="stylesheet" href="_ds/techxyz-ff9a8f49-d86c-4b16-a55f-b2d344231c2f/styles.css">
+<!-- GymXYZ white-label themes + app + mobile + auth -->
+<link rel="stylesheet" href="app/themes.css">
+<link rel="stylesheet" href="app/app.css">
+<link rel="stylesheet" href="app/mobile.css">
+<link rel="stylesheet" href="app/auth.css">
+</head>
+<body>
+<div id="root"></div>
+
+<!-- DS components (compiled) + data (plain JS) -->
+<script src="_ds/techxyz-ff9a8f49-d86c-4b16-a55f-b2d344231c2f/_ds_bundle.js"></script>
+<script src="app/data.js"></script>
+<script src="app/auth-data.js"></script>
+
+<!-- shells & primitives partagés avec l'app -->
+<script type="text/babel" src="app/icons.jsx"></script>
+<script type="text/babel" src="app/shell.jsx"></script>
+<script type="text/babel" src="app/mobile-shell.jsx"></script>
+<script type="text/babel" src="app/ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- parcours d'entrée -->
+<script type="text/babel" src="app/auth-login.jsx"></script>
+<script type="text/babel" src="app/auth-onboarding.jsx"></script>
+<script type="text/babel" src="app/auth-admin.jsx"></script>
+<script type="text/babel" src="app/auth-mobile.jsx"></script>
+<script type="text/babel" src="app/auth-main.jsx"></script>
+
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" fill="#0C2236"/>
+  <rect x="30" y="34" width="40" height="34" rx="6" fill="none" stroke="#00ABFC" stroke-width="4"/>
+  <path d="M38 34v-6a12 12 0 0 1 24 0v6" fill="none" stroke="#fff" stroke-width="4"/>
+  <circle cx="50" cy="51" r="4" fill="#fff"/>
+</svg>
+</template>
+</body>
+</html>
