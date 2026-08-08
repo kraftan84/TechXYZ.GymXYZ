@@ -1,194 +1,209 @@
 # La diffusion du planning en image · brief de démarrage
 
-Écrit le 2026-08-07, après la fusion de la PR 34. `main` est à `65b0ba3`,
-**574 tests au vert**, lots 0 à 11 livrés plus « Rôles & cloisonnement », le lot
-du log, et celui de la cloche et des vacances.
+**Réécrit le 2026-08-08**, après l'arrivée du second handoff. `main` est à
+`5a3fa80`, lots 0 à 11 livrés plus « Rôles & cloisonnement », le lot du log, et
+celui de la cloche et des vacances.
 
 Ceci est un **brief de démarrage, pas un plan** : le plan se propose et se fait
 valider avant d'écrire du code.
 
-**C'est le point 3 de la première version** (`design_handoff_gymxyz/01-LOTS.md`),
-et c'est désormais **le premier point qui reste** — le point 2 a été vidé le
-2026-08-07 et la V1 tient en cinq points.
+**C'est le point 3 de la première version** (`01-LOTS.md`), et le premier point
+qui reste.
+
+> **La suite n'est pas verte au moment d'écrire.** 573 tests passent, **1
+> échoue** : `AttendanceQueryTests.GetAttendanceOverview_ShouldSplitOpenAndValidatedSheets`
+> attend `SessionsToday == 1` pour une séance semée **aujourd'hui à 9 h**, alors
+> que le KPI se compte sur `RecentAttendanceWindow(now)`, qui s'arrête à
+> « maintenant ». **Il échoue tous les matins avant 9 h et passe le reste de la
+> journée.** Ce n'est pas ce lot qui l'a cassé et ce n'est pas son sujet, mais on
+> ne démarre pas sur une suite rouge : le corriger est une ligne, à faire en
+> premier ou à part.
 
 ---
 
-## La décision, et ce qu'elle contredit
+## Ce qui a changé depuis la première version de ce brief
 
-> **Tranchée le 2026-08-07** : le bouton **génère une image du planning
-> hebdomadaire**, que le manager télécharge pour la publier sur les réseaux
-> sociaux. **Aucun envoi, aucune notification, aucun lien public.**
+Ce brief a été écrit une première fois le 2026-08-07, **avant** que le second
+handoff n'arrive. `08-PLANNING-DIFFUSE.md` répond maintenant à la question qui
+était présentée comme centrale — *quelle image ?* — et il y répond **au pixel**,
+en trois habillages, un par marque. Il fournit aussi le prototype :
+`design/Planning diffusé - 3 styles.html`, du HTML/CSS sans React ni JS,
+c'est-à-dire exactement ce qui doit être rendu.
 
-Il faut mesurer ce que ça veut dire, parce que **la maquette dessine autre chose,
-et en détail**. `design/app/screen-planning.jsx:183` porte un `DiffusionModal`
-complet : trois canaux à bascule (**notification push dans l'app**, **e-mail
-récapitulatif**, **lien public partageable**), un **message optionnel**, un
-« **Programmer plus tard** », et un bouton « **Diffuser maintenant** » avec une
-icône d'envoi. L'en-tête annonce « 8 au 14 juin · 28 cours · **visible par 128
-membres** ».
+**Et il renverse la voie technique que ce brief recommandait.** Il faut le dire
+franchement plutôt que de le lisser : je proposais de construire l'image en
+**SVG côté C#**, et l'argument décisif contre le navigateur headless était qu'il
+*capturerait la grille du Planning, illisible en vignette*. Cet argument **est
+caduc** — l'affiche n'est pas la grille, c'est une mise en page à elle, et elle
+est désormais spécifiée en HTML/CSS. Réécrire en dessin C# trois styles définis
+au pixel, ce serait redessiner la spécification à la main et la faire diverger
+au premier ajustement.
 
-**Rien de tout ça n'est dans la V1.** C'est le seul endroit du produit où la
-règle habituelle s'inverse : d'ordinaire **le prototype l'emporte sur les docs**,
-mais ici une **décision métier explicite** l'emporte sur le prototype. La maquette
-décrit une fonctionnalité qui n'a pas été retenue.
+---
 
-**Conséquence pratique** : ce lot ne « câble » pas le modal existant. Il conçoit
-un écran que la maquette ne porte pas — comme la cloche l'aurait demandé, à ceci
-près qu'ici on sait exactement ce que le bouton doit faire.
+## Ce que le handoff tranche, et qu'on ne rouvre pas
+
+| Question | Réponse du doc `08` |
+|---|---|
+| Le format | **1080 × 1350** (4:5), format de référence. Carré, story et A5 sont listés en §6 comme variantes ultérieures. |
+| La mise en page | Squelette commun `.post / .head / .days / .day / .slots / .slot / .foot`, §2. Les 7 jours **se partagent la hauteur** — une semaine chargée et une semaine calme donnent la même affiche. |
+| Les créneaux manquants | Cellules `visibility:hidden`, **pas** absentes : compléter chaque journée jusqu'à 3 cellules (2 pour Leyssa) pour que les colonnes restent alignées. |
+| Les trois marques | §3, §4, §5, au pixel. Leyssa passe à **2 colonnes**, jour en toutes lettres, marque en cercle — et **jamais d'adresse postale**, la zone seule. |
+| Ce que l'image porte | §8 : heure, nom du cours, méta (studio · places, ou durée · coach), état `normal / complet / accent`, « Repos » si rien de publiable. |
+| Ce qu'elle ne porte jamais | **Aucun nom d'adhérent, aucun effectif inscrit, aucun prix.** Places **restantes** oui, nombre d'inscrits non. Séances privées **exclues par défaut**. |
+| Comment la marque atteint le rendu | `data-theme="{tenant.ThemeKey}"` sur la racine + un bloc CSS par marque. **Un nouveau client = un bloc CSS, pas un composant.** |
+| La source des données | `GetWeekPlanningQuery`, livrée au lot 5. **Aucune entité nouvelle.** |
+
+C'était présenté comme « la seule vraie question d'architecture du lot » :
+comment les tokens CSS atteignent le générateur, puisqu'ils vivent dans une
+feuille de style que le C# ne lit pas. **La question disparaît** — si le rendu
+est fait par un navigateur, les tokens sont lus là où ils sont.
+
+---
+
+## La voie technique, et ce qu'elle coûte vraiment
+
+Le handoff recommande : **composant Razor `PlanningPoster.razor`** nourri par
+`GetWeekPlanningQuery`, rendu côté serveur, puis **capturé en PNG** par un
+navigateur headless (`Playwright .NET` ou `PuppeteerSharp`), viewport
+1080 × 1350, `deviceScaleFactor: 2` pour l'impression.
+
+**Ce que ça engage, et qui n'est pas dans le handoff** : aucune bibliothèque
+d'image ni navigateur n'est présente dans la solution — vérifié. C'est donc une
+dépendance nouvelle, de 150 à 300 Mo, **et un binaire de navigateur à installer
+là où l'application tourne**. Ce n'est pas un paquet NuGet de plus : c'est une
+contrainte de déploiement, à accepter en connaissance de cause. Elle arrive au
+moment où le déploiement n'est pas encore fait — ce qui est plutôt le bon moment,
+mais il faut le dire au plan et pas le découvrir ensuite.
+
+**Le piège n°1 du handoff est déjà payé ici.** Il prévient qu'une police tirée de
+Google Fonts au moment de la capture tombe en Montserrat une fois sur deux. Or
+les cinq fichiers sont déjà auto-hébergés depuis le lot 11 :
+`wwwroot/css/techxyz/assets/fonts/` porte Orbitron, Anton, Dancing Script,
+Montserrat et son italique. **Reste la moitié qui n'est pas acquise** : attendre
+`document.fonts.ready` **avant** la capture.
+
+**À proposer au plan** : Playwright ou PuppeteerSharp, comment le navigateur est
+présent en développement et en déploiement, et le cache — le handoff suggère une
+empreinte (semaine + tenant + options) invalidée à toute modification du planning
+de la semaine.
+
+---
+
+## Ce que le handoff ne tranche pas, et qui reste le vrai travail
+
+**1. Le parcours de génération n'est pas maquetté** (§6), et le handoff demande
+de repasser en design avant de le coder. Il décrit pourtant ce qu'il contiendrait :
+semaine (par défaut **la suivante**), format, quoi afficher, aperçu à l'échelle,
+sortie (téléchargement, `navigator.share`, presse-papier).
+
+**C'est la décision de périmètre du lot, et elle vous revient.** Deux lectures se
+défendent :
+
+- **Livrer le rendu seul** — un bouton, la semaine suivante, le format de
+  référence, téléchargement. Aucun écran à dessiner, la V1 avance, et le parcours
+  se maquette pendant que le générateur tourne déjà.
+- **Attendre le design du parcours** — conforme au handoff, mais ça met le point 3
+  en attente d'un aller-retour design alors que les points 4 et 5 en attendent
+  déjà un chacun.
+
+Ma préférence, à valider : **le rendu seul**, parce que l'image est ce que la
+décision du 2026-08-07 promettait et que le reste est du réglage. Mais c'est un
+arbitrage, pas une évidence.
+
+**2. Plus de 3 cours dans une journée** : le prototype ne le traite pas (§2).
+Afficher les 3 premiers et une cellule « +N autres », ou passer la journée en 4
+colonnes ? **À trancher avec le design**, pas au fil du code — et à trancher
+quand même, parce qu'une semaine réelle le rencontrera.
+
+**3. Quelle semaine.** Le handoff dit « par défaut la suivante ». Le bouton du
+Planning, lui, connaît la semaine affichée, et celui de l'Accueil la semaine en
+cours. **Trois réponses possibles pour deux boutons** : à unifier.
+
+**4. Les filtres du Planning** (coach / lieu / format). L'image les respecte-t-elle ?
+Publier une semaine filtrée sur un seul coach sans le dire est un piège ; les
+ignorer en silence en est un autre.
+
+**5. Qui a le droit de diffuser — et ici le code répond déjà à moitié.**
+`GetWeekPlanningQuery.Handler` applique `CoachScope` **en plancher** depuis le lot
+rôles : un coach qui demande la semaine n'obtient que **ses** séances. Donc un
+coach qui génère une affiche obtiendrait une **semaine partielle présentée comme
+le planning du club** — pas une fuite, mais un mensonge, et publié.
+
+C'est le même piège que celui qui a fait reporter la cloche : *le périmètre du
+contenu n'est pas celui du destinataire*. **À trancher** : le bouton est-il
+`IManagerOnly` (le marqueur existe, `Application/Interfaces/IManagerOnly.cs`), ou
+un coach peut-il produire une affiche de ses séances, explicitement titrée comme
+telle ? La première réponse est la plus sûre, et elle se pose maintenant, pas
+après le générateur.
 
 ---
 
 ## Les quatre textes qui mentent déjà
 
-C'est le point le plus urgent du lot, et il est indépendant du reste : **les
-boutons désactivés annoncent aujourd'hui un envoi qui n'arrivera jamais.**
+Indépendant de tout le reste, et sûr : **les boutons désactivés annoncent
+aujourd'hui un envoi qui n'arrivera jamais.**
 
 | Où | Ce qui est écrit | Le problème |
 |---|---|---|
-| `DashboardFilters.cs:116` | « L'**envoi** du planning **aux membres** n'est pas encore disponible : ce message n'a pas de réglage de notification. » | Promet un envoi et un réglage de notification. Les deux sont annulés. |
-| `DashboardFilters.cs:128` | « La **diffusion aux membres** n'est pas encore active. Le planning reste consultable ici. » | Idem, en pied de la carte semaine. |
+| `DashboardFilters.cs:116` | « L'**envoi** du planning **aux membres** n'est pas encore disponible… » | Promet un envoi et un réglage de notification. Les deux sont annulés. |
+| `DashboardFilters.cs:128` | « La **diffusion aux membres** n'est pas encore active. » | Idem, en pied de la carte semaine. |
 | `PlanningDesktop.razor:28` | « Disponible **avec les notifications**. » | Rattache le bouton à un lot qui n'existe plus. |
-| `AccueilDesktop.razor:14` et `AccueilMobile.razor:19` | « Préparez la semaine et **diffusez-la à vos membres**. » | Le sous-titre de l'Accueil, sur les deux plateformes. |
+| `AccueilDesktop.razor:14`, `AccueilMobile.razor:19` | « Préparez la semaine et **diffusez-la à vos membres**. » | Le sous-titre de l'Accueil, sur les deux plateformes. |
 
 Les trois premiers disparaissent avec l'activation. **Le quatrième reste après**,
 et c'est celui qu'on oublie : « diffusez-la à vos membres » décrira toujours faux
-une fonction qui produit une image à publier soi-même. Il se réécrit dans ce lot,
-qu'on active les boutons ou non.
+une fonction qui produit une image à publier soi-même.
 
 **Et il y a un cinquième bouton.** « Aperçu » (`AccueilDesktop.razor:16`) est
 désactivé avec sa propre raison — « l'aperçu du planning arrive dans un lot
-ultérieur ». Ce lot est celui-là, et « voir l'image avant de la télécharger » est
-très exactement ce que ce bouton devrait faire. **À trancher** : est-ce qu'il
-devient l'aperçu de l'image, ou est-ce qu'il reste désactivé ?
+ultérieur ». Ce lot est celui-là, et le handoff met « aperçu à l'échelle » dans le
+parcours (§6). **À trancher avec le périmètre** : il devient l'aperçu de l'image,
+ou il reste désactivé si le parcours attend le design.
 
 ---
 
-## Le vrai sujet : quelle image ?
+## Ce que la maquette de l'app dessine, et qui n'est pas dans la V1
 
-**La maquette ne répond pas**, parce qu'elle dessinait un envoi. C'est la
-question centrale du plan, et elle est de conception, pas de technique.
+`design/app/screen-planning.jsx:183` porte un `DiffusionModal` complet : trois
+canaux à bascule (**push**, **e-mail**, **lien public partageable**), un message
+optionnel, « Programmer plus tard », « Diffuser maintenant », et un en-tête
+« 28 cours · **visible par 128 membres** ».
 
-**La grille du Planning n'est pas une image publiable.** Sept colonnes sur une
-quinzaine de lignes d'heures, c'est fait pour un écran de 1440 px et une souris.
-Réduit au format d'un post Instagram, c'est illisible : les blocs font quelques
-pixels de haut et le texte disparaît.
-
-Ce qu'un post demande, c'est autre chose — un **format portrait ou carré**, le
-nom de la salle en tête, la semaine, et les séances **en liste par jour** avec
-l'heure, le cours et le coach. Autrement dit : **une mise en page à concevoir**,
-pas une capture de l'existant.
-
-**À trancher au plan :**
-
-- **Le format.** Carré 1080×1080 (Instagram, Facebook), portrait 1080×1350, ou
-  story 1080×1920 ? Un seul, ou un choix ? En proposer trois multiplie le travail
-  de mise en page par trois ; en proposer un le rend inutilisable là où il ne
-  rentre pas.
-- **Ce que porte l'image.** Toutes les séances de la semaine, ou seulement les
-  collectives ? Un cours **privé** (`Capacity == 1`) n'a rien à faire sur un post
-  public, et un cours **complet** non plus, sans doute — le publier attire des
-  gens vers une porte fermée. Les séances **annulées** encore moins.
-- **Les places restantes.** « 13/16 » sur l'écran est une information de gestion.
-  Sur un post, « il reste 3 places » est un argument commercial — et « complet »
-  un repoussoir. À décider, et ce n'est pas la même donnée.
-- **La semaine visée.** Le bouton du Planning connaît la semaine affichée ; celui
-  de l'Accueil montre la semaine en cours. Et un manager qui publie le dimanche
-  veut sans doute **la semaine suivante**. Trois réponses possibles pour deux
-  boutons.
-- **Les filtres.** Le Planning porte des filtres coach / lieu / format. L'image
-  les respecte-t-elle ? Publier une semaine filtrée sur un seul coach sans le dire
-  serait un piège ; les ignorer silencieusement en est un autre.
-
----
-
-## Comment on fabrique l'image
-
-**Aucune bibliothèque d'image n'est présente dans la solution** — vérifié : ni
-SkiaSharp, ni ImageSharp, ni Playwright, ni QuestPDF, ni rien côté client. C'est
-donc une dépendance à ajouter, et le choix engage le déploiement.
-
-| Voie | Ce que ça coûte | Ce que ça donne |
-|---|---|---|
-| **SVG construit en C#**, rasterisé par le navigateur | rien à installer | un seul rendu, déterministe, thème résolu côté serveur |
-| **SkiaSharp / ImageSharp**, dessin à la main | un paquet natif par plateforme | contrôle total, mais **un second moteur de rendu** qui divergera du Razor |
-| **Navigateur headless** (Playwright) | ~150–300 Mo, un process à gérer | rend le vrai HTML, mais lourd à déployer pour une image |
-| **Capture côté client** (`html2canvas`) | un JS tiers, hors CDN | suit le thème tout seul, mais capture une grille illisible (voir ci-dessus) |
-
-**Ma préférence, à confirmer au plan : le SVG construit côté serveur.** Une seule
-mise en page, écrite une fois, en C# testable ; les couleurs du thème résolues au
-moment de la génération ; aucun binaire natif ; et le téléchargement peut être le
-SVG lui-même ou un PNG rasterisé par le navigateur en trois lignes de canvas.
-C'est aussi la seule voie où **le contenu de l'image se teste sans image** — on
-assert sur du texte.
-
-Le point qui tranche contre `html2canvas` n'est pas technique : **il capturerait
-la grille**, et la grille n'est pas ce qu'on veut publier.
-
----
-
-## La marque, et le piège du white label
-
-Le lot 11 a rendu chaque client repeignable, et le principe du produit est que
-**changer de marque ne change aucun écran**. Une image qui ne suivrait pas le
-thème du client serait **le seul endroit du produit qui l'ignore** — et c'est
-l'endroit le plus visible, puisqu'il finit sur un réseau social.
-
-Deux règles déjà payées s'appliquent telles quelles :
-
-- **Aucune marque GymXYZ sur l'image.** Le kettlebell a été retiré partout ; un
-  client sans logo affiche **son nom seul**. Une image sortant du produit avec un
-  « propulsé par GymXYZ » réintroduirait exactement ce qu'on a enlevé.
-- **Les couleurs viennent des tokens du thème** (`themes.css`, blocs
-  `[data-theme="…"]`), pas de constantes. La palette de statut
-  (`success / warning / danger`) n'est jamais thémée — si l'image marque un
-  « complet », c'est du `danger` partagé.
-
-**À trancher au plan** : comment les tokens CSS arrivent jusqu'au générateur. Ils
-sont aujourd'hui dans une feuille de style, donc lisibles par le navigateur et
-**pas par le C#**. Soit on les duplique côté serveur — et ils divergeront —, soit
-on les fait remonter, soit le thème du tenant expose ses quelques couleurs utiles
-dans le modèle. C'est la seule vraie question d'architecture du lot.
-
----
-
-## Qui a le droit de diffuser
-
-**Un coach est cloisonné à ses propres séances depuis le lot rôles.** Une image
-de la semaine entière du club lui donnerait, en un clic, exactement ce que ses
-écrans lui refusent.
-
-C'est le même piège que celui qui a fait reporter la cloche : *le périmètre du
-contenu n'est pas celui du destinataire*. Il se traite ici, pas après.
-
-**À trancher au plan** : le bouton est-il `IManagerOnly` — le seul marqueur qui
-existe aujourd'hui (`Application/Interfaces/IManagerOnly.cs`) —, ou un coach
-peut-il générer une image de **ses** séances ? La première réponse est la plus
-sûre et la plus simple ; la seconde demande une image filtrée et se décide
-maintenant, pas une fois le générateur écrit.
+**Rien de tout ça n'est dans la V1.** C'est le seul endroit du produit où la règle
+habituelle s'inverse : d'ordinaire **le prototype l'emporte sur les docs**, mais
+ici une **décision métier explicite** l'emporte sur le prototype. Le doc `08` est
+d'ailleurs d'accord — la publication directe vers Meta y est « hors périmètre, à
+chiffrer à part ».
 
 ---
 
 ## Critère d'acceptation
 
 - **Les trois boutons s'activent ensemble** — Accueil desktop, Accueil mobile,
-  tête du Planning. C'est écrit dans la décision du lot 10 et c'est vérifiable :
-  un bouton actif à côté d'un bouton désactivé pour la même fonction est un bug
-  d'écran.
-- **Aucun texte ne promet plus un envoi.** Les quatre libellés du tableau
-  ci-dessus sont réécrits, sous-titres compris. Le mot « diffuser » peut rester —
-  c'est le mot du prototype et du client — mais il ne doit plus dire « à vos
-  membres ».
-- **L'image est réellement produite et réellement téléchargée**, sur desktop et
-  sur mobile. Une capture de l'image obtenue est attendue, pas seulement un test
-  qui passe.
-- **L'image suit le thème du client** : vérifié sur deux clients aux thèmes
-  différents, et **aucune marque GymXYZ** sur aucune des deux.
-- **Un coach ne peut pas obtenir ce que son écran lui cache** — quelle que soit
-  la réponse retenue, elle est vérifiée.
-- **L'image est lisible à la taille où elle sera vue.** Le critère n'est pas
-  « le fichier existe » mais « on lit les cours sur un téléphone ».
-- `dotnet test` vert, **zéro warning** dans les projets applicatifs.
-- **Le log reste lisible.** Une génération qui échoue se traite ou se consigne ;
+  tête du Planning. Un bouton actif à côté d'un bouton désactivé pour la même
+  fonction est un bug d'écran.
+- **Aucun texte ne promet plus un envoi**, sous-titres compris. Le mot
+  « diffuser » peut rester — c'est le mot du prototype et du client — mais il ne
+  doit plus dire « à vos membres ».
+- **L'image est réellement produite et réellement téléchargée**, desktop et
+  mobile. Une capture de l'image obtenue est attendue, pas seulement un test vert.
+- **Les trois habillages sont conformes au prototype**, vérifiés côte à côte avec
+  `Planning diffusé - 3 styles.html`. C'est du high-fidelity : la cible est le
+  pixel, pas l'approximation.
+- **Les polices de marque sont dans l'image** — c'est le piège n°1 du handoff, et
+  il ne se voit que sur l'image finale.
+- **Aucune marque GymXYZ sur l'affiche d'un client**, et aucune adresse postale
+  pour Leyssa.
+- **Rien de privé sur l'affiche** : aucun nom d'adhérent, aucun effectif inscrit,
+  aucun prix, aucune séance privée.
+- **Un coach ne peut pas publier une semaine partielle en la faisant passer pour
+  celle du club** — quelle que soit la réponse retenue, elle est vérifiée.
+- **L'image est lisible à la taille où elle sera vue** : le critère n'est pas « le
+  fichier existe » mais « on lit les cours sur un téléphone ».
+- `dotnet test` vert — y compris le test du matin — et **zéro warning** dans les
+  projets applicatifs.
+- **Le log reste lisible** : une génération qui échoue se traite ou se consigne,
   elle ne remonte pas au rendu.
 
 ---
@@ -200,54 +215,52 @@ maintenant, pas une fois le générateur écrit.
   un 0 passe sous le seuil mobile, et la grille bureau se rend vide. Forcer
   1440 × 900, puis recharger.
 - **Le volet ne transmet aucun clic** sur les formulaires. Poster en JS ; pour la
-  connexion, poser `.value` **sur les `fluent-text-field` eux-mêmes**. En
-  revanche un `.click()` en JS sur un bouton Blazor **fonctionne** — vérifié au
-  lot précédent sur « Semaine suivante ».
-- **Les comptes de démo** sont dans `DbInitializer` : `dwayne.johnson@gymxyz.fr`
-  (GymXYZ), `aurelie.siquier@teamtrainers.fr`, `najate.amzil@leyssa-coaching.fr`
-  — et non `najate@`, qui est l'adresse de contact du client. Mot de passe
-  `GymXyz!2026`.
-- **Le tenant vient des claims de l'utilisateur**, pas de l'hôte, dès qu'on est
-  authentifié : changer de client = se reconnecter.
+  connexion, poser `.value` **sur les `fluent-text-field` eux-mêmes**. En revanche
+  un `.click()` en JS sur un bouton Blazor **fonctionne**.
+- **Les comptes de démo** sont dans `DbInitializer` : `dwayne.johnson@gymxyz.fr`,
+  `aurelie.siquier@teamtrainers.fr`, `najate.amzil@leyssa-coaching.fr` — et non
+  `najate@`, qui est l'adresse de contact du client. Mot de passe `GymXyz!2026`.
+- **Le tenant vient des claims**, pas de l'hôte, dès qu'on est authentifié :
+  changer de client = se reconnecter.
 - **La base de dev est recréée au démarrage** et déconnecte tout le monde.
 - **Un seul serveur peut tenir le port 5173.**
+- **Les écrans rendent un état vide avant l'arrivée des données** : attendre la
+  stabilisation avant de conclure à une régression.
 
 ---
 
 ## Ce qui n'est pas dans ce lot
 
-- **Tout envoi** : push, e-mail récapitulatif, lien public, message optionnel,
-  programmation — les cinq éléments du `DiffusionModal` de la maquette. Décision
-  du 2026-08-07.
-- **La cloche de notifications** — hors V1, « pour le moment ». Quand elle
-  reviendra, elle commencera par la question qu'elle n'a pas tranchée : une
-  notification est-elle dérivée des alertes déjà calculées, ou stockée avec un
-  état de lecture ?
-- **La météo des cours extérieurs** — abandonnée. `IsWeatherDependent` et le lieu
-  de repli restent, renseignés et lus par le gérant.
-- **Points 4 et 5 — login & onboarding, portail super-admin.** Handoffs à
-  fournir, et le 01-LOTS interdit de les commencer par morceaux en attendant.
+- **Tout envoi** : push, e-mail, lien public, message, programmation — les cinq
+  éléments du `DiffusionModal`. Décision du 2026-08-07.
+- **La publication directe vers Instagram / Facebook** : intégration Meta, hors
+  périmètre, à chiffrer à part (`08`, §6).
+- **Les formats carré, story et A5** : listés en §6, après le format de référence.
+- **La cloche de notifications** — hors V1, « pour le moment ».
+- **La météo** — abandonnée. `IsWeatherDependent` et le lieu de repli restent.
+- **Points 4 et 5 — l'entrée (doc `06`) et la console (doc `07`).** Leurs handoffs
+  sont arrivés, mais ils viennent après, et `01-LOTS.md` interdit de les commencer
+  par morceaux.
 - **Point 6 — comptes à casquettes multiples** (entrée 4 du registre).
 - **Entrée 5 — migrations EF**, en dernier, juste avant un déploiement.
-- **SMS**, **recherche globale**, **portail membre** : hors V1.
 
 ---
 
 ## Premier geste suggéré
 
-1. **Réécrire les quatre textes** qui promettent un envoi. C'est la partie sûre,
-   elle ne dépend d'aucune décision de rendu, et elle enlève un mensonge de
-   l'écran dès aujourd'hui.
-2. **Décider ce que l'image montre** — format, contenu, quelles séances,
-   quelle semaine. C'est de la conception, c'est le vrai sujet, et rien de
-   technique ne se décide avant.
-3. **Décider comment les couleurs du thème atteignent le générateur.** C'est la
-   seule question d'architecture, et elle conditionne le choix de la voie.
-4. **Trancher le périmètre des rôles** avant d'écrire le générateur, pas après.
-5. **Écrire la mise en page en SVG côté C#**, testable sur son contenu, puis le
-   téléchargement.
-6. **Vérifier à la taille réelle**, sur un téléphone, sur deux clients.
+1. **Ouvrir `design/Planning diffusé - 3 styles.html` dans le navigateur.** C'est
+   la cible, elle est déjà écrite en HTML/CSS, et elle vaut tous les résumés — y
+   compris celui-ci.
+2. **Corriger le test du matin**, pour partir d'une suite verte.
+3. **Trancher le périmètre** : le rendu seul, ou le parcours complet avec un
+   aller-retour design. Tout le reste du plan en dépend.
+4. **Trancher le périmètre des rôles** avant d'écrire le générateur.
+5. **Réécrire les quatre textes** qui promettent un envoi — c'est sûr, ça ne
+   dépend d'aucune décision, et ça enlève un mensonge de l'écran dès aujourd'hui.
+6. **Choisir le moteur de capture** et dire comment il vit en développement et au
+   déploiement.
+7. **Vérifier à la taille réelle**, sur un téléphone, sur les trois marques.
 
-Revenir avec un plan qui dit **quelle image on produit** (format, contenu,
-semaine), **comment le thème l'atteint**, **qui a le droit de la générer**, et ce
-que devient le bouton « Aperçu ». **Attendre la validation avant d'écrire.**
+Revenir avec un plan qui dit **le périmètre retenu**, **qui a le droit de
+générer**, **quel moteur de capture et à quel coût de déploiement**, et ce que
+devient le bouton « Aperçu ». **Attendre la validation avant d'écrire.**
