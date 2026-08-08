@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -14,9 +15,14 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// The row is the whole job. As <c>Tenant</c> puts it, adding a customer is a row
 /// here plus a block of tokens in themes.css, never a screen change.
 /// </para>
+/// <para>
+/// <see cref="IPlatformScoped"/> because it creates the customer rather than
+/// acting inside one: it runs with no ambient tenant, and the row it writes is
+/// the very thing the global filter is later drawn around.
+/// </para>
 /// </summary>
 public sealed record CreateTenantCommand(
     string Name,
     string Slug,
     string ThemeKey,
-    bool IsSolo) : IRequest<int>;
+    bool IsSolo) : IRequest<int>, IPlatformScoped;

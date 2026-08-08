@@ -19,8 +19,8 @@ namespace TechXYZ.GymXYZ.Application.Tests.Common;
 /// <para>
 /// Which is why it is written down rather than left to be inferred from an
 /// entity that happens not to implement an interface. A list makes the exception
-/// countable: it is currently two, and a third arriving without a reason will
-/// fail this test rather than pass unnoticed.
+/// countable, and a new one arriving without a reason will fail this test rather
+/// than pass unnoticed.
 /// </para>
 /// </summary>
 public class PlatformScopedPerimeterTests
@@ -36,7 +36,25 @@ public class PlatformScopedPerimeterTests
 
         // The three-month deletion. Runs from a background sweep with no user and
         // no customer at all — the strongest case for the marker there is.
-        nameof(PurgeRefusedSpaceRequestsCommand)
+        nameof(PurgeRefusedSpaceRequestsCommand),
+
+        // The five that were already crossing and did not say so.
+        //
+        // They predate the marker by two lots. Both queries read every customer
+        // at once — GetTenantsQuery counts through TenantMemberCounter, which
+        // lifts the global filter in so many words — and the three commands write
+        // the Tenant row itself, which is the thing the filter is drawn around
+        // rather than something the filter covers. All five run in a scope that
+        // resolves no tenant at all, which is the marker's other half.
+        //
+        // Left out, the list above was true only by omission, and a list of
+        // border-crossers that omits five is not a net. Named here before the
+        // console adds a dozen more.
+        nameof(GetTenantsQuery),
+        nameof(GetTenantDetailQuery),
+        nameof(CreateTenantCommand),
+        nameof(UpdateTenantBrandingCommand),
+        nameof(UpdateTenantPlanCommand)
     ];
 
     [Fact]
@@ -55,15 +73,20 @@ public class PlatformScopedPerimeterTests
     public void APlatformScopedRequest_ShouldNotAlsoDemandAManager()
     {
         // The two markers answer different questions and would contradict each
-        // other here: IManagerOnly asks who is signed in, and the answer on the
-        // public form is nobody. Carrying both would refuse every applicant, and
-        // the failure would read as a broken form rather than a wrong attribute.
+        // other here. IManagerOnly asks whether the caller manages the gym being
+        // served; nobody here is inside a gym. On the public form the caller is
+        // not signed in at all, so the marker would refuse every applicant and
+        // the failure would read as a broken form. On the platform's own
+        // requests the caller is a PlatformAdmin, who manages no gym and — since
+        // the impersonation was removed — is deliberately refused by
+        // ManagerOnly. Either way, carrying both would close the request to the
+        // only person entitled to run it.
         foreach (var name in OutsideEveryTenant)
         {
             AllRequests()
                 .Single(type => type.Name == name)
                 .IsAssignableTo(typeof(IManagerOnly))
-                .ShouldBeFalse($"{name} runs with nobody signed in.");
+                .ShouldBeFalse($"{name} runs outside every gym, so no gym's manager guards it.");
         }
     }
 

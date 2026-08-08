@@ -26,14 +26,19 @@ public static class ManagerOnly
         "Cette action est réservée au responsable de la salle.";
 
     /// <summary>
-    /// A platform admin passes too, matching <c>GymPolicies.GymManager</c>,
-    /// which admits both. Without it an admin inside a customer could open every
-    /// screen and write on none of them — and the impersonation trail exists
-    /// precisely so that visit can act.
+    /// The gym's manager, and nobody else.
+    /// <para>
+    /// A platform admin used to pass here too, matching
+    /// <c>GymPolicies.GymManager</c>, because an admin inside a customer had to
+    /// be able to act as well as look. That visit was removed, and with it the
+    /// only case the exception served: an admin now inhabits no gym, so no gym's
+    /// commands are theirs to run. The platform's own commands are not guarded by
+    /// this — they carry <c>IPlatformScoped</c> and sit behind the
+    /// <c>PlatformAdmin</c> policy instead.
+    /// </para>
     /// </summary>
     public static bool Holds(ICurrentUserService currentUser) =>
-        currentUser.IsInRole(GymRoleNames.GymManager)
-        || currentUser.IsInRole(GymRoleNames.PlatformAdmin);
+        currentUser.IsInRole(GymRoleNames.GymManager);
 
     /// <summary>
     /// Asked before anything is loaded: whether the row exists is none of a

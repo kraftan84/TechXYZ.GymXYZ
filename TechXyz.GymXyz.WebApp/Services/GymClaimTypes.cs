@@ -29,16 +29,9 @@ public static class GymClaimTypes
     /// </summary>
     public const string CoachId = "gymxyz:coach_id";
 
-    /// <summary>
-    /// Present only while a platform admin is inside a customer. Holds the id of
-    /// the <c>TenantImpersonation</c> row the visit opened, so leaving closes the
-    /// exact row it opened.
-    /// <para>
-    /// Its presence is also what tells the shell that the tenant claims beside it
-    /// are borrowed rather than owned — a platform admin's own account carries no
-    /// tenant at all. Nothing reads it to grant access: the policies are unchanged
-    /// and <c>GymManager</c> already admits a <c>PlatformAdmin</c>.
-    /// </para>
-    /// </summary>
-    public const string Impersonation = "gymxyz:impersonation";
+    // There used to be a third claim here, gymxyz:impersonation, carrying the id
+    // of the visit a platform admin had opened inside a customer. It went with
+    // the impersonation itself: an admin now inhabits no customer at all, so the
+    // tenant claims beside these are never borrowed — an account either owns one
+    // or has none.
 }

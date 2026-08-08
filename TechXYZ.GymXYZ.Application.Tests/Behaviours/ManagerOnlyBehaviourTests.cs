@@ -56,11 +56,23 @@ public class ManagerOnlyBehaviourTests
     }
 
     [Fact]
-    public async Task Handle_ShouldLetAPlatformAdminThrough()
+    public async Task Handle_ShouldRefuseAPlatformAdmin()
     {
-        // GymPolicies.GymManager admits one, and the impersonation trail exists
-        // so that visit can act rather than only look.
-        (await Run<ReservedRequest>(GymRoleNames.PlatformAdmin)).ShouldBeTrue();
+        // It used to let one through: GymPolicies.GymManager admitted a platform
+        // admin so that a visit inside a customer could act rather than only
+        // look. The visit was removed, both halves of the perimeter followed, and
+        // this is the half a hand-made POST reaches when no screen is in the way.
+        //
+        // The platform's own commands are not caught by this. They carry
+        // IPlatformScoped instead, and PlatformScopedPerimeterTests holds them to
+        // never carrying both markers at once — which is what stops this refusal
+        // from closing the console to the only person who may open it.
+        var reached = false;
+
+        await Should.ThrowAsync<ValidationException>(() =>
+            Run<ReservedRequest>(GymRoleNames.PlatformAdmin, onHandler: () => reached = true));
+
+        reached.ShouldBeFalse();
     }
 
     [Fact]

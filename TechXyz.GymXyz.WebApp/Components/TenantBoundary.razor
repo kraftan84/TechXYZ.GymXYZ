@@ -72,15 +72,15 @@
             principal.FindFirstValue(GymClaimTypes.Nickname),
             principal.FindFirstValue(GymClaimTypes.RoleLabel))
         {
-            // The tenant claims beside it are borrowed, not owned: a platform
-            // admin's own account carries no tenant at all.
-            IsImpersonating = principal.HasClaim(
-                claim => claim.Type == GymClaimTypes.Impersonation),
-
             // Read here rather than in each shell: the navigation, the topbar and
             // the mobile sheet all ask the same question, and asking it three
             // times is three chances to answer it differently.
-            IsManager = principal.IsInRole(GymRoleNames.GymManager) || isPlatformAdmin,
+            //
+            // A platform admin is not a manager. They were, while they could
+            // enter a customer; with the impersonation gone they inhabit no gym,
+            // and saying they run one would show them a « Nouveau membre » button
+            // on screens CustomerScope already refuses them.
+            IsManager = principal.IsInRole(GymRoleNames.GymManager),
             IsPlatformAdmin = isPlatformAdmin
         };
     }

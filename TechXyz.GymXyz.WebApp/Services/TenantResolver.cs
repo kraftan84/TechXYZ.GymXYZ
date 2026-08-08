@@ -31,10 +31,14 @@ public sealed class TenantResolver : ITenantResolver
     public async Task<TenantBrandDto?> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
     {
         // An authenticated principal carrying no tenant claim belongs to no
-        // customer — a platform admin who has not entered one. It must NOT fall
-        // through to the host: on localhost, and on the apex domain in
-        // production, that hands back DefaultSlug and the admin silently reads
-        // a real customer's data with no TenantImpersonation row recording it.
+        // customer — a platform admin. It must NOT fall through to the host: on
+        // localhost, and on the apex domain in production, that hands back
+        // DefaultSlug and the admin silently reads a real customer's data.
+        //
+        // This was entry 2 of the debt register, and it matters more now than
+        // when it was closed: an admin then had a sanctioned way in, which this
+        // fallback bypassed. There is no sanctioned way in any more, so a
+        // fallback here would be the only one.
         //
         // The host fallback exists for the login screen, which has to be dressed
         // in a brand before anybody has authenticated. That is the only case it

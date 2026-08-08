@@ -22,7 +22,7 @@ namespace TechXyz.GymXyz.Application.Common;
 /// </summary>
 public readonly record struct CoachScope(bool IsRestricted, int? CoachId)
 {
-    /// <summary>A manager, or a platform admin inside a customer: the whole gym.</summary>
+    /// <summary>The gym's manager: the whole gym.</summary>
     public static readonly CoachScope Unrestricted = new(IsRestricted: false, CoachId: null);
 
     /// <summary>
@@ -35,7 +35,9 @@ public readonly record struct CoachScope(bool IsRestricted, int? CoachId)
 
     /// <summary>
     /// What this caller may see. Anybody who is not a manager is confined to
-    /// their own coach row — to nothing at all when they have none.
+    /// their own coach row — to nothing at all when they have none, which is
+    /// where a platform admin lands since the impersonation was removed: they
+    /// run no gym, so no gym's work is theirs.
     /// </summary>
     public static CoachScope For(ICurrentUserService currentUser) =>
         ManagerOnly.Holds(currentUser)

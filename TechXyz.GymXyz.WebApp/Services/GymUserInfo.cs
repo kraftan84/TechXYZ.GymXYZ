@@ -37,15 +37,13 @@ public sealed record GymUserInfo(string DisplayName, string? Nickname, string? R
             : DisplayName;
 
     /// <summary>
-    /// True while a platform admin is inside a customer. Read from the
-    /// impersonation claim once, at the boundary, so the shell never has to ask
-    /// the authentication state whose data it is drawing.
-    /// </summary>
-    public bool IsImpersonating { get; init; }
-
-    /// <summary>
-    /// Whether this person runs the gym rather than teaches in it. True for a
-    /// platform admin as well, matching <c>GymPolicies.GymManager</c>.
+    /// Whether this person runs the gym rather than teaches in it.
+    /// <para>
+    /// <b>False for a platform admin</b>, matching <c>GymPolicies.GymManager</c>,
+    /// which stopped admitting one when the impersonation was removed. An admin
+    /// inhabits no gym, so "runs this gym" has no true answer for them — and the
+    /// screens this flag opens are all screens they cannot reach anyway.
+    /// </para>
     /// <para>
     /// The role, not the <see cref="RoleLabel"/> beside it: that one is free text
     /// the gym writes itself, and Leyssa's owner wrote "Coach" in it while
