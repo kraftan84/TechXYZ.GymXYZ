@@ -166,6 +166,132 @@ public class UserDirectoryTests
         revoked.ShouldBeFalse();
     }
 
+    // ---- Password reset -----------------------------------------------------
+    //
+    // The four refusals below all return the same thing: null, or a dead link.
+    // That sameness is the security property — the screen shows one sentence
+    // whatever the answer, so anything that made these distinguishable would be
+    // an account-enumeration oracle no wording could patch over.
+
+    [Fact]
+    public async Task BeginPasswordReset_ShouldRefuseAnAddressNobodyUses()
+    {
+        await using var fixture = await DirectoryFixture.CreateAsync();
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("personne@nulle-part.fr");
+
+        ticket.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task BeginPasswordReset_ShouldRefuseAnotherCustomersAccount()
+    {
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        await fixture.AddUserAsync("ailleurs@autre.fr", GymRoleNames.GymManager, OtherTenantId);
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("ailleurs@autre.fr");
+
+        ticket.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task BeginPasswordReset_ShouldRefuseARevokedAccess()
+    {
+        // The one Identity does not refuse on its own: its reset path never looks
+        // at lockout, so a coach whose access was withdrawn could otherwise set a
+        // new password and walk straight back in.
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        var userId = await fixture.AddUserAsync("nora@gymxyz.fr", GymRoleNames.Coach, TenantId);
+        await fixture.Directory.RevokeAsync(userId);
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("nora@gymxyz.fr");
+
+        ticket.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task BeginPasswordReset_ShouldReachThePlatformsOwnAccounts()
+    {
+        // A platform admin carries no tenant at all, and signs in through this
+        // same screen. Scoped to the tenant alone, the reset would silently never
+        // find them — and silence is exactly what this flow answers with.
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        await fixture.AddPlatformUserAsync("admin@techxyz.fr");
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("admin@techxyz.fr");
+
+        ticket.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CompletePasswordReset_ShouldChangeThePasswordAndRollTheSecurityStamp()
+    {
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        await fixture.AddUserAsync("nora@gymxyz.fr", GymRoleNames.Coach, TenantId);
+
+        var before = await fixture.SecurityStampAsync("nora@gymxyz.fr");
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("nora@gymxyz.fr");
+
+        var outcome = await fixture.Directory.CompletePasswordResetAsync(
+            "nora@gymxyz.fr", ticket!.Token, "Nouveau!Mdp2026");
+
+        outcome.Succeeded.ShouldBeTrue();
+
+        // The stamp moving is what signs the account's other devices out — which
+        // the confirmation screen states as a fact, not a hope.
+        (await fixture.SecurityStampAsync("nora@gymxyz.fr")).ShouldNotBe(before);
+    }
+
+    [Fact]
+    public async Task CompletePasswordReset_ShouldCallASpentTokenADeadLink()
+    {
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        await fixture.AddUserAsync("nora@gymxyz.fr", GymRoleNames.Coach, TenantId);
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("nora@gymxyz.fr");
+        await fixture.Directory.CompletePasswordResetAsync("nora@gymxyz.fr", ticket!.Token, "Nouveau!Mdp2026");
+
+        var second = await fixture.Directory.CompletePasswordResetAsync(
+            "nora@gymxyz.fr", ticket.Token, "Encore!Autre2026");
+
+        second.Succeeded.ShouldBeFalse();
+        second.LinkNoLongerValid.ShouldBeTrue();
+        second.PasswordErrors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CompletePasswordReset_ShouldReportARefusedPasswordAsSuchRatherThanAsADeadLink()
+    {
+        // The two failures land on different screens: one asks for a better
+        // password, the other for a new link. Confusing them sends somebody back
+        // to their mailbox over a password that was merely too short.
+        await using var fixture = await DirectoryFixture.CreateAsync();
+        await fixture.AddUserAsync("nora@gymxyz.fr", GymRoleNames.Coach, TenantId);
+
+        var ticket = await fixture.Directory.BeginPasswordResetAsync("nora@gymxyz.fr");
+
+        var outcome = await fixture.Directory.CompletePasswordResetAsync(
+            "nora@gymxyz.fr", ticket!.Token, "court1A");
+
+        outcome.Succeeded.ShouldBeFalse();
+        outcome.LinkNoLongerValid.ShouldBeFalse();
+        outcome.PasswordErrors.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void IsRevoked_ShouldTellAWithdrawnAccessApartFromFiveBadTries()
+    {
+        // Same column, two meanings. RevokeAsync writes the far end of time; a
+        // failed sign-in writes a quarter of an hour from now.
+        var revoked = new ApplicationUser { LockoutEnd = DateTimeOffset.MaxValue };
+        var lockedOut = new ApplicationUser { LockoutEnd = DateTimeOffset.UtcNow.AddMinutes(15) };
+        var open = new ApplicationUser();
+
+        UserDirectory.IsRevoked(revoked).ShouldBeTrue();
+        UserDirectory.IsRevoked(lockedOut).ShouldBeFalse();
+        UserDirectory.IsRevoked(open).ShouldBeFalse();
+    }
+
     /// <summary>
     /// A real Identity stack over an in-memory store, scoped to
     /// <see cref="TenantId"/> — the tenant the directory believes it serves.
@@ -201,9 +327,24 @@ public class UserDirectoryTests
             services.AddDbContext<GymDbContext>(options =>
                 options.UseInMemoryDatabase(Guid.NewGuid().ToString("N")));
 
-            services.AddIdentityCore<ApplicationUser>()
+            // Data protection and the default token providers are what make a
+            // password-reset token exist at all; without them the directory throws
+            // instead of answering.
+            services.AddDataProtection();
+
+            services.AddIdentityCore<ApplicationUser>(options =>
+                {
+                    // Mirrors Program.cs. Pinned as a pair by PasswordRuleTests,
+                    // which is what stops the screen and the server drifting apart.
+                    options.Password.RequiredLength = 12;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireNonAlphanumeric = false;
+                })
                 .AddRoles<ApplicationRole>()
-                .AddEntityFrameworkStores<GymDbContext>();
+                .AddEntityFrameworkStores<GymDbContext>()
+                .AddDefaultTokenProviders();
 
             var provider = services.BuildServiceProvider();
             var scope = provider.CreateScope();
@@ -232,6 +373,30 @@ public class UserDirectoryTests
 
             await UserManager.AddToRoleAsync(user, role);
             return user.Id;
+        }
+
+        /// <summary>An account belonging to no customer — the console's own.</summary>
+        public async Task<string> AddPlatformUserAsync(string email)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                TenantId = null
+            };
+
+            (await UserManager.CreateAsync(user)).Succeeded.ShouldBeTrue();
+            await UserManager.AddToRoleAsync(user, GymRoleNames.PlatformAdmin);
+
+            return user.Id;
+        }
+
+        public async Task<string?> SecurityStampAsync(string email)
+        {
+            var user = await UserManager.FindByEmailAsync(email);
+
+            return user is null ? null : await UserManager.GetSecurityStampAsync(user);
         }
 
         public async ValueTask DisposeAsync()

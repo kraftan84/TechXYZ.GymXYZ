@@ -8,63 +8,91 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using TechXyz.GymXyz.Persistence.Identity
+@using TechXyz.GymXyz.WebApp.Components.Features.Account
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 
 <PageTitle>Connexion</PageTitle>
 
-<div class="gx-login">
-    <div class="gx-login-brand">
-        @if (Brand is not null)
-        {
-            <BrandLockup Brand="Brand" OnDark="true"/>
-        }
+<AuthShell>
+    <EditForm Model="Input" method="post" OnValidSubmit="SignInAsync" FormName="connexion" class="gx-a-form">
+        <DataAnnotationsValidator/>
+
         <div>
-            <h2>Votre espace de gestion</h2>
-            <p>Planning, membres, présences et abonnements au même endroit.</p>
+            <h1 class="gx-a-h">Connexion</h1>
+            <p class="gx-a-sub">Accédez à votre tableau de bord.</p>
         </div>
-        <div class="foot">Hébergé en France · Conforme RGPD</div>
-    </div>
 
-    <div class="gx-login-pane">
-        <EditForm Model="Input" method="post" OnValidSubmit="SignInAsync" FormName="connexion" class="gx-login-form">
-            <DataAnnotationsValidator/>
-
-            <div>
-                <h1>Connexion</h1>
-                <p class="lead">Accédez à votre tableau de bord.</p>
+        @if (IsSuspended)
+        {
+            <div class="gx-a-err" role="alert">
+                <GxIcon Name="alert" Size="18" Class="ic"/>
+                <span>
+                    L'accès à cet espace est suspendu. Contactez GymXYZ au 04 50 00 00 00
+                    ou à support@gymxyz.fr pour le rouvrir.
+                </span>
             </div>
-
-            @if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <div class="err" role="alert">@_errorMessage</div>
-            }
-
-            <div class="field">
-                <label for="email">E-mail</label>
-                <FluentTextField id="email" @bind-Value="Input.Email" name="Input.Email"
-                                 TextFieldType="TextFieldType.Email" AutoComplete="username"
-                                 Style="width:100%" Required="true"/>
-                <ValidationMessage For="() => Input.Email"/>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="gx-a-err" role="alert">
+                <GxIcon Name="alert" Size="18" Class="ic"/>
+                <span>@_errorMessage</span>
             </div>
+        }
 
-            <div class="field">
+        <div class="gx-a-field">
+            <label for="email">E-mail</label>
+            <FluentTextField id="email" @bind-Value="Input.Email" name="Input.Email"
+                             TextFieldType="TextFieldType.Email" AutoComplete="username"
+                             Placeholder="prenom@votre-salle.fr"
+                             Style="width:100%" Required="true"/>
+            <ValidationMessage For="() => Input.Email"/>
+        </div>
+
+        <div class="gx-a-pw">
+            <div class="gx-a-field">
                 <label for="password">Mot de passe</label>
                 <FluentTextField id="password" @bind-Value="Input.Password" name="Input.Password"
                                  TextFieldType="TextFieldType.Password" AutoComplete="current-password"
+                                 Placeholder="••••••••••"
                                  Style="width:100%" Required="true"/>
                 <ValidationMessage For="() => Input.Password"/>
             </div>
+            @* Wired by gx-auth.js: this page renders statically, so there is no
+               circuit to handle a click. *@
+            <button type="button" class="gx-a-eye" aria-label="Afficher" aria-pressed="false">
+                <GxIcon Name="eye" Size="18"/>
+            </button>
+        </div>
 
+        <div class="gx-a-row">
             <FluentCheckbox @bind-Value="Input.RememberMe" name="Input.RememberMe" Label="Rester connecté"/>
+            <a class="gx-link" href="/account/mot-de-passe-oublie">Mot de passe oublié ?</a>
+        </div>
 
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width:100%">
-                Se connecter
-            </FluentButton>
-        </EditForm>
-    </div>
-</div>
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width:100%" Disabled="IsSuspended">
+            Se connecter
+        </FluentButton>
+
+        @if (!IsGymXyz)
+        {
+            @* No sign-up link on a customer's screen: a member does not open a
+               space, and the people who run this one already have accounts. *@
+            <div class="gx-a-hr">ou</div>
+            <p class="gx-a-tail">
+                Vous êtes membre de @(Brand?.DisplayName ?? "cette salle") ?
+                Connectez-vous depuis l'application mobile, avec le lien reçu par e-mail.
+            </p>
+        }
+
+        <p class="gx-a-help">
+            Besoin d'aide ? <a href="mailto:support@gymxyz.fr">support@gymxyz.fr</a> · 04 50 00 00 00
+        </p>
+    </EditForm>
+</AuthShell>
 
 @code {
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
@@ -85,8 +113,21 @@
 
     private string? _errorMessage;
 
+    private bool IsGymXyz => (Brand?.ThemeKey ?? "techxyz") == "techxyz";
+
+    private bool IsSuspended => Brand?.IsSuspended == true;
+
     private async Task SignInAsync()
     {
+        // Refused before the password is even checked: the space is closed, and
+        // letting a correct password through to a dead space would be worse than
+        // saying so. A platform admin reaching a suspended customer does it from
+        // the console, by impersonation — not through the customer's own door.
+        if (IsSuspended)
+        {
+            return;
+        }
+
         var result = await SignInManager.PasswordSignInAsync(
             Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
@@ -98,8 +139,32 @@
         }
 
         _errorMessage = result.IsLockedOut
-            ? "Ce compte est temporairement bloqué. Réessayez dans quelques minutes."
+            ? await LockoutMessageAsync()
             : "E-mail ou mot de passe incorrect.";
+    }
+
+    /// <summary>
+    /// Locked out and revoked are the same column in Identity — <c>RevokeAsync</c>
+    /// writes the far end of time where five bad tries write a quarter of an hour.
+    /// Told apart here, because "réessayez dans 12 minutes" to somebody whose
+    /// access was withdrawn sends them back every quarter of an hour forever.
+    /// </summary>
+    private async Task<string> LockoutMessageAsync()
+    {
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+
+        if (user is not null && UserDirectory.IsRevoked(user))
+        {
+            return "Cet accès a été retiré. Contactez la personne qui gère votre espace.";
+        }
+
+        var remaining = user?.LockoutEnd is { } end
+            ? (int)Math.Ceiling((end - DateTimeOffset.UtcNow).TotalMinutes)
+            : 15;
+
+        var minutes = Math.Clamp(remaining, 1, 15);
+
+        return $"Trop de tentatives. Réessayez dans {minutes} minute{(minutes > 1 ? "s" : string.Empty)}.";
     }
 
     private sealed class LoginInput

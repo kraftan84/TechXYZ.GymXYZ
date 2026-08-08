@@ -93,14 +93,31 @@ public class ManagerOnlyPerimeterTests
         nameof(EndTenantImpersonationCommand)
     ];
 
+    /// <summary>
+    /// Run by somebody who is not signed in at all — a third side of the line,
+    /// added by the entry lot.
+    /// <para>
+    /// Named separately rather than folded into the open list because the reason
+    /// differs and the scrutiny does: these two are reachable by anyone on the
+    /// internet, so what protects them is not a role but the rules inside them —
+    /// no answer that distinguishes a known address from an unknown one, a
+    /// single-use token that expires, and a rate limit on the way in.
+    /// </para>
+    /// </summary>
+    private static readonly string[] Anonymous =
+    [
+        nameof(RequestPasswordResetCommand),
+        nameof(ResetPasswordCommand)
+    ];
+
     [Fact]
     public void EveryCommand_ShouldSayWhichSideOfThePerimeterItIsOn()
     {
         var onDisk = AllCommands().Select(type => type.Name).ToList();
 
-        onDisk.Except(Reserved).Except(OpenToACoach).ShouldBeEmpty(
-            "A new command is either reserved to a manager or open to a coach — say which, here.");
-        Reserved.Concat(OpenToACoach).Except(onDisk).ShouldBeEmpty(
+        onDisk.Except(Reserved).Except(OpenToACoach).Except(Anonymous).ShouldBeEmpty(
+            "A new command is reserved to a manager, open to a coach, or public — say which, here.");
+        Reserved.Concat(OpenToACoach).Concat(Anonymous).Except(onDisk).ShouldBeEmpty(
             "This table names a command that no longer exists.");
     }
 
@@ -113,6 +130,21 @@ public class ManagerOnlyPerimeterTests
             .ToList();
 
         marked.ShouldBe(Reserved, ignoreOrder: true);
+    }
+
+    [Fact]
+    public void APublicCommand_ShouldNotCarryTheMarker()
+    {
+        // A marker demanding a manager on a command reached from the login screen
+        // would refuse everybody, and the failure would look like a broken reset
+        // rather than a misplaced attribute.
+        foreach (var name in Anonymous)
+        {
+            AllCommands()
+                .Single(type => type.Name == name)
+                .IsAssignableTo(typeof(IManagerOnly))
+                .ShouldBeFalse($"{name} runs with nobody signed in.");
+        }
     }
 
     [Fact]
@@ -162,7 +194,16 @@ public class ManagerOnlyPerimeterTests
             .GetTypes()
             .Where(type => type is { IsClass: true, IsAbstract: false }
                            && type.Name.EndsWith(suffix, StringComparison.Ordinal)
-                           && type.GetInterfaces().Any(contract =>
-                               contract.IsGenericType
-                               && contract.GetGenericTypeDefinition() == typeof(IRequest<>)));
+                           && type.GetInterfaces().Any(IsMediatRRequest));
+
+    /// <summary>
+    /// Both shapes MediatR offers. The non-generic <c>IRequest</c> is not an
+    /// <c>IRequest&lt;Unit&gt;</c> — it is a separate interface — so a scan that
+    /// looked only for the generic one let every command returning nothing walk
+    /// past this table unclassified. Found when the first such command was
+    /// written; the hole was older than the command.
+    /// </summary>
+    private static bool IsMediatRRequest(Type contract) =>
+        contract == typeof(IRequest)
+        || (contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IRequest<>));
 }

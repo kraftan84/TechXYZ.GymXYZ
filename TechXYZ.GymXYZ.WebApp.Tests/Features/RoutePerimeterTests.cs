@@ -53,11 +53,19 @@ public class RoutePerimeterTests
         Path.Combine("Account", "ImpersonationExit.razor")
     ];
 
-    /// <summary>Reachable without signing in, by explicit opt-out.</summary>
+    /// <summary>
+    /// Reachable without signing in, by explicit opt-out. The four reset screens
+    /// belong here by nature: somebody who has lost their password is, by
+    /// definition, somebody who cannot sign in to ask for a new one.
+    /// </summary>
     private static readonly string[] Anonymous =
     [
         Path.Combine("Account", "Login.razor"),
         Path.Combine("Account", "AccessDenied.razor"),
+        Path.Combine("Account", "ForgotPassword.razor"),
+        Path.Combine("Account", "ResetLinkSent.razor"),
+        Path.Combine("Account", "ResetPassword.razor"),
+        Path.Combine("Account", "ResetPasswordDone.razor"),
         "Error.razor",
         "NotFound.razor"
     ];
@@ -91,6 +99,18 @@ public class RoutePerimeterTests
             customMessage: $"{relativePath} is part of a coach's day and must stay open to them.");
     }
 
+    [Theory]
+    [MemberData(nameof(AnonymousPages))]
+    public void AnAnonymousPage_ShouldOptOutOfAuthentication(string relativePath)
+    {
+        // The direction this lot could get wrong. Every page inherits [Authorize]
+        // from _Imports, so a reset screen that forgets to opt out sends the one
+        // person who cannot sign in to the sign-in screen — and back again.
+        Read(relativePath).ShouldContain(
+            "@attribute [AllowAnonymous]",
+            customMessage: $"{relativePath} is reached by somebody who cannot sign in, and must say so.");
+    }
+
     [Fact]
     public void EveryRoutablePage_ShouldBeAccountedForInThisTable()
     {
@@ -117,6 +137,8 @@ public class RoutePerimeterTests
     public static TheoryData<string> PlatformAdminPages() => new(PlatformAdminOnly);
 
     public static TheoryData<string> OpenPages() => new(OpenToEverySignedInUser);
+
+    public static TheoryData<string> AnonymousPages() => new(Anonymous);
 
     private static string Read(string relativePath) =>
         RepositoryFiles.ReadWebAppFile("Components", "Pages", relativePath);

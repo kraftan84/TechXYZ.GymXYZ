@@ -7,6 +7,16 @@
       "runtimeArgs": ["run", "--project", "TechXyz.GymXyz.WebApp", "--launch-profile", "http"],
       "port": 5173,
       "url": "http://localhost:5173"
+    },
+    {
+      "name": "gymxyz-webapp-teamtrainers",
+      "port": 5173,
+      "url": "http://teamtrainers.localhost:5173"
+    },
+    {
+      "name": "gymxyz-webapp-leyssa",
+      "port": 5173,
+      "url": "http://leyssa.localhost:5173"
     }
   ]
 }

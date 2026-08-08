@@ -1,0 +1,86 @@
+@* The brand panel and the form column, shared by the five entry screens.
+
+   The structuring rule of this lot lives here: the entry is themed by customer.
+   A member of Team Trainer's never sees GymXYZ blue, so the panel reads its
+   colours from --gx-a-* and the copy from the brand's own line. The one thing
+   never to code is "panel = dark": Leyssa's is blush, and the lockup has to flip
+   to its light-background variant with it. *@
+
+@using TechXyz.GymXyz.Application.Models
+
+<div class="gx-auth @(Compact ? "compact" : null)">
+    <div class="gx-auth-panel">
+        @if (Brand is not null)
+        {
+            <BrandLockup Brand="Brand" OnDark="OnDark"/>
+        }
+
+        <div class="gx-a-mid">
+            <h1>@Headline</h1>
+            <p>@Promise</p>
+
+            <div class="gx-a-pills">
+                <span class="gx-a-pill"><GxIcon Name="calendar" Size="16"/>Planning</span>
+                <span class="gx-a-pill"><GxIcon Name="check" Size="16"/>Présences</span>
+                <span class="gx-a-pill"><GxIcon Name="card" Size="16"/>Abonnements</span>
+            </div>
+        </div>
+
+        <div class="gx-a-pfoot">
+            <span>Hébergé en France</span>
+            <span class="sep"></span>
+            <span>Conforme RGPD</span>
+            @if (!IsGymXyz)
+            {
+                @* White label: the customer's own brand carries the screen, and
+                   GymXYZ signs it in the footer rather than in the lockup. *@
+                <span class="sep"></span>
+                <span>Propulsé par GymXYZ</span>
+            }
+        </div>
+    </div>
+
+    @* The column places one child, and that child is the screen's own
+       <form class="gx-a-form"> — so a screen owns its element rather than being
+       wrapped in a div it cannot post. *@
+    <div class="gx-auth-side">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private TenantBrandDto? Brand { get; set; }
+
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+
+    /// <summary>
+    /// Drops the panel's promise on a phone. The four screens after the login
+    /// carry their own title, so repeating the brand pitch above it pushes the
+    /// form itself below the fold.
+    /// </summary>
+    [Parameter] public bool Compact { get; set; }
+
+    private string ThemeKey => Brand?.ThemeKey ?? "techxyz";
+
+    private bool IsGymXyz => ThemeKey == "techxyz";
+
+    /// <summary>
+    /// Leyssa's panel is the light one, so its lockup takes the dark-on-light
+    /// asset. Read from the theme rather than assumed from the surface.
+    /// </summary>
+    private bool OnDark => ThemeKey != "leyssa";
+
+    private string Headline => ThemeKey switch
+    {
+        "teamtrainers" => "Le club, côté coulisses",
+        "leyssa" => "Votre studio, en douceur",
+        _ => "Votre espace de gestion"
+    };
+
+    private string Promise => ThemeKey switch
+    {
+        "teamtrainers" => "Planning, présences et abonnements : tout le club dans une seule interface.",
+        "leyssa" => "Séances, suivi des clientes et abonnements réunis au même endroit.",
+        _ => "Planning, membres, présences et abonnements au même endroit."
+    };
+}

@@ -47,6 +47,14 @@ public sealed record TenantBrandDto(
     public string? ZipCode { get; init; }
 
     /// <summary>
+    /// Space closed for non-payment. Carried on the brand because the login
+    /// screen is the one place that has to know, and it resolves the brand
+    /// before anybody has authenticated — there is no other object in hand at
+    /// that moment.
+    /// </summary>
+    public bool IsSuspended { get; init; }
+
+    /// <summary>
     /// Whether the customer asked for the school holidays on the planning.
     /// Travels beside the postcode for the same reason: the banner decides what
     /// to draw from both at once, and a second round-trip for a boolean would

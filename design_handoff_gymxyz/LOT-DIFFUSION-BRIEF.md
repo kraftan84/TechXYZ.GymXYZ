@@ -219,7 +219,7 @@ chiffrer à part ».
   un `.click()` en JS sur un bouton Blazor **fonctionne**.
 - **Les comptes de démo** sont dans `DbInitializer` : `dwayne.johnson@gymxyz.fr`,
   `aurelie.siquier@teamtrainers.fr`, `najate.amzil@leyssa-coaching.fr` — et non
-  `najate@`, qui est l'adresse de contact du client. Mot de passe `GymXyz!2026`.
+  `najate@`, qui est l'adresse de contact du client. Mot de passe `GymXyz!2026!`.
 - **Le tenant vient des claims**, pas de l'hôte, dès qu'on est authentifié :
   changer de client = se reconnecter.
 - **La base de dev est recréée au démarrage** et déconnecte tout le monde.
