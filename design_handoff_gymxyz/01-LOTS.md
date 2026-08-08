@@ -713,14 +713,18 @@ travail à refaire.
 ## Lot « Entrée » — connexion & demande d'ouverture · point 4 de la V1
 
 *Réf. second handoff : lot 13. Spécification : `06-ENTREE-AUTH-ONBOARDING.md`.*
-Prototype : `design/GymXYZ Auth & Onboarding.html`.
+Prototype : `design/GymXYZ Auth & Onboarding.html`. Brief de démarrage :
+`LOT-ENTREE-BRIEF.md`.
 
 Deux parcours dans un seul document, desktop **et** mobile, sur les trois marques.
 
-- **Connexion, mot de passe oublié, réinitialisation** (`06`, §1 et §2). Les
-  écrans existent déjà en code depuis le lot 0 ; ce lot les remplace par la
-  maquette. **Règle structurante du handoff** : la connexion est **thémée
-  client** — l'écran porte la marque du tenant, pas celle de GymXYZ.
+- **Connexion, mot de passe oublié, réinitialisation** (`06`, §1 et §2).
+  ⚠️ **Corrigé le 2026-08-08** : cette entrée annonçait que « les écrans existent
+  déjà depuis le lot 0 ». C'est faux, et ça sous-estimait le lot. Seul
+  `Account/Login.razor` existe. Les écrans `forgot`, `sent`, `reset` et
+  `reset-done` sont **à créer**, et le parcours de réinitialisation n'existe pas
+  du tout — ni jeton, ni e-mail. **Règle structurante du handoff** : la connexion
+  est **thémée client** — l'écran porte la marque du tenant, pas celle de GymXYZ.
 - **Demande d'ouverture d'espace** (`06`, §3 et §4) : formulaire public en
   **6 étapes** (Profil · Structure · Contact · Formule · Marque · Récapitulatif)
   puis confirmation. Marque GymXYZ uniquement.
