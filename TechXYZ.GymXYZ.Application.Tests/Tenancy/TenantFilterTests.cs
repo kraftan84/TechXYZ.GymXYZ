@@ -178,32 +178,9 @@ public class TenantFilterTests
         invoices.Count.ShouldBe(2);
     }
 
-    [Fact]
-    public async Task Query_ShouldNotFilterImpersonations_SoACustomerCannotEraseItsOwnTrail()
-    {
-        // The trail records a platform admin entering a customer. Scoping it to
-        // that customer would put the audit inside the thing being audited.
-        var databaseName = nameof(Query_ShouldNotFilterImpersonations_SoACustomerCannotEraseItsOwnTrail);
-        var tenantContext = new TestTenantContext(1);
-
-        await using var dbContext = TestInfrastructure.CreateDbContext(databaseName, tenantContext);
-        dbContext.TenantImpersonations.AddRange(
-            new TenantImpersonation
-            {
-                AdminUserId = "admin", AdminEmail = "admin@techxyz.fr",
-                TenantId = 1, StartedAt = DateTime.UtcNow
-            },
-            new TenantImpersonation
-            {
-                AdminUserId = "admin", AdminEmail = "admin@techxyz.fr",
-                TenantId = 2, StartedAt = DateTime.UtcNow
-            });
-        await dbContext.SaveChangesAsync();
-
-        tenantContext.Current = 0;
-
-        var visits = await dbContext.TenantImpersonations.AsNoTracking().ToListAsync();
-
-        visits.Count.ShouldBe(2);
-    }
+    // A third case stood here: TenantImpersonation, unfiltered so that a customer
+    // could not erase the trail of a platform admin's visit into its data. Both
+    // the visit and the trail were removed — there is no such visit to record.
+    // The rule it demonstrated is still demonstrated, by Tenant and Invoice
+    // above: a row about a customer must stay readable from outside it.
 }

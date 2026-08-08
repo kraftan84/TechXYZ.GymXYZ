@@ -1,13 +1,20 @@
-@* Stands between the shell and a business screen when no customer is chosen.
+@* Stands between the shell and a business screen, for an account that belongs to
+   the platform rather than to a customer.
 
    Hiding the navigation is not enough on its own: an admin can still type
    /members, and a bookmark from a previous visit will. The screen behind it
    would query the ambient tenant — 0 — and come back with nothing, which reads
-   as "this customer has no members" rather than "you are not inside a customer".
+   as "this customer has no members" rather than "this is not yours to read".
    An empty state that lies about why it is empty is worse than no screen.
 
+   What it says changed when the impersonation was removed. It used to invite the
+   admin to enter a customer, because there was a door; now there is none, and
+   promising one would be the same lie in the other direction. The screen states
+   the boundary instead, and sends them back to the console — which is the whole
+   of what their account opens.
+
    Administration is the exception it exists for: it is about the platform, not
-   about a customer, and it is where the admin goes to pick one. *@
+   about a customer. *@
 
 @inject NavigationManager Navigation
 
@@ -19,11 +26,11 @@ else
 {
     <div class="gx-empty">
         <GxIcon Name="@GxIconPaths.Shield" Size="28"/>
-        <h3>Aucun client sélectionné</h3>
+        <h3>Cet écran appartient à un client</h3>
         <p>
-            Votre compte appartient à la plateforme, pas à un client. Pour consulter
-            cet écran, entrez chez un client depuis la console — la visite est alors
-            enregistrée et un bandeau vous rappelle où vous êtes.
+            Votre compte appartient à la plateforme. Les fiches membres, les plannings
+            et les paiements restent dans l'espace du client — la console n'y donne pas
+            accès. Pour dépanner quelqu'un, appelez-le ou demandez un partage d'écran.
         </p>
         <a class="gx-btn primary" href="@GxNavigation.Administration.Href">
             <GxIcon Name="@GxNavigation.Administration.Icon" Size="16"/>

@@ -85,12 +85,19 @@ public class ManagerOnlyPerimeterTests
         // this lot left where it was rather than moving the rule twice.
         nameof(ReopenAttendanceSheetCommand),
 
-        // The platform's own, already behind the PlatformAdmin policy.
+        // The platform's own, behind the PlatformAdmin policy and marked
+        // IPlatformScoped. They are not a coach's day either — they are nobody's
+        // gym at all — but they belong on this side of the line for the same
+        // reason: this marker asks whether the caller manages the gym being
+        // served, and there is no gym being served. Since the impersonation was
+        // removed, ManagerOnly refuses a platform admin outright, so carrying it
+        // here would close these to the only person who may run them.
+        //
+        // Two more stood here, BeginTenantImpersonationCommand and its End —
+        // deleted with the visit they opened.
         nameof(CreateTenantCommand),
         nameof(UpdateTenantBrandingCommand),
-        nameof(UpdateTenantPlanCommand),
-        nameof(BeginTenantImpersonationCommand),
-        nameof(EndTenantImpersonationCommand)
+        nameof(UpdateTenantPlanCommand)
     ];
 
     /// <summary>

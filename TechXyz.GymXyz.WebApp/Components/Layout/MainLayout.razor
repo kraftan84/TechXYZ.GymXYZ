@@ -24,10 +24,6 @@
     else if (Responsive.IsMobile)
     {
         <div class="gx-m-app">
-            @* Above the header rather than inside the body: it has to stay put
-               while a sub-screen swaps the header out under it. *@
-            <ImpersonationBar CustomerName="@ImpersonatedCustomer"/>
-
             @* A record or a detail screen asks for the back-arrow header; every
                root screen keeps the brand one. *@
             <MobileHeader Brand="Brand"
@@ -70,7 +66,6 @@
                      SheetsToPoint="Badge.SheetsToPoint"
                      SubscriptionsToWatch="Badge.SubscriptionsToWatch"/>
             <div class="gx-main">
-                <ImpersonationBar CustomerName="@ImpersonatedCustomer"/>
                 <Topbar Brand="Brand" User="User"/>
                 <main class="gx-content">
                     <div class="gx-wrap">
@@ -103,12 +98,6 @@
 
     [CascadingParameter] private TenantBrandDto? Brand { get; set; }
     [CascadingParameter] private GymUserInfo User { get; set; } = GymUserInfo.Anonymous;
-
-    /// <summary>
-    /// Customer on screen while a platform admin is visiting, null otherwise —
-    /// which is what keeps the bar off everybody else's screen.
-    /// </summary>
-    private string? ImpersonatedCustomer => User.IsImpersonating ? Brand?.DisplayName : null;
 
     private bool _plusOpen;
     private IJSObjectReference? _module;

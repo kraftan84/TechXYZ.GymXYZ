@@ -34,10 +34,10 @@ public sealed record GxNavGroup(string Title, IReadOnlyList<GxNavItem> Items);
 /// true, false)</c> is unreadable at the call site and silently wrong when two
 /// of them are swapped.
 /// <para>
-/// <paramref name="IsManager"/> is true for a platform admin too, matching
-/// <c>GymPolicies.GymManager</c>: an admin inside a customer stands in for its
-/// manager, and hiding the sections they are about to be allowed to open would
-/// only make the console look broken.
+/// <paramref name="IsManager"/> is <b>false</b> for a platform admin, matching
+/// <c>GymPolicies.GymManager</c>. It was true while an admin could enter a
+/// customer and stand in for its manager; with the impersonation gone they stand
+/// in for nobody, and the sections it would open are ones they are refused.
 /// </para>
 /// </summary>
 public sealed record GxNavViewer(

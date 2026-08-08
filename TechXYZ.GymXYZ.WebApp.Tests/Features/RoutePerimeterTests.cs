@@ -31,8 +31,9 @@ public class RoutePerimeterTests
     ];
 
     /// <summary>
-    /// Pages about running the gym rather than teaching in it. The policy admits
-    /// a platform admin as well, so impersonation keeps working.
+    /// Pages about running the gym rather than teaching in it. The policy used to
+    /// admit a platform admin as well, so a visit inside a customer could act;
+    /// with the impersonation removed it admits the gym's manager alone.
     /// </summary>
     private static readonly string[] ManagerOnly =
     [
@@ -48,9 +49,10 @@ public class RoutePerimeterTests
     /// <summary>The platform's own screens, reserved for TechXYZ.</summary>
     private static readonly string[] PlatformAdminOnly =
     [
-        "Administration.razor",
-        Path.Combine("Account", "Impersonation.razor"),
-        Path.Combine("Account", "ImpersonationExit.razor")
+        // Two more stood here — /account/client and its exit, the way in and out
+        // of a customer's space. They went with the impersonation, and this is
+        // now the only screen a platform admin can open at all.
+        "Administration.razor"
     ];
 
     /// <summary>

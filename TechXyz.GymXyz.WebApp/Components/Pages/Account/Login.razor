@@ -129,8 +129,9 @@
     {
         // Refused before the password is even checked: the space is closed, and
         // letting a correct password through to a dead space would be worse than
-        // saying so. A platform admin reaching a suspended customer does it from
-        // the console, by impersonation — not through the customer's own door.
+        // saying so. It closes the door on everybody, TechXYZ included — a
+        // platform admin signs in on the platform's own host, never through a
+        // customer's, so this is not the way they reach a suspended customer.
         if (IsSuspended)
         {
             return;

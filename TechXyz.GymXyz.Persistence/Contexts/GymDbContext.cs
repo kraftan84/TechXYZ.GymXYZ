@@ -48,10 +48,9 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<NotificationSetting> NotificationSettings => Set<NotificationSetting>();
     public DbSet<Address> Addresses =>  Set<Address>();
 
-    // Both sit above the tenant filter, alongside Tenant: they are read by the
-    // TechXYZ console about a customer it does not inhabit.
+    // Sits above the tenant filter, alongside Tenant: it is read by the TechXYZ
+    // console about a customer it does not inhabit.
     public DbSet<Invoice> Invoices => Set<Invoice>();
-    public DbSet<TenantImpersonation> TenantImpersonations => Set<TenantImpersonation>();
 
     // Above it for a different reason: these are filled in before any customer
     // exists. A space request is a stranger asking for one, so there is no tenant to
@@ -324,19 +323,6 @@ public class GymDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             // A reference identifies a document, and issuing it twice would make
             // "which invoice is GX-2026-001" a question with two answers.
             x.HasIndex(invoice => invoice.Reference).IsUnique();
-        });
-
-        modelBuilder.Entity<TenantImpersonation>(x =>
-        {
-            x.HasOne(visit => visit.Tenant)
-                .WithMany()
-                .HasForeignKey(visit => visit.TenantId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Closing a visit looks up the admin's open row; auditing one
-            // customer reads the other index.
-            x.HasIndex(visit => new { visit.AdminUserId, visit.EndedAt });
-            x.HasIndex(visit => new { visit.TenantId, visit.StartedAt });
         });
 
         modelBuilder.Entity<SpaceRequest>(x =>

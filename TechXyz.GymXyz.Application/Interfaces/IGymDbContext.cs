@@ -27,7 +27,6 @@ public interface IGymDbContext
     DbSet<OpeningHours> OpeningHours { get; }
     DbSet<NotificationSetting> NotificationSettings { get; }
     DbSet<Invoice> Invoices { get; }
-    DbSet<TenantImpersonation> TenantImpersonations { get; }
 
     // Outside every tenant, because they precede all of them. Only requests
     // marked IPlatformScoped may read these.

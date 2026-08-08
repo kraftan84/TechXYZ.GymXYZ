@@ -84,11 +84,12 @@ public class TenantResolverTests
     [Fact]
     public async Task ResolveAsync_ShouldResolveNothing_ForAnAuthenticatedUserWithNoTenant()
     {
-        // A platform admin who has entered no customer. Before lot 11 this fell
-        // through to the host, which on localhost — and on the apex domain in
-        // production — answers DefaultSlug: the admin read a real customer's
-        // members and e-mail addresses with no TenantImpersonation row recording
-        // it, and no banner saying whose data it was.
+        // A platform admin. Before lot 11 this fell through to the host, which on
+        // localhost — and on the apex domain in production — answers DefaultSlug:
+        // the admin read a real customer's members and e-mail addresses in
+        // silence. That was entry 2 of the debt register, and closing it is now
+        // the whole rule rather than half of it — an admin has no sanctioned way
+        // into a customer at all since the impersonation was removed.
         var sender = new RecordingSender();
         var resolver = CreateResolver("gymxyz.fr", sender);
         var admin = CreatePrincipal(("Console TechXYZ", ClaimTypes.Name));
@@ -115,23 +116,11 @@ public class TenantResolverTests
         sender.LastSlug.ShouldBeNull();
     }
 
-    [Fact]
-    public async Task ResolveAsync_ShouldStillUseTheClaim_WhenAnAdminHasEnteredACustomer()
-    {
-        // Impersonation writes TenantId, TenantSlug and Impersonation onto the
-        // principal. The admin is then inside that customer for real, and the
-        // refusal above must not follow them in.
-        var sender = new RecordingSender();
-        var resolver = CreateResolver("localhost", sender);
-        var admin = CreatePrincipal(
-            ("Console TechXYZ", ClaimTypes.Name),
-            ("leyssa", GymClaimTypes.TenantSlug),
-            ("42", GymClaimTypes.Impersonation));
-
-        await resolver.ResolveAsync(admin);
-
-        sender.LastSlug.ShouldBe("leyssa");
-    }
+    // A fourth case stood here: an admin carrying borrowed tenant claims had to
+    // keep resolving that customer, so the refusal above did not follow them into
+    // a visit they were entitled to. There are no borrowed claims any more — an
+    // account either owns a tenant or has none — and the rule that a signed claim
+    // beats the host is already pinned by ShouldPreferTheUserClaim_OverTheHost.
 
     private static TenantResolver CreateResolver(string host, ISender? sender = null)
     {

@@ -1,4 +1,5 @@
 using MediatR;
+using TechXyz.GymXyz.Application.Interfaces;
 
 namespace TechXyz.GymXyz.Application.Commands;
 
@@ -15,6 +16,10 @@ namespace TechXyz.GymXyz.Application.Commands;
 /// and there is no provider. Editing it would mean inventing a card number the
 /// product must never hold.
 /// </para>
+/// <para>
+/// <see cref="IPlatformScoped"/>: what a customer pays TechXYZ is the
+/// platform's own row, written by somebody who inhabits no customer.
+/// </para>
 /// </summary>
 public sealed record UpdateTenantPlanCommand(
     int TenantId,
@@ -22,4 +27,4 @@ public sealed record UpdateTenantPlanCommand(
     string? PlanDescription,
     decimal? PlanPrice,
     DateOnly? PlanRenewalDate,
-    int? PlanMemberCap) : IRequest<bool>;
+    int? PlanMemberCap) : IRequest<bool>, IPlatformScoped;

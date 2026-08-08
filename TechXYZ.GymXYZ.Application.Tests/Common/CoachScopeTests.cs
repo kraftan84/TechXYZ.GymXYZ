@@ -27,13 +27,22 @@ public class CoachScopeTests
     }
 
     [Fact]
-    public void For_ShouldNotRestrictAPlatformAdmin()
+    public void For_ShouldRestrictAPlatformAdminToNothing()
     {
-        // Inside a customer an admin stands in for its manager, the same way
-        // GymPolicies.GymManager admits them.
+        // The answer flipped when the impersonation was removed. An admin used to
+        // stand in for the manager of the customer they had entered, so the whole
+        // gym was theirs to read; they now enter nobody, and the honest answer is
+        // the second of the two this type keeps apart — restricted, to no coach
+        // at all, and therefore to no session at all.
+        //
+        // It is belt and braces: an admin's ambient tenant is 0, so the global
+        // filter already answers nothing. This says the same thing one layer up,
+        // which is where it would be read if a tenant were ever resolved for them.
         var scope = CoachScope.For(new TestCurrentUserService(GymRoleNames.PlatformAdmin));
 
-        scope.IsRestricted.ShouldBeFalse();
+        scope.IsRestricted.ShouldBeTrue();
+        scope.Covers(SessionOf(Nora)).ShouldBeFalse();
+        scope.Covers(SessionOf(null)).ShouldBeFalse();
     }
 
     [Fact]

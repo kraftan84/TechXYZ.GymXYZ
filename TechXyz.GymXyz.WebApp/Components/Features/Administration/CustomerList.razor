@@ -8,9 +8,10 @@
    nothing new is invented — every row paints its own brand by carrying
    data-theme, the same trick the theme cards use.
 
-   « Entrer » is the impersonation from PR 1. It is a link and not a button
-   because it leaves for a statically rendered page: re-signing the
-   authentication cookie needs a real HTTP response, which a circuit cannot give. *@
+   Each row used to carry an « Entrer » link, which opened the customer's space
+   as its manager. It went with the impersonation: this screen shows what TechXYZ
+   holds about a customer, and there is no longer a door from here into what the
+   customer holds about its members. *@
 
 <GxCard Padded="false">
     <CardHead Title="@GxFormats.Plural(Customers.Count, "client", "clients")">
@@ -68,11 +69,6 @@
                     {
                         <GxChip Tone="GxTone.Brand" Icon="@GxIconPaths.Check">Sélectionné</GxChip>
                     }
-
-                    <a class="gx-tab" href="@($"/account/client?client={customer.Id}")">
-                        <GxIcon Name="@GxIconPaths.ArrowRight" Size="16"/>
-                        <span>Entrer</span>
-                    </a>
                 </div>
             }
         </div>

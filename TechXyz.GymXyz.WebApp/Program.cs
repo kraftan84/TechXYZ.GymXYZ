@@ -156,7 +156,13 @@ builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(GymPolicies.PlatformAdmin, policy => policy.RequireRole(GymRoles.PlatformAdmin));
-    options.AddPolicy(GymPolicies.GymManager, policy => policy.RequireRole(GymRoles.GymManager, GymRoles.PlatformAdmin));
+
+    // A platform admin used to satisfy this one as well, so that a visit inside
+    // a customer could act as its manager. The visit no longer exists, and the
+    // exception outlived its reason: an admin who types /reglages is now refused
+    // like anybody else who does not run that gym. The console is the whole of
+    // what they may open.
+    options.AddPolicy(GymPolicies.GymManager, policy => policy.RequireRole(GymRoles.GymManager));
 });
 
 var app = builder.Build();
