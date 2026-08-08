@@ -3,11 +3,13 @@ using MediatR;
 using Shouldly;
 using TechXyz.GymXyz.Application.Commands;
 using TechXyz.GymXyz.Application.Interfaces;
+using TechXyz.GymXyz.Application.Queries;
 
 namespace TechXYZ.GymXYZ.Application.Tests.Common;
 
 /// <summary>
-/// Which commands only a manager may run, named one by one.
+/// Which commands only a manager may run, named one by one — and, since the
+/// poster, which queries too.
 /// <para>
 /// The list is the point. A marker interface makes the check impossible to
 /// forget inside a handler, but nothing stops a new command from simply not
@@ -127,11 +129,39 @@ public class ManagerOnlyPerimeterTests
         }
     }
 
-    private static IEnumerable<Type> AllCommands() =>
+    /// <summary>
+    /// Reading is a narrower perimeter than writing, and almost every query is
+    /// open: a coach has to see the gym to work in it. The exception is the
+    /// poster, where the content leaving the building is not the caller's own
+    /// week but a picture of the club's.
+    /// </summary>
+    private static readonly string[] ReservedQueries =
+    [
+        nameof(GetPlanningPosterQuery)
+    ];
+
+    [Fact]
+    public void EveryQuery_ShouldSayWhichSideOfThePerimeterItIsOn()
+    {
+        // The commands are pinned above one by one; the queries are pinned by
+        // their exceptions, because listing every open query would be a list of
+        // the whole application that nobody would keep true.
+        var marked = AllRequests("Query")
+            .Where(type => type.IsAssignableTo(typeof(IManagerOnly)))
+            .Select(type => type.Name)
+            .ToList();
+
+        marked.ShouldBe(ReservedQueries, ignoreOrder: true,
+            "A query reserved to a manager is unusual enough to be named here.");
+    }
+
+    private static IEnumerable<Type> AllCommands() => AllRequests("Command");
+
+    private static IEnumerable<Type> AllRequests(string suffix) =>
         typeof(UpdateTeamMemberAccessCommand).Assembly
             .GetTypes()
             .Where(type => type is { IsClass: true, IsAbstract: false }
-                           && type.Name.EndsWith("Command", StringComparison.Ordinal)
+                           && type.Name.EndsWith(suffix, StringComparison.Ordinal)
                            && type.GetInterfaces().Any(contract =>
                                contract.IsGenericType
                                && contract.GetGenericTypeDefinition() == typeof(IRequest<>)));

@@ -8,23 +8,28 @@
    of the strip goes to the Planning (onNavigate('planning')), not to a day
    screen of its own. That is the reading this lot follows on both shells.
 
-   « Diffuser le planning » is the prototype's primary CTA. It renders disabled
-   with the reason on it rather than doing nothing quietly: what it will produce
-   is an image the manager publishes themselves, and that image is not built
-   yet. Wording shared with the desktop shell and the Planning head through
-   BroadcastLabels — the three buttons switch on in the same PR. *@
+   « Diffuser le planning » is the prototype's primary CTA and produces the
+   image to publish. Shown only to whoever runs the gym — a coach's week is
+   their own sessions, and publishing those under the club's name would be a
+   lie. Wording shared with the desktop shell and the Planning head through
+   BroadcastLabels. *@
 
 <div class="gx-m-screen">
     <div class="gx-m-greet">
         <div class="hi">Bonjour @GreetingName</div>
-        <div class="sub">@BroadcastLabels.AccueilSubtitle</div>
+        <div class="sub">@(CanBroadcast ? BroadcastLabels.AccueilSubtitle : BroadcastLabels.AccueilSubtitleWithoutBroadcast)</div>
     </div>
 
-    <button type="button" class="gx-m-cta ghost" style="margin-top:16px" disabled
-            title="@BroadcastLabels.Unavailable">
-        <GxIcon Name="@GxIconPaths.Share" Size="20"/>
-        Diffuser le planning
-    </button>
+    @if (CanBroadcast)
+    {
+        <button type="button" class="gx-m-cta ghost" style="margin-top:16px"
+                disabled="@IsBroadcasting"
+                title="@BroadcastLabels.ButtonHint"
+                @onclick="() => OnBroadcast.InvokeAsync()">
+            <GxIcon Name="@GxIconPaths.Share" Size="20"/>
+            @(IsBroadcasting ? BroadcastLabels.Working : "Diffuser le planning")
+        </button>
+    }
 
     <div class="gx-m-sec"><span class="t">@DashboardFilters.RangeLabel(Dashboard.WeekStart)</span></div>
     <div class="gx-m-card">
@@ -52,10 +57,15 @@
                 }
             </div>
         </div>
-        <div class="gx-m-diffuse">
-            <GxIcon Name="@GxIconPaths.Send" Size="16"/>
-            <span>@BroadcastLabels.Footnote</span>
-        </div>
+        @* Explains the publishing feature, so it goes with the button: a coach
+           has neither. *@
+        @if (CanBroadcast)
+        {
+            <div class="gx-m-diffuse">
+                <GxIcon Name="@GxIconPaths.Send" Size="16"/>
+                <span>@BroadcastLabels.Footnote</span>
+            </div>
+        }
     </div>
 
     <div class="gx-m-sec">
@@ -150,6 +160,18 @@
     [Parameter, EditorRequired] public SchoolCalendarDto Calendar { get; set; } = SchoolCalendarDto.Unavailable("—");
     [Parameter, EditorRequired] public bool IsLoaded { get; set; }
     [Parameter, EditorRequired] public string GreetingName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether this person may publish the club's week. False hides the button
+    /// rather than disabling it: a coach is not waiting for the feature, it is
+    /// not theirs.
+    /// </summary>
+    [Parameter] public bool CanBroadcast { get; set; }
+
+    /// <summary>An image is being produced right now.</summary>
+    [Parameter] public bool IsBroadcasting { get; set; }
+
+    [Parameter] public EventCallback OnBroadcast { get; set; }
 
     [Parameter] public EventCallback<DateOnly> OnOpenDay { get; set; }
     [Parameter] public EventCallback OnOpenPlanning { get; set; }

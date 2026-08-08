@@ -4,25 +4,30 @@
    No KPI. The hand-off describes four, the prototype draws none, and the two
    mockups agree with each other about the screen being planning-first.
 
-   « Diffuser le planning » and « Aperçu » render disabled with a reason on
-   them. The button produces an image the manager publishes themselves — decided
-   2026-08-07 — and that image is not built yet; showing a button that silently
-   does nothing would be worse than showing why. Same treatment as the
-   payment-card button at lot 9. The wording lives in BroadcastLabels: the head
-   of the Planning carries the same button and the two switch on together. *@
+   « Diffuser le planning » produces the image to publish. It is shown only to
+   whoever runs the gym: the query behind it is manager-only, because a coach's
+   week is their own sessions and publishing those as the club's planning would
+   be a lie with the club's name on it.
+
+   « Aperçu » stays disabled with its reason — the screen that would show the
+   image at scale before producing it is not designed yet. *@
 
 <PageHead Title="@($"Bonjour {GreetingName}")"
-          Subtitle="@BroadcastLabels.AccueilSubtitle">
-    <FluentButton Appearance="Appearance.Outline" Disabled="true"
-                  Title="@BroadcastLabels.PreviewUnavailable">
-        <GxIcon Slot="start" Name="@GxIconPaths.Eye" Size="18"/>
-        Aperçu
-    </FluentButton>
-    <FluentButton Appearance="Appearance.Accent" Disabled="true"
-                  Title="@BroadcastLabels.Unavailable">
-        <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
-        Diffuser le planning
-    </FluentButton>
+          Subtitle="@(CanBroadcast ? BroadcastLabels.AccueilSubtitle : BroadcastLabels.AccueilSubtitleWithoutBroadcast)">
+    @if (CanBroadcast)
+    {
+        <FluentButton Appearance="Appearance.Outline" Disabled="true"
+                      Title="@BroadcastLabels.PreviewUnavailable">
+            <GxIcon Slot="start" Name="@GxIconPaths.Eye" Size="18"/>
+            Aperçu
+        </FluentButton>
+        <FluentButton Appearance="Appearance.Accent" Disabled="@IsBroadcasting"
+                      Title="@BroadcastLabels.ButtonHint"
+                      @onclick="() => OnBroadcast.InvokeAsync()">
+            <GxIcon Slot="start" Name="@GxIconPaths.Share" Size="18"/>
+            @(IsBroadcasting ? BroadcastLabels.Working : "Diffuser le planning")
+        </FluentButton>
+    }
 </PageHead>
 
 <div style="margin-bottom:18px">
@@ -58,8 +63,13 @@
         </div>
 
         <div class="gx-diffuse-foot">
-            <GxIcon Name="@GxIconPaths.Send" Size="15"/>
-            <span>@BroadcastLabels.Footnote</span>
+            @* Explains the publishing feature, so it goes with the button:
+               a coach has neither. *@
+            @if (CanBroadcast)
+            {
+                <GxIcon Name="@GxIconPaths.Send" Size="15"/>
+                <span>@BroadcastLabels.Footnote</span>
+            }
             <span style="margin-left:auto">
                 <FluentButton Appearance="Appearance.Stealth" Size="ButtonSize.Small"
                               @onclick="() => OnOpenPlanning.InvokeAsync()">
@@ -177,6 +187,18 @@
 
     /// <summary>A solo coach has no team, so the week says "28 cours" and stops there.</summary>
     [Parameter] public bool IsSolo { get; set; }
+
+    /// <summary>
+    /// Whether this person may publish the club's week. False hides the two
+    /// buttons rather than disabling them: a coach is not waiting for the
+    /// feature, it is not theirs.
+    /// </summary>
+    [Parameter] public bool CanBroadcast { get; set; }
+
+    /// <summary>An image is being produced right now.</summary>
+    [Parameter] public bool IsBroadcasting { get; set; }
+
+    [Parameter] public EventCallback OnBroadcast { get; set; }
 
     [Parameter] public EventCallback<DateOnly> OnOpenDay { get; set; }
     [Parameter] public EventCallback OnOpenPlanning { get; set; }

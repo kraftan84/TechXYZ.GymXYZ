@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Bogus;
 using Microsoft.EntityFrameworkCore;
 using TechXyz.GymXyz.Application.Common;
@@ -11,13 +12,30 @@ internal static class TestInfrastructure
     /// <summary>Tenant every fixture writes to, unless a test asks for another one.</summary>
     public const int DefaultTenantId = 1;
 
-    public static GymDbContext CreateDbContext(string databaseName)
-        => CreateDbContext(databaseName, new TestTenantContext(DefaultTenantId));
+    public static GymDbContext CreateDbContext(
+        string databaseName,
+        [CallerFilePath] string? callerFile = null)
+        => CreateDbContext(databaseName, new TestTenantContext(DefaultTenantId), callerFile);
 
-    public static GymDbContext CreateDbContext(string databaseName, ITenantContext tenantContext)
+    /// <summary>
+    /// An in-memory store named after the test that asked for it — and after the
+    /// file it lives in.
+    /// <para>
+    /// The file matters. Every caller passes <c>nameof(TheTest)</c>, and two
+    /// classes naming a test the same way — <c>Handle_ShouldNormalizeTheAnchor…</c>
+    /// exists twice — then share one store and seed into each other's fixtures.
+    /// It fails only when both run, so it does not fail when the test is written,
+    /// and it reads as a bug in the handler rather than a collision. Six such
+    /// pairs were already sitting in the suite when this was added.
+    /// </para>
+    /// </summary>
+    public static GymDbContext CreateDbContext(
+        string databaseName,
+        ITenantContext tenantContext,
+        [CallerFilePath] string? callerFile = null)
     {
         var options = new DbContextOptionsBuilder<GymDbContext>()
-            .UseInMemoryDatabase(databaseName)
+            .UseInMemoryDatabase($"{Path.GetFileNameWithoutExtension(callerFile)}.{databaseName}")
             .Options;
 
         return new GymDbContext(options, new TestCurrentUserService(), tenantContext);

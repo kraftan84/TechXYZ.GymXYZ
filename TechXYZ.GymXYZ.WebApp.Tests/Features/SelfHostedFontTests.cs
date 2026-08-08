@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Shouldly;
+using TechXyz.GymXyz.WebApp.Components.Features.Planning;
 
 namespace TechXYZ.GymXYZ.WebApp.Tests.Features;
 
@@ -111,6 +112,36 @@ public class SelfHostedFontTests
                 $"themes.css asks for « {family} » but fonts.css hosts no such family. "
                 + "Add the woff2 and its @font-face rather than importing it from a CDN.");
         }
+    }
+
+    /// <summary>
+    /// The family name the poster refuses to publish without has to be the name
+    /// fonts.css actually declares.
+    /// <para>
+    /// gx-poster.js will not produce an image unless it embedded the brand's
+    /// display face, and it decides that by comparing
+    /// <c>PosterLayout.DisplayFont</c> against the families it inlined. A name
+    /// that is merely spelt differently there — « DancingScript » for
+    /// « Dancing Script » — turns that guard into a permanent refusal, and a
+    /// guard nobody can satisfy gets deleted rather than fixed.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("techxyz")]
+    [InlineData("teamtrainers")]
+    [InlineData("leyssa")]
+    public void ThePostersDisplayFont_ShouldBeAFamilyFontsCssDeclares(string themeKey)
+    {
+        var fonts = RepositoryFiles.ReadWebAppFile(
+            "wwwroot", "css", "techxyz", "tokens", "fonts.css");
+
+        var family = PosterLayout.DisplayFont(themeKey);
+
+        fonts.ShouldContain(
+            $"font-family: \"{family}\"",
+            customMessage:
+            $"The poster refuses to publish « {themeKey} » without « {family} », "
+            + "and fonts.css declares no such family — so it would refuse forever.");
     }
 
     private static string StripComments(string css) =>

@@ -16,6 +16,11 @@
     <link rel="stylesheet" href="@Assets["css/app.css"]"/>
     <link rel="stylesheet" href="@Assets["css/mobile.css"]"/>
     <link rel="stylesheet" href="@Assets["css/gx-extras.css"]"/>
+    @* The published image. Its own stylesheet because gx-poster.js carries
+       exactly these rules into the SVG it rasterises — and nothing else. Found
+       by the marker rather than by its file name: MapStaticAssets fingerprints
+       the URL, so the name on the href is not the name on disk. *@
+    <link rel="stylesheet" href="@Assets["css/poster.css"]" data-gx-poster/>
     @* Loaded after the Fluent stylesheets so the brand tokens win. *@
     <link rel="stylesheet" href="@Assets["css/fluent-bridge.css"]"/>
     <link rel="stylesheet" href="@Assets["TechXyz.GymXyz.WebApp.styles.css"]"/>

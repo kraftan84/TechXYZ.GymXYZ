@@ -24,6 +24,22 @@ public sealed record TenantBrandDto(
     public string? City { get; init; }
 
     /// <summary>
+    /// Zone shown instead of a town for a customer who works on the move
+    /// ("Thonon et alentours"). Carried beside <see cref="City"/> because
+    /// <see cref="Where"/> has to be answerable from the brand alone — the
+    /// poster puts it on a public image, and reaching for the address there
+    /// would print the one thing an itinerant coach never publishes.
+    /// </summary>
+    public string? AreaLabel { get; init; }
+
+    /// <summary>
+    /// Where this customer is, in the words they chose. The area wins over the
+    /// town, the same precedence <c>TenantDetailDto</c> and
+    /// <c>TenantSummaryDto</c> already apply.
+    /// </summary>
+    public string? Where => string.IsNullOrWhiteSpace(AreaLabel) ? City : AreaLabel;
+
+    /// <summary>
     /// Postcode of the gym. Carried here because the school-holiday zone is
     /// derived from it, and the planning banner needs it before anything else
     /// about the customer is loaded.
